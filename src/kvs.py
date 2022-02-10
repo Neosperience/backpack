@@ -2,6 +2,7 @@ import re
 import os
 import datetime as datetime
 import logging
+import threading
 
 import boto3
 from botocore.credentials import RefreshableCredentials
@@ -134,17 +135,24 @@ class KVSCredentialsHandler:
         self.caller_arn = self.sts.get_caller_identity()['Arn']
         self.credentials = self.session.get_credentials() 
         self.next_update = None
-        self._refresh()
-        
-    def _refresh(self):
+        self._refresh(sync=True)
+
+    def _refresh(self, sync=True):
+        if sync:
+            self._do_refresh()
+        else:
+            thread = threading.Thread(self._do_refresh)
+            thread.start()
+
+    def _do_refresh(self):
         if _is_refreshable(self.credentials):
             self.logger.info(f'Refreshing credentials using {self.caller_arn}')
             # This will refresh the credentials if neeeded
             advisory = self.credentials.refresh_needed(self.credentials._advisory_refresh_timeout)
             mandatory = self.credentials.refresh_needed(self.credentials._mandatory_refresh_timeout)
             self.logger.info(f'Refresh needed: advisory={advisory}, mandatory={mandatory}')
-            self.credentials._protected_refresh(is_mandatory=True)
             self.logger.info(f'Forcing refresh credentials with method {self.credentials._refresh_using}')
+            self.credentials._protected_refresh(is_mandatory=True)
             frozen_credentials = self.credentials.get_frozen_credentials()
             expiry_time = self.credentials._expiry_time
             self.logger.info('Got credentials: '
@@ -194,7 +202,7 @@ class KVSCredentialsHandler:
         if refresh_needed:
             self.logger.info(f'Refresh needed: now={_format_time(now)}, '
                              f'next_update={_format_time(self.next_update)}')
-            self._refresh()
+            self._refresh(sync=False)
         
     def save_credentials(
         self, 
