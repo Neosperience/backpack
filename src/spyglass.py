@@ -144,10 +144,10 @@ class SpyGlass:
 
     def _config_env(self, dotenv_path=None):
         dotenv_path = dotenv_path or find_dotenv()
-        if not dotenv_path:
-            self.logger.warning('.env configuration file was not found!')
-            return
         self.logger.info(f'Loading config variables from {dotenv_path}')
+        if not dotenv_path or not os.path.isfile(dotenv_path):
+            self.logger.warning(f'dotenv configuration file was not found at path: {dotenv_path}')
+            return
         cfg = dotenv_values(dotenv_path=dotenv_path)
         self.logger.info(f'Loaded env config structure: {cfg}')
         if 'GST_PLUGIN_PATH' in cfg:

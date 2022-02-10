@@ -81,6 +81,14 @@ class StopWatch:
         child.parent = self
         self.children.append(child)
         return child
+    
+    def parents(self):
+        current = self
+        while True:
+            yield current
+            current = current.parent
+            if not current:
+                break
         
     def __enter__(self):
         self._start = time.perf_counter()
@@ -103,12 +111,7 @@ class StopWatch:
 
     @property
     def level(self):
-        lvl = 0
-        current = self
-        while current.parent:
-            current = current.parent
-            lvl += 1
-        return lvl        
+        return len(list(self.parents()))
 
     def __repr__(self):
         lvl = self.level
