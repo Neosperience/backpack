@@ -1,4 +1,5 @@
 import time
+import datetime
 from collections import deque
 from itertools import islice
 from typing import List, Deque, Optional, Iterator, Tuple
@@ -206,6 +207,103 @@ class StopWatch(BaseClock):
         return f'{nl if lvl > 0 else ""}{indent}<{self.__class__.__name__} {" ".join(props)}>'
 
 
+class Schedule:
+    ''' Schedules a task to be called later with the help of an external
+    scheduler.
+
+    The external scheduler is expected to call the `tick()` method periodically,
+    most likely from an event-loop.
+
+    :param repeating: If this schedule fires repeatedly
+    :param callback: The callback to be called when the scheduler fires
+    :param args: Positional arguments of the callback
+    :param kwargs: Keywordarguments of the callback
+    '''
+
+    def __init__(self, repeating, callback, args=[], kwargs={}):
+        self.repeating = repeating
+        self.callback = callback
+        self.args = args
+        self.kwargs = kwargs
+
+    def fire(self):
+        ''' Fires the schedule calling the callback. '''
+        self.callback(*self.args, **self.kwargs)
+
+    def tick(self):
+        ''' The heartbeat of the schedule to be called periodically.
+
+        :returns: True if the schedule was fired
+        '''
+        return False
+
+
+class AtSchedule(Schedule):
+
+    def __init__(self, at: datetime.datetime, callback, args=[], kwargs={}):
+        super().__init__(False, callback, args, kwargs)
+        self.at = at
+        self._fired = False
+
+    def tick(self):
+        now = datetime.datetime.now()
+        if not self._fired and now > at:
+            self.fire()
+            self._fired = True
+            return True
+        else:
+            return False
+
+
+class IntervalSchedule(Schedule):
+
+    def __init__(self, interval: datetime.timedelta, callback, args=[], kwargs={}):
+        super().__init__(True, callback, args, kwargs)
+        self.interval = interval
+        self._last_fired = datetime.datetime.now()
+
+    def tick(self):
+        now = datetime.datetime.now()
+        if now > self._last_fired + self.interval:
+            self.fire()
+            self._last_fired = now
+            return True
+        else:
+            return False
+
+
+class OrdinalSchedule(Schedule):
+
+    def __init__(self, ordinal: int, callback, args=[], kwargs={}):
+        super().__init__(True, callback, args, kwargs)
+        self.ordinal = ordinal
+        self._counter = 0
+
+    def tick(self):
+        self._counter += 1
+        if self._counter == self.ordinal:
+            self.fire()
+            self._counter = 0
+            return True
+        else:
+            return False
+
+
+class AlarmClock:
+
+    def __init__(self, schedules=[]):
+        self.schedules = schedules
+
+    def tick(self):
+        removables = []
+        for schedule in self.schedules:
+            res = schedule.tick()
+            if res and not schedule.repeating:
+                removables.append(schedule)
+        for schedule in removables:
+            self.schedules.remove(schedule)
+
+
 if __name__ == '__main__':
     import random
     with StopWatch('root') as root:
@@ -228,3 +326,20 @@ if __name__ == '__main__':
         ticker.tick()
         time.sleep(random.random() / 10)
     print(ticker)
+
+    print('\n')
+
+    cb = lambda name: print(f'{name} was called at {datetime.datetime.now()}')
+
+    at = datetime.datetime.now() + datetime.timedelta(seconds=5)
+    atschedule = AtSchedule(at=at, callback=cb, kwargs={'name': 'AtSchedule'})
+
+    iv = datetime.timedelta(seconds=1.5)
+    ivschedule = IntervalSchedule(interval=iv, callback=cb, kwargs={'name': 'IntervalSchedule'})
+
+    ordinalschedule = OrdinalSchedule(ordinal=10, callback=cb, kwargs={'name': 'OrdinalSchedule'})
+    alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
+
+    for i in range(70):
+        alarmclock.tick()
+        time.sleep(0.1)
