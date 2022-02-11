@@ -6,6 +6,7 @@ from typing import List, Deque, Optional, Iterator, Tuple
 
 class BaseClock:
     
+    # Print at most this many intervals in __repr__
     MAX_REPR_INTERVALS = 5
     
     ''' Base clock the registers time intervals. '''
@@ -217,7 +218,7 @@ class Schedule:
     :param repeating: If this schedule fires repeatedly
     :param callback: The callback to be called when the scheduler fires
     :param args: Positional arguments of the callback
-    :param kwargs: Keywordarguments of the callback
+    :param kwargs: Keyword arguments of the callback
     '''
 
     def __init__(self, repeating, callback, args=[], kwargs={}):
@@ -239,9 +240,17 @@ class Schedule:
 
 
 class AtSchedule(Schedule):
+    ''' Schedules a task to be executed only once at a specific time.
+    
+    The task will be executed at the next tick after the specified datetime.
+    
+    :param at: When to execute the task
+    :param args: Positional arguments to be passed to superclass initializer
+    :param kwargs: Keyword arguments to be passed to superclass initializer
+    '''
 
-    def __init__(self, at: datetime.datetime, callback, args=[], kwargs={}):
-        super().__init__(False, callback, args, kwargs)
+    def __init__(self, at: datetime.datetime, *args, **kwargs):
+        super().__init__(False, *args, **kwargs)
         self.at = at
         self._fired = False
 
@@ -256,26 +265,42 @@ class AtSchedule(Schedule):
 
 
 class IntervalSchedule(Schedule):
+    ''' Schedules a task to be executed at regular time intervals.
+    
+    The task will be executed at the first tick and at each tick after
+    the specified time interval has passed.
+    
+    :param interval: The time interval of the executions
+    :param args: Positional arguments to be passed to superclass initializer
+    :param kwargs: Keyword arguments to be passed to superclass initializer
+    '''
 
-    def __init__(self, interval: datetime.timedelta, callback, args=[], kwargs={}):
-        super().__init__(True, callback, args, kwargs)
+    def __init__(self, interval: datetime.timedelta, *args, **kwargs):
+        super().__init__(True, *args, **kwargs)
         self.interval = interval
-        self._last_fired = datetime.datetime.now()
+        self._next_fire = None
+
+    def _set_next_fire(self, now):
+        while self._next_fire <= now:
+            self._next_fire += self.interval
 
     def tick(self):
         now = datetime.datetime.now()
-        if now > self._last_fired + self.interval:
+        if not self._next_fire:
+            self._next_fire = now
+        if now >= self._next_fire:
             self.fire()
-            self._last_fired = now
-            return True
+            res = True
         else:
-            return False
+            res = False
+        self._set_next_fire(now)
+        return res
 
 
 class OrdinalSchedule(Schedule):
 
-    def __init__(self, ordinal: int, callback, args=[], kwargs={}):
-        super().__init__(True, callback, args, kwargs)
+    def __init__(self, ordinal: int, *args, **kwargs):
+        super().__init__(True, *args, **kwargs)
         self.ordinal = ordinal
         self._counter = 0
 
@@ -331,15 +356,15 @@ if __name__ == '__main__':
 
     cb = lambda name: print(f'{name} was called at {datetime.datetime.now()}')
 
-    at = datetime.datetime.now() + datetime.timedelta(seconds=5)
+    at = datetime.datetime.now() + datetime.timedelta(seconds=3)
     atschedule = AtSchedule(at=at, callback=cb, kwargs={'name': 'AtSchedule'})
 
-    iv = datetime.timedelta(seconds=1.5)
+    iv = datetime.timedelta(seconds=1.35)
     ivschedule = IntervalSchedule(interval=iv, callback=cb, kwargs={'name': 'IntervalSchedule'})
 
-    ordinalschedule = OrdinalSchedule(ordinal=10, callback=cb, kwargs={'name': 'OrdinalSchedule'})
+    ordinalschedule = OrdinalSchedule(ordinal=17, callback=cb, kwargs={'name': 'OrdinalSchedule'})
     alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
 
-    for i in range(70):
+    for i in range(25*5):
         alarmclock.tick()
-        time.sleep(0.1)
+        time.sleep(1/25)

@@ -15,16 +15,16 @@ from dotenv import find_dotenv, dotenv_values
 from .utils import add_timestamp
 
 class SpyGlass:
-    
+
     ''' Base class for sending OpenCV frames to a remote service using GStreamer. 
-    
+
     SpyGlass can be used to create programatically a video stream and send it to 
     an external video ingestion service supported by GStreamer. Once the SpyGlass 
     instances is configured and the streaming pipeline was opened by calling 
     `start_streaming`, successive frames can be passed to the `put` method of the 
     instance in OpenCV image format (numpy arrays with a shape of `(height, width, 3)`, 
     BGR channel order, `np.uint8` type). 
-    
+
     The frequency of frames (frames per second) as well as the image
     dimensions (width, heigth) are static during the streaming. You can either 
     specify these properties upfront in the constructor, or let SpyGlass figure out 
@@ -34,13 +34,13 @@ class SpyGlass:
     be determined automatically. In all cases you are expected to call the `put`
     method with the frequency of the `video_fps` property, and send images 
     of (`video_width`, `video_height`) size.
-    
+
     You should also specify `GST_PLUGIN_PATH` variable to the folder 
     where the kvssink plugin binaries were built, and add the open-source 
     dependency folder of kvssink to the `LD_LIBRARY_PATH` variable.
     You can define these variables as environment variables, or in a file
     called `.env` in the same folder where this file can be found. 
-    
+
     :param video_width: The declared width of the video. Leave this to the default
         None to determine this value automatically.
     :param video_height: The declared heigth of the video. Leave this to the default
@@ -57,14 +57,14 @@ class SpyGlass:
         SpyGlass will use the default search mechanism of the python-dotenv library
         to search for the .env file (searching in the current and parent folders).
     '''
-    
+
     _FRAME_LOG_FREQUENCY = datetime.timedelta(seconds=60)
 
     # Wait for so many put() requests before starting streaming.
     # During this period the avgerage FPS will be measured and the
     # stream will be initialized with this FPS
     _FPS_METER_WARMUP_FRAMES = 100
-    
+
     class State(Enum):
         STOPPED = 0,
         START_WARMUP = 1,
@@ -102,10 +102,10 @@ class SpyGlass:
         self._int_height = 0
         self._video_writer = None
         self.state = SpyGlass.State.STOPPED
-        
+
     def _check_gst_plugin(self, plugin_name: str) -> bool:
         ''' Checks if a given GStreamer plugin can be correctly loaded.
-        
+
         :param plugin_name: The name of the GStreamer plugin
         :return: True if the plugin can be loaded by the GStreamer system.
         '''
@@ -119,7 +119,7 @@ class SpyGlass:
         except subprocess.CalledProcessError as e:
             self.logger.warning(f'"{cmd}" returned error code={e.returncode}, output:\n{e.output.decode()}')
             return False
-    
+
     def _get_pipeline(self, fps: float, width: int, height: int) -> str:
         ''' Returns to GStreamer pipeline definition. 
         
@@ -128,7 +128,7 @@ class SpyGlass:
         raise NotImplementedError(
             'SpyGlass._get_pipeline() should be implemented in subclasses'
         )
-        
+
     def _put_frame(self, frame, timestamp, show_timestamp): 
         size = (self._int_width, self._int_height)
         resized = cv2.resize(frame, size, interpolation=cv2.INTER_LINEAR)
@@ -162,7 +162,7 @@ class SpyGlass:
         path = path.replace('::', ':')
         os.environ['LD_LIBRARY_PATH'] = path
         os.environ['GST_DEBUG_NO_COLOR'] = '1'
-        
+
     def _check_env(self):
         def _check_var(var_name, warn=True):
             val = os.environ.get(var_name)
@@ -170,15 +170,15 @@ class SpyGlass:
                 self.logger.info(f'{var_name}={val}')
             elif warn:
                 self.logger.warning(f'{var_name} environment variable is not defined')
-                
+
         _check_var('GST_PLUGIN_PATH')
         _check_var('LD_LIBRARY_PATH')
         _check_var('GST_DEBUG', warn=False)
         _check_var('GST_DEBUG_FILE', warn=False)
-        
+
         self.logger.info(f'Local time on host: {datetime.datetime.now().isoformat()}')
         self.logger.info(f'UTC time on host: {datetime.datetime.utcnow().isoformat()}')
-        
+
     def _open_stream(self, fps, width, height):
         pipeline = self._get_pipeline(fps, width, height)
         self.logger.info(f'Opening streaming pipeline')
@@ -189,11 +189,11 @@ class SpyGlass:
         self._int_width = width
         self._int_height = height
         return self._video_writer.isOpened()
-            
+
     def _close_stream(self):
         self._video_writer.release()
         self._video_writer = None
-        
+
     def _frame_log(self, log_fn):
         now = datetime.datetime.now()
         if now - self._last_log > self._FRAME_LOG_FREQUENCY:
@@ -203,7 +203,7 @@ class SpyGlass:
     def _start_warmup(self):
         self._fps_meter_start = time.perf_counter()
         self._fps_meter_warmup_cnt = self._FPS_METER_WARMUP_FRAMES
-        
+
     def _finish_warmup(self, frame):
         fps = round(self._FPS_METER_WARMUP_FRAMES / (time.perf_counter() - self._fps_meter_start))
         height, width = frame.shape[0], frame.shape[1]
@@ -215,12 +215,12 @@ class SpyGlass:
     @property
     def state(self):
         return self._state
-    
+
     @state.setter
     def state(self, state):
         self.logger.info(f'state = {state}')
         self._state = state
-        
+
     # Events
 
     def start_streaming(self):
@@ -239,7 +239,7 @@ class SpyGlass:
             self.logger.info(f'No FPS meter warmup needed.')
             self._open_stream(self.video_fps, self.video_width, self.video_height)
             self.state = SpyGlass.State.STREAMING
-            
+
     def put(
         self, 
         frame: 'np.array', 
@@ -247,7 +247,7 @@ class SpyGlass:
         show_timestamp: bool = False
     ) -> bool:
         ''' Put a frame to the video stream.
-        
+
         :param frame: A numpy array of (height, width, 3) shape and of `np.uint8` type. 
         :param timestamp: If you have a presentation timestamp of the frame, 
             you can set it here. It will be sent downstream on the pipeline on a 
@@ -255,7 +255,7 @@ class SpyGlass:
         :param show_timestamp: Show a timestamp on the video stream.
         :return: True if the frame was effectively put on the downstream pipeline.
         '''
-        
+
         if self.state == SpyGlass.State.STOPPED:
             # Streamer paused
             return False
@@ -267,12 +267,12 @@ class SpyGlass:
                 )
             )
             return False
-    
+
         elif self.state == SpyGlass.State.START_WARMUP:
             self._start_warmup()
             self.state = SpyGlass.State.WARMUP
             return False
-    
+
         elif self.state == SpyGlass.State.WARMUP:
             self._fps_meter_warmup_cnt -= 1
             if self._fps_meter_warmup_cnt == 0:
@@ -286,15 +286,15 @@ class SpyGlass:
                 else:
                     self.logger.warning('Could not open cv2.VideoWriter')
                     self.state = SpyGlass.State.ERROR
-                    
+
             return False
-        
+
         elif self.state == SpyGlass.State.STREAMING:
             return self._put_frame(frame, timestamp, show_timestamp)
 
     def stop_streaming(self):
         ''' Stops the streaming. 
-        
+
         Successive calls to `put` method will silently discard the frames.
         '''
         self._close_stream()
