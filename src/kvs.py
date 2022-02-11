@@ -20,12 +20,12 @@ def _format_time(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 class KVSSpyGlass(SpyGlass):
-    
+
     ''' Sends OpenCV frames to Kinesis Video Streams.
-    
+
     KVSSpyGlass can be used to create programatically a video stream and send 
     it to AWS Kinesis Video Streams service. 
-    
+
     When initializing the KVSSpyGlass() instance, you should provide the AWS 
     credentials that will be used to stream the video in your AWS account.
     The `CredentialsHandler` subclasses implement different ways of passing the
@@ -33,10 +33,10 @@ class KVSSpyGlass(SpyGlass):
     cases, `FileCredentialsHandler` with the default arguments should work well,
     as long as your AWS user or the assume IAM Role have a policy to write put
     data in KVS.
-    
+
     You can configure the frame width, height and fps auto-detection as described
     in the SpyGlass class documentation.
-        
+
     :param stream_region: The AWS region of the Kinesis Video Stream
     :param stream_name: The name of the Kinesis Video Stream
     :param credentials_handler: The credentials handler
@@ -56,7 +56,7 @@ class KVSSpyGlass(SpyGlass):
         self.stream_name = stream_name
         self.credentials_handler = credentials_handler
         self._check_gst_plugin('kvssink')
-        
+
     def _get_pipeline(self, fps, width, height):
         credentials_config_str = self.credentials_handler.plugin_config()
         kvs_config_str = ' '.join([
@@ -78,7 +78,7 @@ class KVSSpyGlass(SpyGlass):
         pipeline_safe = self.credentials_handler.plugin_config_mask(pipeline)
         self.logger.info(f'GStreamer pipeline definition:\n{pipeline_safe}')
         return pipeline
-    
+
     def _put_frame(self, frame, timestamp, show_timestamp):
         result = super()._put_frame(frame, timestamp, show_timestamp)
         self.credentials_handler.check_refresh()
@@ -141,7 +141,7 @@ class KVSCredentialsHandler:
         if sync:
             self._do_refresh()
         else:
-            thread = threading.Thread(self._do_refresh)
+            thread = threading.Thread(target=self._do_refresh)
             thread.start()
 
     def _do_refresh(self):
