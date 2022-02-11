@@ -2,13 +2,14 @@ import re
 import os
 import datetime as datetime
 import logging
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 from botocore.credentials import RefreshableCredentials
 from dateutil.tz import tzlocal
 
 from .spyglass import SpyGlass
+from .timepiece import AtSchedule
 
 def _is_refreshable(credentials):
     return isinstance(credentials, RefreshableCredentials)
@@ -83,7 +84,7 @@ class KVSSpyGlass(SpyGlass):
         result = super()._put_frame(frame, timestamp, show_timestamp)
         self.credentials_handler.check_refresh()
         return result
-
+    
 
 class KVSCredentialsHandler:
     ''' Provide AWS credentials to Kinesis Video Stream Producer library. 
@@ -135,16 +136,11 @@ class KVSCredentialsHandler:
         self.caller_arn = self.sts.get_caller_identity()['Arn']
         self.credentials = self.session.get_credentials() 
         self.next_update = None
-        self._refresh(sync=True)
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.schedule = AtSchedule(at=None, callback=self._refresh, executor=self.executor)
+        self._refresh()
 
-    def _refresh(self, sync=True):
-        if sync:
-            self._do_refresh()
-        else:
-            thread = threading.Thread(target=self._do_refresh)
-            thread.start()
-
-    def _do_refresh(self):
+    def _refresh(self):
         if _is_refreshable(self.credentials):
             self.logger.info(f'Refreshing credentials using {self.caller_arn}')
             # This will refresh the credentials if neeeded
@@ -177,32 +173,27 @@ class KVSCredentialsHandler:
             #                                 ^
             #                   update_timeout+
             #
-            self.next_update = expiry_time - self.REFRESH_BEFORE_EXPIRATION
+            next_schedule = expiry_time - self.REFRESH_BEFORE_EXPIRATION
             credentials = frozen_credentials
-            self.logger.info(f'Next update: {_format_time(self.next_update)}')
+            self.logger.info(f'Next update: {_format_time(self.schedule.at)}')
             now = _local_now()
-            if self.next_update < now:
+            if self.schedule.at < now:
                 msg = ('Next update time is in the past! '
                     f'current_time={_format_time(now)}, '
-                    f'next_update={_format_time(self.next_update)}, '
+                    f'next_update={_format_time(self.schedule.at)}, '
                     f'expiry={_format_time(expiry_time)}'
                 )
                 self.logger.warning(msg)
         else:
             self.logger.info('Credentials are static')
-            self.next_update = None
+            next_schedule = None
             credentials = self.credentials
-
-        self.save_credentials(credentials, self.next_update)
+        self.save_credentials(credentials, self.schedule.at)
+        self.schedule.at = next_schedule
         
     def check_refresh(self):
         ''' Call this method periodically to refresh credentials. '''
-        now = _local_now()
-        refresh_needed = (now > self.next_update) if self.next_update else False
-        if refresh_needed:
-            self.logger.info(f'Refresh needed: now={_format_time(now)}, '
-                             f'next_update={_format_time(self.next_update)}')
-            self._refresh(sync=False)
+        self.schedule.tick()
         
     def save_credentials(
         self, 

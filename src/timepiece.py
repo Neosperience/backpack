@@ -1,5 +1,6 @@
 import time
 import datetime
+import threading
 from collections import deque
 from itertools import islice
 from typing import List, Deque, Optional, Iterator, Tuple
@@ -219,17 +220,22 @@ class Schedule:
     :param callback: The callback to be called when the scheduler fires
     :param args: Positional arguments of the callback
     :param kwargs: Keyword arguments of the callback
+    :param executor: If specified, callback will be sent to this executor
     '''
 
-    def __init__(self, repeating, callback, args=[], kwargs={}):
+    def __init__(self, repeating, callback, args=[], kwargs={}, executor=None):
         self.repeating = repeating
         self.callback = callback
         self.args = args
         self.kwargs = kwargs
+        self.executor = executor
 
     def fire(self):
         ''' Fires the schedule calling the callback. '''
-        self.callback(*self.args, **self.kwargs)
+        if self.executor:
+            self.executor.submit(self.callback, *self.args, **self.kwargs)
+        else:
+            self.callback(*self.args, **self.kwargs)
 
     def tick(self):
         ''' The heartbeat of the schedule to be called periodically.
@@ -251,17 +257,35 @@ class AtSchedule(Schedule):
 
     def __init__(self, at: datetime.datetime, *args, **kwargs):
         super().__init__(False, *args, **kwargs)
+        self.at_lock = threading.Lock()
+        self.fire_lock = threading.Lock()
         self.at = at
-        self._fired = False
+        
+    @property
+    def at(self):
+        return self._at
+    
+    @at.setter
+    def at(self, val):
+        with self.at_lock:
+            self._at = val
+            self._fired = False
 
-    def tick(self):
+    def _do_tick(self):
         now = datetime.datetime.now()
-        if not self._fired and now > at:
+        if not self._fired and self.at is not None and now > self.at:
             self.fire()
             self._fired = True
             return True
         else:
             return False
+
+    def tick(self):
+        if self.executor:
+            with self.fire_lock:
+                return self._do_tick()
+        else:
+            return self._do_tick()
 
 
 class IntervalSchedule(Schedule):
