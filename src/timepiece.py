@@ -6,7 +6,7 @@ import datetime
 import threading
 from collections import deque
 from itertools import islice
-from typing import Deque, Optional, Iterator, Dict
+from typing import List, Deque, Optional, Iterator, Dict, Any, Callable
 
 from dateutil.tz import tzlocal
 
@@ -20,7 +20,10 @@ class BaseTimer:
     # Print at most this many intervals in __repr__
     MAX_REPR_INTERVALS = 5
 
-    ''' Base clock the registers time intervals. '''
+    ''' Base clock the registers time intervals.
+
+    :param max_intervals: Maximum number of intervals to remember.
+    '''
 
     def __init__(self, max_intervals:int=10) -> None:
         self.intervals: Deque[float] = deque(maxlen=max_intervals)
@@ -237,24 +240,32 @@ class Schedule:
     :param callback: The callback to be called when the scheduler fires
     :param cbargs: Positional arguments of the callback
     :param cbkwargs: Keyword arguments of the callback
-    :param executor: If specified, callback will be sent to this executor
+    :param executor: If specified, callback will be called asynchronously, using
+        this executor.
     '''
 
-    def __init__(self, repeating, callback, cbargs=None, cbkwargs=None, executor=None):
+    def __init__(
+        self,
+        repeating: bool,
+        callback: Callable,
+        cbargs: Optional[List[Any]] = None,
+        cbkwargs: Optional[Dict[str, Any]] = None,
+        executor: Optional['concurrent.futures.Executor'] = None
+    ) -> None:
         self.repeating = repeating
         self.callback = callback
         self.cbargs = cbargs or []
         self.cbkwargs = cbkwargs or {}
         self.executor = executor
 
-    def fire(self):
+    def fire(self) -> None:
         ''' Fires the schedule calling the callback. '''
         if self.executor:
             self.executor.submit(self.callback, *self.cbargs, **self.cbkwargs)
         else:
             self.callback(*self.cbargs, **self.cbkwargs)
 
-    def tick(self): # pylint: disable=no-self-use
+    def tick(self) -> bool: # pylint: disable=no-self-use
         ''' The heartbeat of the schedule to be called periodically.
 
         :returns: True if the schedule was fired
@@ -273,19 +284,19 @@ class AtSchedule(Schedule):
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
 
-    def __init__(self, at: datetime.datetime, *args, **kwargs):
+    def __init__(self, at: datetime.datetime, *args: Any, **kwargs: Any) -> None:
         super().__init__(False, *args, **kwargs)
         self.at_lock = threading.Lock()
         self.fire_lock = threading.Lock()
         self.at = at
 
     @property
-    def at(self):
+    def at(self) -> datetime.datetime:
         ''' Property accessor for 'at'. '''
         return self._at
 
     @at.setter
-    def at(self, val):
+    def at(self, val: datetime.datetime):
         ''' Property setter for 'at'. '''
         with self.at_lock:
             self._at = val
@@ -299,7 +310,7 @@ class AtSchedule(Schedule):
             return True
         return False
 
-    def tick(self):
+    def tick(self) -> bool:
         if self.executor:
             with self.fire_lock:
                 return self._do_tick()
@@ -317,7 +328,7 @@ class IntervalSchedule(Schedule):
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
 
-    def __init__(self, interval: datetime.timedelta, *args, **kwargs):
+    def __init__(self, interval: datetime.timedelta, *args: Any, **kwargs: Any) -> None:
         super().__init__(True, *args, **kwargs)
         self.interval = interval
         self._next_fire = None
@@ -326,7 +337,7 @@ class IntervalSchedule(Schedule):
         while self._next_fire <= now:
             self._next_fire += self.interval
 
-    def tick(self):
+    def tick(self) -> bool:
         now = local_now()
         if not self._next_fire:
             self._next_fire = now
@@ -349,7 +360,7 @@ class OrdinalSchedule(Schedule):
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
 
-    def __init__(self, ordinal: int, *args, **kwargs):
+    def __init__(self, ordinal: int, *args: Any, **kwargs: Any) -> None:
         super().__init__(True, *args, **kwargs)
         self.ordinal = ordinal
         self._counter = 0
@@ -370,10 +381,10 @@ class AlarmClock:
     :param schedules: The list of the schedules.
     '''
 
-    def __init__(self, schedules=None):
+    def __init__(self, schedules: List[Schedule]=None) -> None:
         self.schedules = schedules or []
 
-    def tick(self):
+    def tick(self) -> None:
         ''' The heartbeat of the alarm clock to be called periodically.
 
         Will forward the tick to the registered schedules.
@@ -391,8 +402,10 @@ class Tachometer:
     ''' A Tachometer can be used to measure the frequency of recurring events,
     and periodically report statistics about it.
 
-    Call the `tick` method of the tachimeter each time an atomic event happens
-    (for example a new frame is being processed).
+    Call the `tick` method of the tachimeter each time an atomic event happens.
+    For example, if you are interested in the stastics of the frame processing
+    time of your application, call `tick` method each time you process a new
+    frame.
 
     Tachometer will periodically call a callback function with the following
     signature:
@@ -408,17 +421,17 @@ class Tachometer:
     :param stats_callback: A callable with the above signature that will be called
         when new statistics is available.
     :param stat_interval: The interval of the statistics calculation
-    :param executor: If specified, callback will be sent to this executor
+    :param executor: If specified, callback will be called asynchronously using this executor
     '''
 
     EXPECTED_MAX_FPS = 100
 
     def __init__(
         self,
-        stats_callback,
-        stats_interval=datetime.timedelta(seconds=60),
-        executor=None
-    ):
+        stats_callback: Callable[[datetime.datetime, float, float, float, int], None],
+        stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
+        executor: Optional['concurrent.futures.Executor'] = None
+    ) -> None:
         self.stats_callback = stats_callback
         self.schedule = IntervalSchedule(
             interval=stats_interval,
@@ -428,10 +441,13 @@ class Tachometer:
         ticker_intervals = int(self.EXPECTED_MAX_FPS * stats_interval.total_seconds())
         self.ticker = Ticker(max_intervals=ticker_intervals)
 
-    def tick(self):
-        ''' Call this method when a recurring event happens. '''
+    def tick(self) -> bool:
+        ''' Call this method when a recurring event happens.
+
+        :returns: True if the stat_callback was called in this tick.
+        '''
         self.ticker.tick()
-        self.schedule.tick()
+        return self.schedule.tick()
 
     def _calculate_stats(self):
         timestamp = local_now()
@@ -485,12 +501,12 @@ if __name__ == '__main__':
         alarmclock.tick()
         time.sleep(1/25)
 
-    def stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events):
+    def _stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events):
         print('timestamp:', timestamp)
         print(f'min: {min_proc_time:.4f}, max: {max_proc_time:.4f}, '
               f'sum: {sum_proc_time:.4f}, num: {num_events}')
 
-    tach = Tachometer(stats_callback, datetime.timedelta(seconds=2))
+    tach = Tachometer(_stats_callback, datetime.timedelta(seconds=2))
 
     for i in range(200):
         tach.tick()

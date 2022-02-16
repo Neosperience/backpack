@@ -1,5 +1,8 @@
+''' Reports Tachometer stastitics to AWS CloudWatch Metrics. '''
+
 import datetime
 import logging
+from typing import Optional, Dict
 
 import boto3
 import botocore
@@ -7,17 +10,39 @@ import botocore
 from .timepiece import Tachometer
 
 class CWTachometer(Tachometer):
-    ''' Reports Tachometer stastitics to AWS CloudWatch Metrics. '''
+    ''' Reports Tachometer stastitics to AWS CloudWatch Metrics.
+
+    The IAM policy associated with the Panorama Appplication Role of this app should grant
+    the execution of `cloudwatch:PutMetricData` operation.
+
+    :param namespace: The name of the CloudWatch namespace of this custom metrics.
+        It can be for example the name of your project.
+    :param metric_name: The name of the CloudWatch metrics. This can be for example
+        `frame_processing_time`, if you use CWTachometer to measure frame processing
+        time statistics.
+    :param dimensions: Additional CloudWatch metrics dimensions of this metric. This
+        can be for example the device and application identifier.
+    :param stats_interval: Report statistics to CloudWatch with this interval. If using
+        standard resolution metrics, this should not be less than 1 minute.
+    :param executor: If specified, the metrics will be reported asynchronously, using
+        this executor.
+    :param region: The AWS region of the CloudWatch metrics.
+    :param boto3_session: The boto3 session to be used for sending the CloudWatch metrics.
+        If left to None, CWTachometer will use the default session. If the default session
+        does not have a default region configured, you might get errors.
+    :param parent_logger: If you want to connect the logger of this class to a parent,
+        specify it here.
+    '''
     def __init__(
         self,
-        namespace,
-        metric_name,
-        dimensions=None,
-        stats_interval=datetime.timedelta(seconds=60),
-        executor=None,
-        region=None,
-        boto3_session=None,
-        parent_logger: logging.Logger=None
+        namespace: str,
+        metric_name: str,
+        dimensions: Optional[Dict[str, str]] = None,
+        stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
+        executor: Optional['concurrent.futures.Executor']=None,
+        region: Optional[str] = None,
+        boto3_session: Optional[boto3.Session] = None,
+        parent_logger: Optional[logging.Logger] = None
     ):
         super().__init__(
             stats_callback=self._stats_calback,
@@ -38,8 +63,8 @@ class CWTachometer(Tachometer):
         return [{ 'Name': name, 'Value': value } for name, value in self.dimensions.items()]
 
     def _stats_calback(
-        self, timestamp, 
-        min_proc_time, max_proc_time, 
+        self, timestamp,
+        min_proc_time, max_proc_time,
         sum_proc_time, num_events
     ):
         metric_data = {
@@ -54,19 +79,17 @@ class CWTachometer(Tachometer):
             },
             'Unit': 'Seconds'
         }
-        # self.logger.info('Putting CloudWatch metric data: %s', metric_data)
         try:
             self.cloudwatch.put_metric_data(
                 Namespace=self.namespace,
                 MetricData=[metric_data]
             )
-        except botocore.exceptions.ClientError as e:
-            self.logger.warning("Couldn't put data for metric %s.%s", self.namespace, self.metric_name)
-            self.logger.warning(str(e))
+        except botocore.exceptions.ClientError as error:
+            self.logger.warning('Couldn\'t put data for metric %s.%s', 
+                                self.namespace, self.metric_name)
+            self.logger.warning(str(error))
         except AttributeError:
-            self.logger.warning("CloudWatch client is not available.")
-        except Exception as e:
-            self.logger.warning("Exception during CloudWatch metric put: " + str(e))
+            self.logger.warning('CloudWatch client is not available.')
 
 
 if __name__ == '__main__':
@@ -75,7 +98,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     session = boto3.Session()
     from concurrent.futures import ThreadPoolExecutor
-    executor = ThreadPoolExecutor()
+    executor_ = ThreadPoolExecutor()
     tacho = CWTachometer(
         namespace='PeopleAnalytics-test',
         metric_name='frame_processing_time',
@@ -84,7 +107,7 @@ if __name__ == '__main__':
             'device_id': 'foobar'
         },
         stats_interval=datetime.timedelta(seconds=10),
-        executor=executor,
+        executor=executor_,
         boto3_session=session
     )
     tacho.logger.info(f'AWS region: {session.region_name}')

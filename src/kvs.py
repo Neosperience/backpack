@@ -1,10 +1,26 @@
-''' SpyGlass implementation that sends OpenCV frames to AWS Kinesis Video Streams. '''
+''' SpyGlass implementation that sends OpenCV frames to AWS Kinesis Video Streams.
+
+To use this class you MUST have the following dependencies correctly configured on your system:
+ - GStreamer 1.0 installed with standard plugins pack, libav, tools and development libraries
+ - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
+ - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
+ - Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
+   binaries of KVS Producer SDK GStreamer plugin is placed
+ - Environment vatiable LD_LIBRARY_PATH including the open source third party dependencies
+   compiled by KVS Producer SDK
+ - numpy
+ - boto3
+
+These dependencies can not be easily specified by a requirements.txt or a Conda environment.
+See the example Dockerfile on how to install these dependencies on your system.
+'''
 
 import re
 import os
 import datetime
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 import boto3
 from botocore.credentials import RefreshableCredentials
@@ -47,8 +63,8 @@ class KVSSpyGlass(SpyGlass):
         stream_region: str,
         stream_name: str,
         credentials_handler: 'KVSCredentialsHandler',
-        *args,
-        **kwargs
+        *args: Any,
+        **kwargs: Any
     ):
         super().__init__(*args, **kwargs)
         self.stream_region = stream_region
@@ -137,7 +153,7 @@ class KVSCredentialsHandler:
 
     def _refresh(self):
         # pylint: disable=protected-access
-        # since botocore credentials do not give access to expiry date, 
+        # since botocore credentials do not give access to expiry date,
         # we've to use protected members
         if _is_refreshable(self.credentials):
             self.logger.info(f'Refreshing credentials using {self.caller_arn}')
@@ -190,7 +206,7 @@ class KVSCredentialsHandler:
         self.save_credentials(credentials, next_update)
         self.schedule.at = next_update
 
-    def check_refresh(self):
+    def check_refresh(self) -> None:
         ''' Call this method periodically to refresh credentials. '''
         self.schedule.tick()
 
@@ -198,7 +214,7 @@ class KVSCredentialsHandler:
         self,
         credentials: 'botocore.credentials.Credentials',
         next_update: datetime.datetime
-    ):
+    ) -> None:
         ''' Saves the credentials for Kinesis Video Stream Producer component.
 
         This method should be implemented in subclasses.
@@ -211,7 +227,7 @@ class KVSCredentialsHandler:
         ''' Returns a string that should be included in the kvssing plugin config.'''
         return ''
 
-    def plugin_config_mask(self, plugin_config) -> str: # pylint: disable=no-self-use
+    def plugin_config_mask(self, plugin_config: str) -> str: # pylint: disable=no-self-use
         ''' Masks credentials for printing in logs. '''
         return plugin_config
 
@@ -223,7 +239,7 @@ class KVSInlineCredentialsHandler(KVSCredentialsHandler):
     no way to refresh the credentials once they were passed to KVS Producer.
     '''
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if _is_refreshable(self.credentials):
             raise RuntimeError(
@@ -232,13 +248,13 @@ class KVSInlineCredentialsHandler(KVSCredentialsHandler):
                 'kvssink plugin configuration.'
             )
 
-    def plugin_config(self):
+    def plugin_config(self) -> None:
         return ' '.join([
             f'access-key="{self.credentials.access_key}"',
             f'secret-key="{self.credentials.secret_key}"',
         ])
 
-    def plugin_config_mask(self, plugin_config):
+    def plugin_config_mask(self, plugin_config: str) -> str:
         ''' Masks credentials for printing in logs. '''
         res = plugin_config
         res = re.sub(r'secret-key="([^"]*)"', 'secret-key="*****"', res)
@@ -257,7 +273,11 @@ class KVSEnvironmentCredentialsHandler(KVSCredentialsHandler):
     only with static credentials.
     '''
 
-    def save_credentials(self, credentials, next_update):
+    def save_credentials(
+        self,
+        credentials: 'botocore.credentials.Credentials',
+        next_update: datetime.datetime
+    ):
         if _is_refreshable(self.credentials):
             credentials = credentials.get_frozen_credentials()
             os.environ['AWS_SESSION_TOKEN'] = credentials.token
@@ -328,5 +348,5 @@ class KVSFileCredentialsHandler(KVSCredentialsHandler):
         with open(self.credentials_path, 'w', encoding='utf-8') as credentials_file:
             credentials_file.write(credentials_str)
 
-    def plugin_config(self):
+    def plugin_config(self) -> str:
         return f'credential-path="{self.credentials_path}"'

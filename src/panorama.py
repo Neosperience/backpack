@@ -2,19 +2,23 @@
 
 import os
 import logging
+import datetime
+from typing import Dict
 
 import boto3
 
 class AutoIdentity:
     ''' AutoIdentity instance queries metadata of the current application instance.
 
-    The IAM policy associated with the Panorama Appplication Role of this app should allow 
-    the execution of panorama.ListApplicationInstances operation.
+    The IAM policy associated with the Panorama Appplication Role of this app should grant
+    the execution of `panorama:ListApplicationInstances` operation.
 
     :param device_region: The AWS region where this Panorama appliance is registered.
     :param application_instance_id: The application instance id. If left to None,
         AutoIdentity will try to find the instance id in the environment variable.
     :param parent_logger: If you want to connect the logger to a parent, specify it here.
+
+    Upon successfully initialization, AutoIdentity will fill out the following properties:
 
     :ivar application_created_time: Application deployment time.
     :ivar application_instance_id: Application instance id.
@@ -31,14 +35,16 @@ class AutoIdentity:
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)
         )
-        self.application_instance_id = application_instance_id or os.environ.get('AppGraph_Uid')
-        self.application_name = None
-        self.device_id = None
-        self.device_name = None
-        self.application_created_time = None
-        self.application_status = None
-        self.application_tags = None
-        self.application_description = None
+        self.application_instance_id: str = (
+            application_instance_id or os.environ.get('AppGraph_Uid')
+        )
+        self.application_name: str = None
+        self.device_id: str = None
+        self.device_name: str = None
+        self.application_created_time: datetime.datetime = None
+        self.application_status: str = None
+        self.application_tags: Dict[str, str]  = None
+        self.application_description: str = None
         if not self.application_instance_id:
             self._logger.warning('Could not find application instance id '
                                  'in environment variable "AppGraph_Uid"')
@@ -79,8 +85,8 @@ class AutoIdentity:
                 next_token = response['NextToken']
             else:
                 break
-        
+
     def _app_instance_data(self, application_instance_id):
-        matches = [inst for inst in self._list_app_instances() \
+        matches = [inst for inst in self._list_app_instances()
                    if inst.get('ApplicationInstanceId') == application_instance_id]
         return matches[0] if matches else None

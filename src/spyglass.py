@@ -218,19 +218,19 @@ class SpyGlass:
         return fps, width, height
 
     @property
-    def state(self):
+    def state(self) -> SpyGlass.State:
         ''' State of the SpyGlass. '''
         return self._state
 
     @state.setter
-    def state(self, state):
+    def state(self, state: SpyGlass.State) -> None:
         ''' Set the state of the SpyGlass. '''
         self.logger.info(f'state = {state}')
         self._state = state
 
     # Events
 
-    def start_streaming(self):
+    def start_streaming(self) -> None:
         ''' Start the streaming.
 
         After calling this method, you are exepcted to call the `put` method at
@@ -303,7 +303,7 @@ class SpyGlass:
         assert False, f'Unhandled SpyGlass state {self.state}'
         return False
 
-    def stop_streaming(self):
+    def stop_streaming(self) -> None:
         ''' Stops the streaming.
 
         Successive calls to `put` method will silently discard the frames.
