@@ -235,24 +235,24 @@ class Schedule:
 
     :param repeating: If this schedule fires repeatedly
     :param callback: The callback to be called when the scheduler fires
-    :param args: Positional arguments of the callback
-    :param kwargs: Keyword arguments of the callback
+    :param cbargs: Positional arguments of the callback
+    :param cbkwargs: Keyword arguments of the callback
     :param executor: If specified, callback will be sent to this executor
     '''
 
-    def __init__(self, repeating, callback, args=None, kwargs=None, executor=None):
+    def __init__(self, repeating, callback, cbargs=None, cbkwargs=None, executor=None):
         self.repeating = repeating
         self.callback = callback
-        self.args = args or []
-        self.kwargs = kwargs or {}
+        self.cbargs = cbargs or []
+        self.cbkwargs = cbkwargs or {}
         self.executor = executor
 
     def fire(self):
         ''' Fires the schedule calling the callback. '''
         if self.executor:
-            self.executor.submit(self.callback, *self.args, **self.kwargs)
+            self.executor.submit(self.callback, *self.cbargs, **self.cbkwargs)
         else:
-            self.callback(*self.args, **self.kwargs)
+            self.callback(*self.cbargs, **self.cbkwargs)
 
     def tick(self): # pylint: disable=no-self-use
         ''' The heartbeat of the schedule to be called periodically.
@@ -387,6 +387,64 @@ class AlarmClock:
             self.schedules.remove(schedule)
 
 
+class Tachometer:
+    ''' A Tachometer can be used to measure the frequency of recurring events,
+    and periodically report statistics about it.
+
+    Call the `tick` method of the tachimeter each time an atomic event happens
+    (for example a new frame is being processed).
+
+    Tachometer will periodically call a callback function with the following
+    signature:
+
+    ```python
+    def stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events):
+        pass
+    ```
+
+    passing the minimum, maximum and total processing time, the number of measurements
+    and the timestamp of the last event.
+
+    :param stats_callback: A callable with the above signature that will be called
+        when new statistics is available.
+    :param stat_interval: The interval of the statistics calculation
+    :param executor: If specified, callback will be sent to this executor
+    '''
+
+    EXPECTED_MAX_FPS = 100
+
+    def __init__(
+        self,
+        stats_callback,
+        stats_interval=datetime.timedelta(seconds=60),
+        executor=None
+    ):
+        self.stats_callback = stats_callback
+        self.schedule = IntervalSchedule(
+            interval=stats_interval,
+            callback=self._calculate_stats,
+            executor=executor
+        )
+        ticker_intervals = int(self.EXPECTED_MAX_FPS * stats_interval.total_seconds())
+        self.ticker = Ticker(max_intervals=ticker_intervals)
+
+    def tick(self):
+        ''' Call this method when a recurring event happens. '''
+        self.ticker.tick()
+        self.schedule.tick()
+
+    def _calculate_stats(self):
+        timestamp = local_now()
+        if len(self.ticker.intervals) == 0:
+            return
+        min_proc_time = min(self.ticker.intervals)
+        max_proc_time = max(self.ticker.intervals)
+        num_events = len(self.ticker.intervals)
+        sum_proc_time = sum(self.ticker.intervals)
+        self.stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events)
+        self.ticker.intervals.clear()
+
+
 if __name__ == '__main__':
     import random
     with StopWatch('root') as root:
@@ -414,15 +472,26 @@ if __name__ == '__main__':
 
     cb = lambda name: print(f'{name} was called at {datetime.datetime.now()}')
 
-    at_ = datetime.datetime.now() + datetime.timedelta(seconds=3)
-    atschedule = AtSchedule(at=at_, callback=cb, kwargs={'name': 'AtSchedule'})
+    at_ = local_now() + datetime.timedelta(seconds=3)
+    atschedule = AtSchedule(at=at_, callback=cb, cbkwargs={'name': 'AtSchedule'})
 
     iv = datetime.timedelta(seconds=1.35)
-    ivschedule = IntervalSchedule(interval=iv, callback=cb, kwargs={'name': 'IntervalSchedule'})
+    ivschedule = IntervalSchedule(interval=iv, callback=cb, cbkwargs={'name': 'IntervalSchedule'})
 
-    ordinalschedule = OrdinalSchedule(ordinal=17, callback=cb, kwargs={'name': 'OrdinalSchedule'})
+    ordinalschedule = OrdinalSchedule(ordinal=17, callback=cb, cbkwargs={'name': 'OrdinalSchedule'})
     alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
 
     for i in range(25*5):
         alarmclock.tick()
         time.sleep(1/25)
+
+    def stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events):
+        print('timestamp:', timestamp)
+        print(f'min: {min_proc_time:.4f}, max: {max_proc_time:.4f}, '
+              f'sum: {sum_proc_time:.4f}, num: {num_events}')
+
+    tach = Tachometer(stats_callback, datetime.timedelta(seconds=2))
+
+    for i in range(200):
+        tach.tick()
+        time.sleep(random.random() / 10)
