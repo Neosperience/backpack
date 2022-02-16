@@ -137,7 +137,7 @@ class KVSCredentialsHandler:
 
     def _refresh(self):
         # pylint: disable=protected-access
-        # until botocore credentials do not give access to expiry date,
+        # since botocore credentials do not give access to expiry date, 
         # we've to use protected members
         if _is_refreshable(self.credentials):
             self.logger.info(f'Refreshing credentials using {self.caller_arn}')
