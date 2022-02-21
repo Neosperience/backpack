@@ -1,4 +1,7 @@
-''' SpyGlass can be used to send OpenCV frames to a GStreamer pipeline. '''
+''' SpyGlass can be used to send OpenCV frames to a GStreamer pipeline, and 
+annotation drivers unify the drawing API of different backends (for example, 
+OpenCV or panoramasdk.media).
+'''
 
 import os
 import time
@@ -7,16 +10,16 @@ import logging
 from collections import OrderedDict
 import datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Tuple, Optional, Any, Callable
+import datetime
+from abc import ABC, abstractmethod
 
 import cv2
 from dotenv import find_dotenv, dotenv_values
 
-from .utils import add_timestamp
+class SpyGlass(ABC):
 
-class SpyGlass:
-
-    ''' Base class for sending OpenCV frames to a remote service using GStreamer.
+    ''' Abstract base class for sending OpenCV frames to a remote service using GStreamer.
 
     SpyGlass can be used to create programatically a video stream and send it to
     an external video ingestion service supported by GStreamer. Once the SpyGlass
@@ -124,6 +127,7 @@ class SpyGlass:
             )
             return False
 
+    @abstractmethod
     def _get_pipeline(self, fps: float, width: int, height: int) -> str:
         ''' Returns to GStreamer pipeline definition.
 
@@ -133,7 +137,7 @@ class SpyGlass:
             'SpyGlass._get_pipeline() should be implemented in subclasses'
         )
 
-    def _put_frame(self, frame, timestamp, show_timestamp):
+    def _put_frame(self, frame):
         size = (self._int_width, self._int_height)
         resized = cv2.resize(frame, size, interpolation=cv2.INTER_LINEAR)
         if not self._video_writer or not self._video_writer.isOpened():
@@ -141,9 +145,6 @@ class SpyGlass:
                 'Tried to write to cv2.VideoWriter but it is not opened'
             ))
             return False
-        if show_timestamp:
-            timestamp = timestamp or datetime.datetime.now()
-            add_timestamp(resized, timestamp=timestamp)
         self._video_writer.write(resized)
         return True
 
@@ -218,12 +219,12 @@ class SpyGlass:
         return fps, width, height
 
     @property
-    def state(self) -> SpyGlass.State:
+    def state(self) -> 'SpyGlass.State':
         ''' State of the SpyGlass. '''
         return self._state
 
     @state.setter
-    def state(self, state: SpyGlass.State) -> None:
+    def state(self, state: 'SpyGlass.State') -> None:
         ''' Set the state of the SpyGlass. '''
         self.logger.info(f'state = {state}')
         self._state = state
@@ -250,16 +251,10 @@ class SpyGlass:
     def put(
         self,
         frame: 'np.array',
-        timestamp: Optional[datetime.datetime] = None,
-        show_timestamp: bool = False
     ) -> bool:
         ''' Put a frame to the video stream.
 
         :param frame: A numpy array of (height, width, 3) shape and of `np.uint8` type.
-        :param timestamp: If you have a presentation timestamp of the frame,
-            you can set it here. It will be sent downstream on the pipeline on a
-            best-effort basis.
-        :param show_timestamp: Show a timestamp on the video stream.
         :return: True if the frame was effectively put on the downstream pipeline.
         '''
 
@@ -297,7 +292,7 @@ class SpyGlass:
             return False
 
         if self.state == SpyGlass.State.STREAMING:
-            return self._put_frame(frame, timestamp, show_timestamp)
+            return self._put_frame(frame)
 
         # Should not arrive here
         assert False, f'Unhandled SpyGlass state {self.state}'

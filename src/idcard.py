@@ -3,14 +3,14 @@
 import os
 import logging
 import datetime
-from typing import Dict
+from typing import Dict, Tuple
 
 import boto3
 
 class AutoIdentity:
     ''' AutoIdentity instance queries metadata of the current application instance.
 
-    The IAM policy associated with the Panorama Appplication Role of this app should grant
+    The IAM policy associated with the Panorama Application Role of this app should grant
     the execution of `panorama:ListApplicationInstances` operation.
 
     :param device_region: The AWS region where this Panorama appliance is registered.

@@ -93,8 +93,8 @@ class KVSSpyGlass(SpyGlass):
         self.logger.info(f'GStreamer pipeline definition:\n{pipeline_safe}')
         return pipeline
 
-    def _put_frame(self, frame, timestamp, show_timestamp):
-        result = super()._put_frame(frame, timestamp, show_timestamp)
+    def _put_frame(self, *args, **kwargs):
+        result = super()._put_frame(*args, **kwargs)
         self.credentials_handler.check_refresh()
         return result
 

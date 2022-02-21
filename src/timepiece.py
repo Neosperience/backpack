@@ -6,13 +6,22 @@ import datetime
 import threading
 from collections import deque
 from itertools import islice
-from typing import List, Deque, Optional, Iterator, Dict, Any, Callable
+from typing import List, Deque, Optional, Iterator, Dict, Any, Callable, Tuple
 
 from dateutil.tz import tzlocal
 
 def local_now():
     ''' Returns the current time in local time zone. '''
     return datetime.datetime.now(tzlocal())
+
+
+def panorama_timestamp_to_datetime(panorama_ts: Tuple[int, int]) -> datetime.datetime:
+    ''' Converts panoramasdk.media.time_stamp (seconds, microsececonds)
+    tuple to python datetime.
+    '''
+    sec, microsec = panorama_ts
+    return datetime.datetime.fromtimestamp(sec + microsec / 1000000.0)
+
 
 class BaseTimer:
     ''' Base class for code execution time measuring timers.'''
@@ -463,6 +472,8 @@ class Tachometer:
 
 if __name__ == '__main__':
     import random
+    from concurrent.futures import ThreadPoolExecutor
+    
     with StopWatch('root') as root:
         with root.child('task1', max_intervals=5) as task1:
             time.sleep(0.01)
@@ -474,8 +485,9 @@ if __name__ == '__main__':
                 time.sleep(0.09)
             with subtask1_1:
                 time.sleep(0.05)
-        with root.child('task2') as task2:
-            time.sleep(0.17)
+        for i in range(5):
+            with root.child('task2') as task2:
+                time.sleep(random.random() / 10)
     print(root)
 
     ticker = Ticker(max_intervals=20)
@@ -487,14 +499,31 @@ if __name__ == '__main__':
     print('\n')
 
     cb = lambda name: print(f'{name} was called at {datetime.datetime.now()}')
+    executor = ThreadPoolExecutor()
 
-    at_ = local_now() + datetime.timedelta(seconds=3)
-    atschedule = AtSchedule(at=at_, callback=cb, cbkwargs={'name': 'AtSchedule'})
+    at = local_now() + datetime.timedelta(seconds=3)
+    atschedule = AtSchedule(
+        at=at, 
+        callback=cb, 
+        cbkwargs={'name': 'AtSchedule'}, 
+        executor=executor
+    )
 
     iv = datetime.timedelta(seconds=1.35)
-    ivschedule = IntervalSchedule(interval=iv, callback=cb, cbkwargs={'name': 'IntervalSchedule'})
+    ivschedule = IntervalSchedule(
+        interval=iv, 
+        callback=cb, 
+        cbkwargs={'name': 'IntervalSchedule'},
+        executor=executor
+    )
 
-    ordinalschedule = OrdinalSchedule(ordinal=17, callback=cb, cbkwargs={'name': 'OrdinalSchedule'})
+    ordinalschedule = OrdinalSchedule(
+        ordinal=17, 
+        callback=cb, 
+        cbkwargs={'name': 'OrdinalSchedule'},
+        executor=executor
+    )
+
     alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
 
     for i in range(25*5):
