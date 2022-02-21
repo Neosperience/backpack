@@ -1,0 +1,114 @@
+# Example Dockerfile that installs all required dependencies for KVSSpyGlass
+
+FROM public.ecr.aws/panorama/panorama-application
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -y
+
+# Install build tools
+
+RUN apt-get -y install build-essential cmake m4 git
+RUN apt-get -y install pkg-config
+
+# Install gstreamer
+
+RUN apt-get install -y libgstreamer1.0-0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly \
+            gstreamer1.0-libav \
+            gstreamer1.0-doc \
+            gstreamer1.0-tools \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            protobuf-compiler \
+            libgtk2.0-dev \
+            ocl-icd-opencl-dev
+
+# numpy linker helper
+
+RUN ln -s $(python3 -c "import numpy as np; print(np.__path__[0])")/core/include/numpy /usr/include/numpy
+
+# Clone OpenCV repo
+
+RUN mkdir -p /opt
+WORKDIR /opt
+RUN git clone https://github.com/opencv/opencv.git
+WORKDIR /opt/opencv
+RUN git checkout 4.2.0
+
+# Build OpenCV
+
+RUN mkdir -p /opt/opencv/build
+WORKDIR /opt/opencv/build
+
+ENV PYTHON_EXECUTABLE=/usr/bin/python3
+
+RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
+    -D INSTALL_PYTHON_EXAMPLES=OFF \
+    -D INSTALL_C_EXAMPLES=OFF \
+    -D PYTHON2_EXECUTABLE=$(which python) \
+    -D PYTHON_EXECUTABLE=$(which python3) \
+    -D BUILD_opencv_python2=OFF \
+    -D BUILD_opencv_python3=ON \
+    -D BUILD_TESTS=OFF \
+    -D DBUILD_PERF_TESTS=OFF \
+    -D CMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
+    -D PYTHON3_EXECUTABLE=$(which python3) \
+    -D PYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+    -D PYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
+    -D WITH_GSTREAMER=ON \
+    -D BUILD_EXAMPLES=OFF \
+    -D WITH_GTK=OFF \
+    ..
+RUN make -j$(nproc)
+
+# Install OpenCV
+
+RUN make install
+RUN ldconfig
+
+ENV LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1
+
+# Download Kinesis Video Streams producer C++ SDK
+
+WORKDIR /opt
+RUN git clone https://github.com/awslabs/amazon-kinesis-video-streams-producer-sdk-cpp.git
+
+# Build KVS producer C++ SDK
+
+RUN mkdir -p /opt/amazon-kinesis-video-streams-producer-sdk-cpp/build
+WORKDIR /opt/amazon-kinesis-video-streams-producer-sdk-cpp/build
+RUN cmake -D BUILD_GSTREAMER_PLUGIN=ON \
+    -D BUILD_TEST=FALSE \
+    ..
+
+RUN make -j$(nproc)
+
+ENV GST_PLUGIN_PATH=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/build
+ENV LD_LIBRARY_PATH=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local/lib
+
+# Create GStreamer cache directory
+RUN mkdir -p /root/.cache/gstreamer-1.0/
+
+WORKDIR /
+RUN mkdir -p /panorama
+
+# for some reason, the GST_PLUGIN_PATH and LD_LIBRARY_PATH environment variables defined
+# above are not visible from within the container. We will replicate them in the
+# /panorama/.env file that will be read from application code.
+RUN echo "GST_PLUGIN_PATH=\"${GST_PLUGIN_PATH}\"\nLD_LIBRARY_PATH=\"${LD_LIBRARY_PATH}\"\n" > /panorama/.env
+
+# kvs log configuration example. Feel free to download and modify this file and copy your
+# custom version into the container
+RUN curl https://github.com/neosperience/backpack/raw/main/resources/kvs_log_configuration -o /kvs_log_configuration
+
+# Install backpack
+RUN pip install git+https://github.com/neosperience/backpack.git
+
+# Install your application dependencies and copy your application code here, for example:
+
+# RUN pip install requests
+# COPY src /panorama
