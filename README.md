@@ -2,11 +2,17 @@
 
 > Your hiking equipment for an enjoyable Panorama development experience
 
-Backpack is a toolset that makes development for AWS Panorama. AWS Panorama is is a machine learning appliance and software development kit that can be used to develop intelligent video analytics and computer vision applications, deployed on an edge device. For more information, refer to the [Panorama page](https://aws.amazon.com/panorama/) on AWS website.
+Backpack is a toolset that makes development for AWS Panorama. AWS Panorama is is a machine learning appliance and software development kit that can be used to develop intelligent video analytics and computer vision applications, deployed on an edge device. For more information, refer to the [Panorama page](https://aws.amazon.com/panorama/) on the AWS website.
+
+Backpack provides the following modules:
+ - *idcard.AutoIdentity* allows your application to learn more about itself and the host device. It gives access to the Panorama device id, application instance id, application name and description, and other similar information.
+ - *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (pre-processing, model invocation, post-processing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
+ - *SpyGlass* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSpyGlass* is an implementation of a SpyGlass pipeline that lets you send the processed video to AWS Kinesis Video Streams.
+ - *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
 
 ## Installation
 
-Backpack consists of several loosely coupled components, each solving a specific tasks. Backpack python package is expected to be installed in the docker container of your Panorama application with pip, so you would add the following line to your `Dockerfile`:
+Backpack consists of several loosely coupled components, each solving a specific task. Backpack python package is expected to be installed in the docker container of your Panorama application with pip, so you would add the following line to your `Dockerfile`:
 
 ```docker
 RUN pip install git+https://github.com/neosperience/backpack.git
@@ -16,7 +22,7 @@ Some components have particular dependencies that can not be installed with the 
 
 ## Permissions
 
-Several components of Backpack call AWS services in the account where your Panorama appliance is provisioned. To use these components, you should grant permissions to the Panorama Application IAM Role to use these services. Please refer to [AWS Panorama documentation](https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html) for more information. For each components, we will list the services required by the component. For example, `AutoIdentity` needs the permission to execute the following AWS service operations:
+Several components of Backpack call AWS services in the account where your Panorama appliance is provisioned. To use these components, you should grant permissions to the Panorama Application IAM Role to use these services. Please refer to [AWS Panorama documentation](https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html) for more information. For each component, we will list the services required by the component. For example, `AutoIdentity` needs permission to execute the following AWS service operations:
 
  - `panorama:ListApplicationInstances`
 
@@ -37,7 +43,7 @@ The rest of this readme discusses the different components that can be found in 
 
 ## AutoIdentity 📛
 
-When you application code is running in a Panorama application, there is no official way to know details about which device is running your app, or which deployment version of your app is currently running. `AutoIdentity` queries these details directly calling AWS Panorama management services based on the UID of your Application that you typically can find in the `AppGraph_Uid` environment variable. When instantiating the `AutoIdentity` object, you should pass the AWS region name where your Panorama appliance is provisioned. You can pass the region name for exampel as an application parameter.
+When your application's code is running in a Panorama application, there is no official way to know details about which device is running your app, or which deployment version of your app is currently running. `AutoIdentity` queries these details directly calling AWS Panorama management services based on the UID of your Application that you typically can find in the `AppGraph_Uid` environment variable. When instantiating the `AutoIdentity` object, you should pass the AWS region name where your Panorama appliance is provisioned. You can pass the region name for example as an application parameter.
 
 To successfully use AutoIdentity, you should grant the execution of the following operations to the Panorama Application IAM Role:
 
@@ -46,7 +52,7 @@ To successfully use AutoIdentity, you should grant the execution of the followin
 Example usage:
 
 ```python
-from backpack.panorama import AutoIdentity
+from backpack.idcard import AutoIdentity
 
 auto_identity = AutoIdentity(device_region='us-east-1')
 print(auto_identity)
@@ -70,11 +76,11 @@ You can access all these details as the properties of the `AutoIdentity` object,
 
 ## Timepiece ⌚
 
-Timepiece component includes classes that allows you to easily time profile your video processing pipeline. For detailed information, please check the API documentation.
+Timepiece component includes classes that allow you to easily time profile your video processing pipeline. For detailed information, please check the API documentation.
 
 ### Ticker
 
-`Ticker` allows you to calculate statistics of the time intervals between recurring events. You can use ticker for example to get statistics about how much time your application spends to process frames.
+`Ticker` allows you to calculate statistics of the time intervals between recurring events. You can use a ticker for example to get statistics about how much time your application spends to process frames.
 
 Example usage:
 ```python
@@ -96,7 +102,7 @@ This code returns the time interval (in seconds) between the last five `tick()` 
 
 ### StopWatch
 
-With `StopWatch` you can measure the execution time of a code block, even repeatedly, and get statistics about the time spent on different invocations. You can use `StopWatch` for example to profile the inference time of your machine learning model, or your preprocessing or postprocessing functions. `StopWatch` can be organized in a hierarchy, where the parent watch measures the summary of the time of child watches.
+With `StopWatch`, you can measure the execution time of a code block, even repeatedly, and get statistics about the time spent on different invocations. You can use `StopWatch` for example to profile the inference time of your machine learning model, or your preprocessing or postprocessing functions. Stopwatches can be organized in a hierarchy, where the parent watch measures the summary of the time of child watches.
 
 Example usage:
 
@@ -139,9 +145,9 @@ You can access all interval data, as well as the statistical values using `StopW
 
 Schedules allow you to schedule the execution of a function at a later time. 
 
-It is important to note that `Schedule` instances does not intrinsically have any event loop or use kernel based timing operations. Instead, you are expected to call regularly the `tick()` method of the `Schedule`, and the scheduled function will be executed when the next `tick()` is called after the scheduled time. When developing Panorama applications, you typicallly call the `tick()` function in the main frame processing loop. 
+It is important to note that `Schedule` instances do not intrinsically have an event loop or use kernel-based timing operations. Instead, you are expected to call regularly the `tick()` method of the `Schedule`, and the scheduled function will be executed when the next `tick()` is called after the scheduled time. When developing Panorama applications, you typically call the `tick()` function in the frame processing loop. 
 
-You can also specify a [python executor](https://docs.python.org/3/library/concurrent.futures.html) when creating `Schedule` objects. If an executor is specified, the scheduled function will be called asynchronously using that executor. This way the `tick()` function can immediately return, and the scheduled function will be called in another thread.
+You can also specify a [python executor](https://docs.python.org/3/library/concurrent.futures.html) when creating `Schedule` objects. If an executor is specified, the scheduled function will be called asynchronously using that executor. This way the `tick()` function can immediately return and the scheduled function will be called in another thread.
 
 The following Schedules are available to you:
 
@@ -198,7 +204,7 @@ OrdinalSchedule was called at 2022-02-18 13:08:31.776985+00:00
 
 ### Tachometer
 
-A `Tachometer` combines a `Ticker` and an `IntervalSchedule` to measure the time interval of a recurring event, and periodically report statistics about it. You can used it for example to report the frame processing time statistics to an external service. You can specify the reporting interval and a callback function that will be called with the timing statistics. In this case, the use of an *executor* is highly recommended, as your reporting callback can take considerable amount of time to finish, and you might not want to hold up your processing loop synchronously meanwhile.
+A `Tachometer` combines a `Ticker` and an `IntervalSchedule` to measure the time interval of a recurring event, and periodically report statistics about it. You can use it for example to report the frame processing time statistics to an external service. You can specify the reporting interval and a callback function that will be called with the timing statistics. In this case, the use of an *executor* is highly recommended, as your reporting callback can take a considerable amount of time to finish, and you might not want to hold up your processing loop synchronously meanwhile.
 
 Example usage:
 
@@ -236,7 +242,7 @@ min: 0.0028, max: 0.0975, sum: 1.9781, num: 39
 
 ### CWTachometer 
 
-`CWTachometer` is a `Tachometer` subclass that reports frame processing time statistics to [AWS CloudWatch Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html) service. You can use this class as a drop-in to your frame processing loop. It will give you detailed statistics about the behavior the timing of your application and you can mount [CloudWatch alarms](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) on this metric to receive email or sms notification when your application stops processing the video for whatever reason.
+`CWTachometer` is a `Tachometer` subclass that reports frame processing time statistics to [AWS CloudWatch Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html) service. You can use this class as a drop-in to your frame processing loop. It will give you detailed statistics about the behavior the timing of your application and you can mount [CloudWatch alarms](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) on this metric to receive email or SMS notifications when your application stops processing the video for whatever reason.
 
 To successfully use `CWTachometer`, you should grant the execution of the following operations to the Panorama Application IAM Role:
 
@@ -300,33 +306,34 @@ main()
 
 ## SpyGlass 🔭
 
-As you may know, the only official way to get visual feedback of the correct functionality of your Panorama application is to physically connect a display to the HDMI port of the Panorama appliance. When connected, the display will show the output video stream of a single application deployed on the device. However, physically accessing the appliance is not always feasible. SpyGlass allows you to re-stream the output video of your Panorama application to an external service, for example to [AWS Kinesis Video Streams](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html). This can be very convenient to remotely monitor your application.
+As you may know, the only official way to get visual feedback on the correct functionality of your Panorama application is to physically connect a display to the HDMI port of the Panorama appliance. When connected, the display will show the output video stream of a single application deployed on the device. However, physically accessing the appliance is not always feasible. SpyGlass allows you to re-stream the output video of your Panorama application to an external service, for example to [AWS Kinesis Video Streams](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html). This can be very convenient to remotely monitor your application.
 
 ### Warning notes about using SpyGlass
 
-Even if SpyGlass is a very helpfull tool, using it might arise two concerns that you should consider carefully. For the same reason we discourage using SpyGlass in a production environment: it is principally a development aid or at most a debugging tool. 
+Even if SpyGlass is a very helpful tool, using it might arise two concerns that you should consider carefully. For the same reason we discourage using SpyGlass in a production environment: it is principally a development aid or at most a debugging tool. 
 
-The first concern is of technical nature. As currently the application code in a Panorama app does not have direct access to the onboard GPU, all video encoding codecs used by SpyGlass run on the CPU of the device. This could take precious computing time from the CPUs that occupy with streaming the output instead of processing the video. We measured that streaming a single output stream with SpyGlass could require anything between 10-30% of the CPU capacity of the device. 
+The first concern is of technical nature. Currently the application code in a Panorama app does not have direct access to the onboard GPU, thus all video encoding codecs used by SpyGlass run on the CPU of the device. This could take precious computing time from the CPUs that occupy with streaming the output instead of processing the video. We measured that streaming a single output stream with SpyGlass could require anything between 10-30% of the CPU capacity of the device. 
 
-The second concern regards data protection. The Panorama appliance is designed so to strongly protect the video streams being processed: it has even two ethernet port to separate the network of the video cameras (typically a closed-circuit local area network) and the Internet access of the device. Using SpyGlass you might effectively relay the video stream from the protected, closed circuit camera network to the public Internet. For this reason, you should carefully examine the data protection requirements of your application and the camera network before integrating SpyGlass.
+The second concern regards data protection. The Panorama appliance is designed so to strongly protect the video streams being processed: it has even two ethernet interfaces to physically separate the network of the video cameras (typically a closed-circuit local area network) and the Internet access of the device. Using SpyGlass you might effectively relay the video stream from the protected, closed-circuit camera network to the public Internet. For this reason, you should carefully examine the data protection requirements of your application and the camera network before integrating SpyGlass.
 
 ### How does it work?
 
-Technically speaking, SpyGlass instantiates a [GStreamer pipeline](https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html) with an [appsrc](https://gstreamer.freedesktop.org/documentation/app/appsrc.html) element at the head. An [OpenCV VideoWriter](https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html) is configured to write to the `appsrc` element: instead of saving the consecutive frames to a video file, it streams to the output sink. When opening the `VideoWriter` instance, the user should specify the frame width and height, as well as the frame rate of the output stream. You can manually specify these parameters or let SpyGlass infer these values from the input dimensions and the frequency you send new frames to it. If using this auto-configuration features, some frames (by default 100) will be discarded at the beginning of the streaming, as they will be used to calculate statistics of the frame rate and measure the frame dimensions. This phase is referred to as "warmup" state of SpyGlass. If later on you send frames of different dimensions compared to the expected width and height, SpyGlass will redimension the input, but this has a performance penalty of the pipeline. You are also expected to send new frames to SpyGlass with the frequency specified in the frame-per-second parameter. If you send frames slower or faster, the KVS video fragements get out-of-sync and you won't be able to play back the video continuously.
+Technically speaking, SpyGlass instantiates a [GStreamer pipeline](https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html) with an [appsrc](https://gstreamer.freedesktop.org/documentation/app/appsrc.html) element at the head. An [OpenCV VideoWriter](https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html) is configured to write to the `appsrc` element: instead of saving the consecutive frames to a video file, it streams to the output sink. When opening the `VideoWriter` instance, the user should specify the frame width and height, as well as the frame rate of the output stream. You can manually specify these parameters or let SpyGlass infer these values from the input dimensions and the frequency you send new frames to it. If using this auto-configuration feature, some frames (by default 100) will be discarded at the beginning of the streaming, as they will be used to calculate statistics of the frame rate and measure the frame dimensions. This phase is referred to as the "warmup" state of SpyGlass. If later on, you send frames of different dimensions compared to the expected width and height, SpyGlass will redimension the input, but this has a performance penalty of the pipeline. You are also expected to send new frames to SpyGlass with the frequency specified in the frame-per-second parameter. If you send frames slower or faster, the KVS video fragments get out of sync and you won't be able to play back the video continuously.
 
 ### Configuring the Panorama Application Docker container
 
 SpyGlass depends on a set of custom compiled external libraries. You should have all these libraries compiled and configured correctly in your application's docker container in order to make `SpyGlass` work correctly. These libraries include:
 
- - GStreamer 1.0 installed with standard plugins pack, libav, tools and development libraries
+ - GStreamer 1.0 installed with standard plugins pack, libav, tools, and development libraries
  - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
  - numpy (it is typically installed by the base docker image of your Panorama application)
 
 Furthermore, if you want to use `KVSSpyGlass`, the `SpyGlass` implementation that streams the video to Kinesis Video Streams, you will need also the following libraries:
+
  - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
  - Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
    binaries of KVS Producer SDK GStreamer plugin is placed
- - Environment vatiable LD_LIBRARY_PATH including the open source third party dependencies
+ - Environment variable LD_LIBRARY_PATH including the open-source third-party dependencies
    compiled by KVS Producer SDK
  - boto3 (it is typically installed by the base docker image of your Panorama application)
 
@@ -340,13 +347,15 @@ Compared to the `SpyGlass` base class, `KVSSpyGlass` adds an additional element 
  - kinesisvideo:GetStreamingEndpoint
  - kinesisvideo:PutMedia
 
-You should configure this user to have programmatic access to AWS resources, and get the AWS Access Key and Secret Key pair of the user. These are so-called static credentials that do not expire. You can create a `KVSInlineCredentialsHandler` or `KVSEnvironmentCredentialsHandler` instance to pass these credentials to KVS Producer Plugin directly in the GStreamer pipeline definition, or as environment variables. However as these credentials do not expire, it is not recommended to use this setting in production environment. Even in a development and testing environment you should take the appropriate security measures to protect these credentials: never hard code them in the source code. Instead, use AWS Secret Manager or similar service to provision the these parameters.
+You should configure this user to have programmatic access to AWS resources, and get the AWS Access Key and Secret Key pair of the user. These are so-called static credentials that do not expire. You can create a `KVSInlineCredentialsHandler` or `KVSEnvironmentCredentialsHandler` instance to pass these credentials to KVS Producer Plugin directly in the GStreamer pipeline definition, or as environment variables. However as these credentials do not expire, it is not recommended to use this setting in a production environment. Even in a development and testing environment, you should take the appropriate security measures to protect these credentials: never hard code them in the source code. Instead, use AWS Secret Manager or a similar service to provision these parameters.
 
-`KVSSpyGlass` can use also the Panorama Application Role to pass the application's credentials to KVS Producer. These credentials are temporary, meaning that they expire within a couple of hours, and they should be renewed. The Producer library expects temporary credentials in a text file. `KVSFileCredentialsHandler` takes manages the renewal of the credentials and periodically updates the text file with the new credentials. You should always test your Panorama application - KVS integration that it still works when the credentials are refreshed. This means letting run your application for several hours and check if it still streams the video to KVS. You will also find diagnostic information in the CloudWatch logs of your application when the credentials were renewed.
+`KVSSpyGlass` can use also the Panorama Application Role to pass the application's credentials to KVS Producer. These credentials are temporary, meaning that they expire within a couple of hours, and they should be renewed. The Producer library expects temporary credentials in a text file. `KVSFileCredentialsHandler` takes manages the renewal of the credentials and periodically updates the text file with the new credentials. You should always test your Panorama application - KVS integration that it still works when the credentials are refreshed. This means letting run your application for several hours and periodically checking if it still streams the video to KVS. You will also find diagnostic information in the CloudWatch logs of your application when the credentials were renewed.
 
 `KvsSpyGlass` needs also two correctly configured environment variables to make GStreamer find the KVS Producer plugin. The name of these variables are `GST_PLUGIN_PATH` and `LD_LIBRARY_PATH`. They point to the folder where the KVS Producer binary and its 3rd party dependencies can be found. If you've used the example Dockerfile provided, the correct values of these variables are written to a small configuration file at `/panorama/.env`. You should pass the path of this file to `KvsSpyGlass` or otherwise ensure that these variables contain the correct value.
 
-Example usage of KVSSpyGlass:
+At instantiation time, you should pass at least the AWS region name where your stream is created, the name of the stream, and a credentials handler instance. If you want to configure manually the frame rate and the dimensions of the frames, you should also pass them here: if both are specified, the warmup period will be skipped and your first frame will be sent directly to KVS. When you are ready to send the frames, you should call the `start_streaming` method: this will open the GStreamer pipeline. After this method is called, you are expected to send new frames to the stream calling the `put` method periodically, with the frequency of the frame rate specified, or inferred by `KvsSpyGlass`. You can stop and restart streaming any number of times on the same `KvsSpyGlass` instance.
+
+Example usage:
 
 ```python
 import panoramasdk
@@ -375,6 +384,7 @@ class Application(panoramasdk.node):
         # This call opens the streaming pipeline:
         self.spyglass.start_streaming()
 
+    # called from video processing loop:
     def process_streams(self):
         streams = self.inputs.video_in.get()
 
@@ -390,3 +400,50 @@ class Application(panoramasdk.node):
 
 If everything worked well, you can watch the restreamed video in the [Kinesis Video Streams page](https://console.aws.amazon.com/kinesisvideo/home) of the AWS console.
 
+## Annotations
+
+*Annotations* and *annotation drivers* provide a unified way to draw annotations on different rendering backends. Currently, two annotation drivers are implemented:
+
+ - `PanoramaMediaAnnotationDriver` allows you to draw on `panoramasdk.media` object, and
+ - `OpenCVImageAnnotationDriver` allows you to draw on an OpenCV image (numpy array) object.
+
+Two types of annotations can be drawn: labels and rectangles. Not all annotation drivers necessarily implement all features specified by annotations, for example, one driver might decide to ignore colors.
+
+### Using annotations
+
+You can create one or more annotation driver instances at the beginning of the video frame processing loop, depending on the available backends. During the process of a single frame, you are expected to collect all annotations to be drawn on the frame in a python collection (for example, in a `list`). When the processing is finished, you can call the `render` method on any number of drivers, passing the same collection of annotations. All coordinates used in annotation are normalized to the range of `[0; 1)`.
+
+Example usage:
+
+```python
+import panoramasdk
+from backpack.annotation import (
+    Point, LabelAnnotation, RectAnnotation, TimestampAnnotation,
+    OpenCVImageAnnotationDriver, 
+    PanoramaMediaAnnotationDriver
+)
+
+class Application(panoramasdk.node):
+
+    def __init__(self):
+        super().__init__()
+        # self.spyglass = ... 
+        self.panorama_driver = PanoramaMediaAnnotationDriver()
+        self.cv2_driver = OpenCVImageAnnotationDriver()
+
+    # called from video processing loop:
+    def process_streams(self):
+        streams = self.inputs.video_in.get()
+        for idx, stream in enumerate(streams):
+            annotations = [
+                TimestampAnnotation(),
+                RectAnnotation(point1=Point(0.1, 0.1), point2=Point(0.9, 0.9)),
+                LabelAnnotation(point=Point(0.5, 0.5), text='Hello World!')
+            ]
+            self.panorama_driver.render(annotations, stream)
+
+            # TODO: eventually multiplex streams to a single frame
+            if idx == 0:
+                rendered = self.cv2_driver.render(annotations, stream.image.copy())
+                # self.spyglass.put(rendered)
+```
