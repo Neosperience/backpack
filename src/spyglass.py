@@ -1,5 +1,5 @@
-''' SpyGlass can be used to send OpenCV frames to a GStreamer pipeline, and 
-annotation drivers unify the drawing API of different backends (for example, 
+''' SpyGlass can be used to send OpenCV frames to a GStreamer pipeline, and
+annotation drivers unify the drawing API of different backends (for example,
 OpenCV or panoramasdk.media). '''
 
 import os
@@ -9,8 +9,7 @@ import logging
 from collections import OrderedDict
 import datetime
 from enum import Enum
-from typing import List, Tuple, Optional, Any, Callable
-import datetime
+from typing import Optional
 from abc import ABC, abstractmethod
 
 import cv2

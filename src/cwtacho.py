@@ -85,7 +85,7 @@ class CWTachometer(Tachometer):
                 MetricData=[metric_data]
             )
         except botocore.exceptions.ClientError as error:
-            self.logger.warning('Couldn\'t put data for metric %s.%s', 
+            self.logger.warning('Couldn\'t put data for metric %s.%s',
                                 self.namespace, self.metric_name)
             self.logger.warning(str(error))
         except AttributeError:

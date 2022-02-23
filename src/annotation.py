@@ -1,17 +1,16 @@
 ''' Utility functions for AWS Panorama development. '''
 
-from typing import List, Tuple, Optional, Any, Callable, Iterable
+from typing import Tuple, Optional, Any, Iterable, NamedTuple
 import datetime
 import logging
 from abc import ABC, abstractmethod
-from typing import NamedTuple
 import cv2
 
 from .timepiece import local_now
 
 class Point(NamedTuple):
-    ''' A point with both coordinates normalized to the [0; 1) range. 
-    
+    ''' A point with both coordinates normalized to the [0; 1) range.
+
     :ivar x: The x coordinate of the point
     :ivar y: The y coordinate of the point
     '''
@@ -19,8 +18,8 @@ class Point(NamedTuple):
     y: float
 
     def scale(self, width: float, height: float) -> Tuple[int, int]:
-        ''' Scales this point to image coordinates. 
-        
+        ''' Scales this point to image coordinates.
+
         :param width: The width of the target image
         :param height: The height of the target image
         :returns: The integer (pixel) coordinates of the point, scaled to the image dimensions.
@@ -28,8 +27,8 @@ class Point(NamedTuple):
         return (int(self.x * width), int(self.y * height))
 
     def in_image(self, img: 'np.array') -> Tuple[int, int]:
-        ''' Scales this point in an OpenCV image. 
-        
+        ''' Scales this point in an OpenCV image.
+
         :param img: The OpenCV image of (height, width, channels) shape
         :returns: The integer (pixel) coordinates of the point, scaled to the image dimensions.
         '''
@@ -38,8 +37,8 @@ class Point(NamedTuple):
 
 
 class LabelAnnotation(NamedTuple):
-    ''' A label annotation to be rendered in an AnnotationDriver context. 
-    
+    ''' A label annotation to be rendered in an AnnotationDriver context.
+
     :ivar point: The origin of the label
     :ivar text: The text to be rendered
     '''
@@ -48,8 +47,8 @@ class LabelAnnotation(NamedTuple):
 
 
 class RectAnnotation(NamedTuple):
-    ''' A rectangle annotation to be rendered in an AnnotationDriver context. 
-    
+    ''' A rectangle annotation to be rendered in an AnnotationDriver context.
+
     :ivar point1: The top-left corner of the rectangle
     :ivar point2: The bottom-right corner of the rectangle
     '''
@@ -58,11 +57,11 @@ class RectAnnotation(NamedTuple):
 
 
 class TimestampAnnotation(LabelAnnotation):
-    ''' A timestamp annotation to be rendered in an AnnotationDriver context. 
-    
+    ''' A timestamp annotation to be rendered in an AnnotationDriver context.
+
     :param timestamp: The timestamp to be rendered. If not specified, the current local time
         will be used.
-    :param point: The origin of the timestamp. If not specified, the timestamp will be places 
+    :param point: The origin of the timestamp. If not specified, the timestamp will be places
         on the top-left corner of the image.
     '''
     def __new__(cls, timestamp: Optional[datetime.datetime]=None, point: Point=Point(0.02, 0.04)):
@@ -74,10 +73,10 @@ class TimestampAnnotation(LabelAnnotation):
 
 class AnnotationDriverBase(ABC):
     ''' Base class for annotating drawing drivers.
-    
+
     Annotation drivers provide an unified API to draw annotations on images of different backends.
     All annotation driver should derive from `AnnotationDriverBase`.
-    
+
     :param parent_logger: If you want to connect the logger of the annotation driver to a parent,
         specify it here.
     '''
@@ -86,10 +85,10 @@ class AnnotationDriverBase(ABC):
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)
         )
-    
+
     def render(self, annotations: Iterable, context: Any) -> Any:
         ''' Renders a collection of annotations on a context.
-        
+
         :param annotations: An iterable collection of annotation type definied in this module.
         :param context: The context of the backend. Type is implementation-specific.
         :returns: The context.
@@ -156,12 +155,12 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
 
 if __name__ == '__main__':
     import numpy as np
-    img = np.zeros((500, 500, 3), np.uint8)
+    image = np.zeros((500, 500, 3), np.uint8)
     annos = [
         RectAnnotation(Point(0.1, 0.1), Point(0.9, 0.9)),
         LabelAnnotation(Point(0.5, 0.5), 'Hello World'),
         TimestampAnnotation()
     ]
     cv2driver = OpenCVImageAnnotationDriver()
-    cv2driver.render(annos, img)
-    cv2.imwrite('aw.png', img)
+    rendered = cv2driver.render(annos, image)
+    cv2.imwrite('aw.png', rendered)

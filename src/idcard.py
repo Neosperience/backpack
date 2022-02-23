@@ -3,7 +3,7 @@
 import os
 import logging
 import datetime
-from typing import Dict, Tuple
+from typing import Dict
 
 import boto3
 

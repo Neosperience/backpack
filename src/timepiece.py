@@ -473,7 +473,7 @@ class Tachometer:
 if __name__ == '__main__':
     import random
     from concurrent.futures import ThreadPoolExecutor
-    
+
     with StopWatch('root') as root:
         with root.child('task1', max_intervals=5) as task1:
             time.sleep(0.01)
@@ -499,29 +499,29 @@ if __name__ == '__main__':
     print('\n')
 
     cb = lambda name: print(f'{name} was called at {datetime.datetime.now()}')
-    executor = ThreadPoolExecutor()
+    executr = ThreadPoolExecutor()
 
-    at = local_now() + datetime.timedelta(seconds=3)
+    when = local_now() + datetime.timedelta(seconds=3)
     atschedule = AtSchedule(
-        at=at, 
-        callback=cb, 
-        cbkwargs={'name': 'AtSchedule'}, 
-        executor=executor
+        at=when,
+        callback=cb,
+        cbkwargs={'name': 'AtSchedule'},
+        executor=executr
     )
 
     iv = datetime.timedelta(seconds=1.35)
     ivschedule = IntervalSchedule(
-        interval=iv, 
-        callback=cb, 
+        interval=iv,
+        callback=cb,
         cbkwargs={'name': 'IntervalSchedule'},
-        executor=executor
+        executor=executr
     )
 
     ordinalschedule = OrdinalSchedule(
-        ordinal=17, 
-        callback=cb, 
+        ordinal=17,
+        callback=cb,
         cbkwargs={'name': 'OrdinalSchedule'},
-        executor=executor
+        executor=executr
     )
 
     alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
