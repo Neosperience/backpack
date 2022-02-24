@@ -365,17 +365,22 @@ class OrdinalSchedule(Schedule):
 
     At the first tick the task will not be executed.
 
-    :param ordinal: Execute the task once in every ordinal number of ticks.
+    :param ordinal: Execute the task once in every ordinal number of ticks. An OrdinalSchedule
+        with zero ordinal will never fire.
     :param args: Positional arguments to be passed to superclass initializer
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
 
     def __init__(self, ordinal: int, *args: Any, **kwargs: Any) -> None:
         super().__init__(True, *args, **kwargs)
+        if ordinal < 0:
+            raise ValueError('ordinal must be greater or equal than zero')
         self.ordinal = ordinal
         self._counter = 0
 
     def tick(self):
+        if self.ordinal == 0:
+            return False
         self._counter += 1
         if self._counter == self.ordinal:
             self.fire()

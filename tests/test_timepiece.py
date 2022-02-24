@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
-from unittest.mock import Mock
+from unittest.mock import Mock, PropertyMock
 import datetime
 
 from backpack.timepiece import (
-    local_now, panorama_timestamp_to_datetime, 
+    local_now, panorama_timestamp_to_datetime,
     Ticker, StopWatch,
-    AtSchedule
+    AtSchedule, IntervalSchedule, OrdinalSchedule, AlarmClock
 )
 
 # Mock time to control its behavior
@@ -284,3 +284,131 @@ class TestAtSchedule(unittest.TestCase):
         args, kwargs = executor.submit.call_args
         self.assertEqual(args[1:], self.cbargs)
         self.assertEqual(kwargs, self.cbkwargs)
+
+
+@patch('backpack.timepiece.local_now')
+class TestIntervalSchedule(unittest.TestCase):
+
+    def setUp(self):
+        self.start = datetime.datetime(2022, 2, 22, 22, 22, 0)
+        self.interval = datetime.timedelta(seconds=5)
+        self.callback = Mock()
+        self.cbargs = (1, 2, 3)
+        self.cbkwargs = {'foo': 'bar'}
+        self.interval_schedule = IntervalSchedule(
+            interval=self.interval,
+            callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+        )
+
+    def test_first_fire(self, backpack_mock_local_now):
+        backpack_mock_local_now.return_value = self.start
+        res = self.interval_schedule.tick()
+        self.assertTrue(res, 'reported no fire when it should')
+        self.assertTrue(self.callback.called, 'did not call callback when it should')
+
+    def test_no_double_fire(self, backpack_mock_local_now):
+        backpack_mock_local_now.return_value = self.start
+        res = self.interval_schedule.tick()
+        res = self.interval_schedule.tick()
+        self.assertFalse(res, 'reported fire second time')
+        self.assertEqual(self.callback.call_count, 1, 'did not fire once')
+
+    def test_no_early_call(self, backpack_mock_local_now):
+        backpack_mock_local_now.return_value = self.start
+        res = self.interval_schedule.tick()
+        backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=3)
+        res = self.interval_schedule.tick()
+        self.assertFalse(res, 'reported fire early')
+        self.assertEqual(self.callback.call_count, 1, 'did not fire once')
+
+    def test_interval_call(self, backpack_mock_local_now):
+        backpack_mock_local_now.return_value = self.start
+        res = self.interval_schedule.tick()
+        backpack_mock_local_now.return_value = self.start + self.interval
+        res = self.interval_schedule.tick()
+        self.assertTrue(res, 'did not fire second time')
+        self.assertEqual(self.callback.call_count, 2, 'did not fire two times')
+
+    def test_second_call_schedule(self, backpack_mock_local_now):
+        backpack_mock_local_now.return_value = self.start
+        res = self.interval_schedule.tick()
+        backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=8)
+        res = self.interval_schedule.tick()
+        self.assertTrue(res, 'did not fire second time')
+        # even if last tick was at 8s, next call should be scheduled at 10s (not 13s)
+        backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=11)
+        res = self.interval_schedule.tick()
+        self.assertTrue(res, 'did not fire third time')
+        self.assertEqual(self.callback.call_count, 3, 'did not fire three times')
+
+    def test_callback_args(self, backpack_mock_local_now):
+        backpack_mock_local_now.return_value = self.start
+        res = self.interval_schedule.tick()
+        args, kwargs = self.callback.call_args
+        self.assertEqual(args, self.cbargs)
+        self.assertEqual(kwargs, self.cbkwargs)
+
+
+class TestOrdinalSchedule(unittest.TestCase):
+
+    def setUp(self):
+        self.ordinal = 3
+        self.callback = Mock()
+        self.cbargs = (1, 2, 3)
+        self.cbkwargs = {'foo': 'bar'}
+        self.ordinal_schedule = OrdinalSchedule(
+            ordinal=self.ordinal,
+            callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+        )
+
+    def test_no_first_call(self):
+        res = self.ordinal_schedule.tick()
+        self.assertFalse(res, 'reported fire when it should not')
+        self.assertFalse(self.callback.called, 'called callback when it should not')
+
+    def test_called_in_order(self):
+        res = self.ordinal_schedule.tick()
+        res = self.ordinal_schedule.tick()
+        self.assertFalse(res, 'reported fire when it should not')
+        self.assertFalse(self.callback.called, 'called callback when it should not')
+        res = self.ordinal_schedule.tick()
+        self.assertTrue(res, 'did not report fire when it should')
+        self.assertTrue(self.callback.called, 'did not call callback when it should')
+
+    def test_zero_ordinal(self):
+        zero_ordinal_schedule = OrdinalSchedule(
+            ordinal=0, callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+        )
+        res = zero_ordinal_schedule.tick()
+        res = zero_ordinal_schedule.tick()
+        res = zero_ordinal_schedule.tick()
+        self.assertFalse(res, 'reported fire when it should not')
+        self.assertFalse(self.callback.called, 'called callback when it should not')
+
+    def test_negative_ordinal(self):
+        with self.assertRaises(ValueError):
+            zero_ordinal_schedule = OrdinalSchedule(
+                ordinal=-1, callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+            )
+
+
+class TestAlarmClock(unittest.TestCase):
+
+    def setUp(self):
+        self.schedule1 = Mock()
+        type(self.schedule1).repeating = PropertyMock(return_value=True)
+        self.schedule2 = Mock()
+        type(self.schedule2).repeating = PropertyMock(return_value=False)
+        self.alarm_clock = AlarmClock([self.schedule1, self.schedule2])
+
+    def test_call_every_schedule(self):
+        self.alarm_clock.tick()
+        self.assertTrue(self.schedule1.tick.called)
+        self.assertTrue(self.schedule2.tick.called)
+
+    def test_non_repeating_removed(self):
+        self.alarm_clock.tick()
+        self.alarm_clock.tick()
+        self.assertEqual(self.schedule1.tick.call_count, 2)
+        self.assertEqual(self.schedule2.tick.call_count, 1)
+        self.assertFalse(self.schedule2 in self.alarm_clock.schedules)
