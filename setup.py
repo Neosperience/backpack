@@ -16,7 +16,7 @@ setup(
     description="Tools for AWS Panorama development",
     python_requires=">=3.7",
     packages=['backpack'],
-    package_dir={'backpack': 'src'},
+    package_dir={'backpack': 'backpack'},
     py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob('src/*.py')],
     include_package_data=True,
     install_requires=requires,

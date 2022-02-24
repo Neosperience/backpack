@@ -7,6 +7,7 @@ import threading
 from collections import deque
 from itertools import islice
 from typing import List, Deque, Optional, Iterator, Dict, Any, Callable, Tuple
+from abc import ABC, abstractmethod
 
 from dateutil.tz import tzlocal
 
@@ -23,7 +24,7 @@ def panorama_timestamp_to_datetime(panorama_ts: Tuple[int, int]) -> datetime.dat
     return datetime.datetime.fromtimestamp(sec + microsec / 1000000.0)
 
 
-class BaseTimer:
+class BaseTimer(ABC):
     ''' Base class for code execution time measuring timers.'''
 
     # Print at most this many intervals in __repr__
@@ -238,7 +239,7 @@ class StopWatch(BaseTimer):
         return f'{newline if lvl > 0 else ""}{indent}<{self.__class__.__name__} {" ".join(props)}>'
 
 
-class Schedule:
+class Schedule(ABC):
     ''' Schedules a task to be called later with the help of an external
     scheduler.
 
@@ -274,12 +275,12 @@ class Schedule:
         else:
             self.callback(*self.cbargs, **self.cbkwargs)
 
+    @abstractmethod
     def tick(self) -> bool: # pylint: disable=no-self-use
         ''' The heartbeat of the schedule to be called periodically.
 
         :returns: True if the schedule was fired
         '''
-        return False
 
 
 class AtSchedule(Schedule):
