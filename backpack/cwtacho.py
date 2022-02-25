@@ -86,27 +86,4 @@ class CWTachometer(Tachometer):
             self.logger.warning(str(error))
         except AttributeError:
             self.logger.warning('CloudWatch client is not available.')
-
-
-if __name__ == '__main__':
-    import random
-    import time
-    logging.basicConfig(level=logging.INFO)
-    session = boto3.Session()
-    from concurrent.futures import ThreadPoolExecutor
-    executor_ = ThreadPoolExecutor()
-    tacho = CWTachometer(
-        namespace='PeopleAnalytics-test',
-        metric_name='frame_processing_time',
-        dimensions={
-            'application': 'cwtacho_test',
-            'device_id': 'foobar'
-        },
-        stats_interval=datetime.timedelta(seconds=10),
-        executor=executor_,
-        boto3_session=session
-    )
-    tacho.logger.info(f'AWS region: {session.region_name}')
-    for i in range(10 * 60 * 10):
-        tacho.tick()
-        time.sleep(random.random() / 10)
+        return metric_data

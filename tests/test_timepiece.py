@@ -463,17 +463,18 @@ class TestTachometer(unittest.TestCase):
 
     def test_first_tick_no_stats(self, backpack_mock_local_now, backpack_mock_time):
         backpack_mock_local_now.return_value = self.start
-        fired, res = self.tachometer.tick()
-        self.assertIs(res, False, 'Stats callback was reported to be called')
+        fired, (cb_fired, res) = self.tachometer.tick()
+        self.assertIs(cb_fired, False, 'Stats callback was reported to be called')
         self.assertFalse(self.stats_callback.called)
 
     def test_stats_called(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         for i in range(60 + 1):
             backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=i)
-            fired, res = self.tachometer.tick()
+            tick_res = self.tachometer.tick()
             time.sleep(1)
-        self.assertIs(res, True, 'Stats callback was not reported to be called')
+        fired, cb_fired = tick_res
+        self.assertIs(cb_fired[0], True, 'Stats callback was not reported to be called')
         self.assertTrue(self.stats_callback.called)
         args, kwargs = self.stats_callback.call_args
         self.assertEqual(args[0], self.start + datetime.timedelta(seconds=60), 

@@ -430,7 +430,7 @@ class Tachometer:
     ''' A Tachometer can be used to measure the frequency of recurring events,
     and periodically report statistics about it.
 
-    Call the `tick` method of the tachimeter each time an atomic event happens.
+    Call the `tick()` method of the tachimeter each time an atomic event happens.
     For example, if you are interested in the stastics of the frame processing
     time of your application, call `tick` method each time you process a new
     frame.
@@ -446,6 +446,12 @@ class Tachometer:
     passing the timestamp of the last event, as well as the `Ticker` instance that
     collected the events. You can access the `min()`, `max()`, `sum()` (total processing time)
     and the `len()` (number of measurements) methods of the ticker.
+
+    The `tick()` method will return a tuple with these elements:
+     - bool: True, if the internal schedule was fired (you can ignore this value)
+     - a tuple with these elements:
+       - bool: True, if the stats_callback was called
+       - the return value of stats_callback if it was called, else None
 
     :param stats_callback: A callable with the above signature that will be called
         when new statistics is available.
@@ -481,7 +487,7 @@ class Tachometer:
     def _calculate_stats(self):
         timestamp = local_now()
         if len(self.ticker.intervals) == 0:
-            return False
-        self.stats_callback(timestamp, self.ticker)
+            return (False, None)
+        res = self.stats_callback(timestamp, self.ticker)
         self.ticker.intervals.clear()
-        return True
+        return (True, res)
