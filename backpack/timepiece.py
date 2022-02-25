@@ -48,7 +48,15 @@ class BaseTimer(ABC):
 
     def mean(self) -> float:
         ''' Returns the mean time interval between the events (in seconds). '''
-        return sum(self.intervals) / len(self.intervals) if len(self.intervals) > 0 else 0.0
+        return self.sum() / self.len() if self.len() > 0 else 0.0
+
+    def sum(self) -> float:
+        ''' Returns the sum of the time interval between recorded events (in seconds). '''
+        return sum(self.intervals) if len(self.intervals) > 0 else 0.0
+
+    def len(self) -> int:
+        ''' Returns the number of recorded events. '''
+        return len(self.intervals)
 
     def freq(self) -> float:
         ''' Returns the mean frequency of the events (in Hertz). '''
@@ -269,17 +277,23 @@ class Schedule(ABC):
         self.executor = executor
 
     def fire(self) -> None:
-        ''' Fires the schedule calling the callback. '''
+        ''' Fires the schedule calling the callback. 
+        
+        :returns: If not using an executor (the callback is called synchronously), `fire()` 
+            returns the return value of the callback. Otherwise it returns None.
+        '''
         if self.executor:
             self.executor.submit(self.callback, *self.cbargs, **self.cbkwargs)
+            return None
         else:
-            self.callback(*self.cbargs, **self.cbkwargs)
+            return self.callback(*self.cbargs, **self.cbkwargs)
 
     @abstractmethod
     def tick(self) -> bool: # pylint: disable=no-self-use
         ''' The heartbeat of the schedule to be called periodically.
 
-        :returns: True if the schedule was fired
+        :returns: A tuple of (True, callback_return_value) if the schedule was fired,
+            otherwise (False, None)
         '''
 
 
@@ -315,10 +329,10 @@ class AtSchedule(Schedule):
     def _do_tick(self):
         now = local_now()
         if not self._fired and self.at is not None and now > self.at:
-            self.fire()
+            res = self.fire()
             self._fired = True
-            return True
-        return False
+            return (True, res)
+        return (False, None)
 
     def tick(self) -> bool:
         if self.executor:
@@ -352,10 +366,9 @@ class IntervalSchedule(Schedule):
         if not self._next_fire:
             self._next_fire = now
         if now >= self._next_fire:
-            self.fire()
-            res = True
+            res = (True, self.fire())
         else:
-            res = False
+            res = (False, None)
         self._set_next_fire(now)
         return res
 
@@ -380,13 +393,13 @@ class OrdinalSchedule(Schedule):
 
     def tick(self):
         if self.ordinal == 0:
-            return False
+            return (False, None)
         self._counter += 1
         if self._counter == self.ordinal:
-            self.fire()
+            res = (True, self.fire())
             self._counter = 0
-            return True
-        return False
+            return res
+        return (False, None)
 
 
 class AlarmClock:
@@ -406,8 +419,8 @@ class AlarmClock:
         '''
         removables = []
         for schedule in self.schedules:
-            res = schedule.tick()
-            if res and not schedule.repeating:
+            fired, res = schedule.tick()
+            if fired and not schedule.repeating:
                 removables.append(schedule)
         for schedule in removables:
             self.schedules.remove(schedule)
@@ -426,12 +439,13 @@ class Tachometer:
     signature:
 
     ```python
-    def stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events):
+    def stats_callback(timestamp, ticker):
         pass
     ```
 
-    passing the minimum, maximum and total processing time, the number of measurements
-    and the timestamp of the last event.
+    passing the timestamp of the last event, as well as the `Ticker` instance that
+    collected the events. You can access the `min()`, `max()`, `sum()` (total processing time)
+    and the `len()` (number of measurements) methods of the ticker.
 
     :param stats_callback: A callable with the above signature that will be called
         when new statistics is available.
@@ -443,7 +457,7 @@ class Tachometer:
 
     def __init__(
         self,
-        stats_callback: Callable[[datetime.datetime, float, float, float, int], None],
+        stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional['concurrent.futures.Executor'] = None
     ) -> None:
@@ -467,82 +481,7 @@ class Tachometer:
     def _calculate_stats(self):
         timestamp = local_now()
         if len(self.ticker.intervals) == 0:
-            return
-        min_proc_time = min(self.ticker.intervals)
-        max_proc_time = max(self.ticker.intervals)
-        num_events = len(self.ticker.intervals)
-        sum_proc_time = sum(self.ticker.intervals)
-        self.stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events)
+            return False
+        self.stats_callback(timestamp, self.ticker)
         self.ticker.intervals.clear()
-
-
-if __name__ == '__main__':
-    import random
-    from concurrent.futures import ThreadPoolExecutor
-
-    with StopWatch('root') as root:
-        with root.child('task1', max_intervals=5) as task1:
-            time.sleep(0.01)
-            with task1.child('subtask1_1') as subtask1_1:
-                time.sleep(0.03)
-            with task1.child('subtask1_2'):
-                time.sleep(0.07)
-            with task1.child('subtask1_3'):
-                time.sleep(0.09)
-            with subtask1_1:
-                time.sleep(0.05)
-        for i in range(5):
-            with root.child('task2') as task2:
-                time.sleep(random.random() / 10)
-    print(root)
-
-    ticker = Ticker(max_intervals=20)
-    for i in range(20):
-        ticker.tick()
-        time.sleep(random.random() / 10)
-    print(ticker)
-
-    print('\n')
-
-    cb = lambda name: print(f'{name} was called at {datetime.datetime.now()}')
-    executr = ThreadPoolExecutor()
-
-    when = local_now() + datetime.timedelta(seconds=3)
-    atschedule = AtSchedule(
-        at=when,
-        callback=cb,
-        cbkwargs={'name': 'AtSchedule'},
-        executor=executr
-    )
-
-    iv = datetime.timedelta(seconds=1.35)
-    ivschedule = IntervalSchedule(
-        interval=iv,
-        callback=cb,
-        cbkwargs={'name': 'IntervalSchedule'},
-        executor=executr
-    )
-
-    ordinalschedule = OrdinalSchedule(
-        ordinal=17,
-        callback=cb,
-        cbkwargs={'name': 'OrdinalSchedule'},
-        executor=executr
-    )
-
-    alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
-
-    for i in range(25*5):
-        alarmclock.tick()
-        time.sleep(1/25)
-
-    def _stats_callback(timestamp, min_proc_time, max_proc_time, sum_proc_time, num_events):
-        print('timestamp:', timestamp)
-        print(f'min: {min_proc_time:.4f}, max: {max_proc_time:.4f}, '
-              f'sum: {sum_proc_time:.4f}, num: {num_events}')
-
-    tach = Tachometer(_stats_callback, datetime.timedelta(seconds=2))
-
-    for i in range(200):
-        tach.tick()
-        time.sleep(random.random() / 10)
+        return True

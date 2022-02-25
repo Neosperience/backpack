@@ -62,20 +62,16 @@ class CWTachometer(Tachometer):
     def _cw_dimensions(self):
         return [{ 'Name': name, 'Value': value } for name, value in self.dimensions.items()]
 
-    def _stats_calback(
-        self, timestamp,
-        min_proc_time, max_proc_time,
-        sum_proc_time, num_events
-    ):
+    def _stats_calback(self, timestamp, ticker):
         metric_data = {
             'MetricName': self.metric_name,
             'Dimensions': self._cw_dimensions(),
             'Timestamp': timestamp,
             'StatisticValues': {
-                'SampleCount': num_events,
-                'Sum': sum_proc_time,
-                'Minimum': min_proc_time,
-                'Maximum': max_proc_time
+                'SampleCount': ticker.len(),
+                'Sum': ticker.sum(),
+                'Minimum': ticker.min(),
+                'Maximum': ticker.max()
             },
             'Unit': 'Seconds'
         }
