@@ -99,18 +99,16 @@ class AnnotationDriverBase(ABC):
             elif isinstance(anno, RectAnnotation):
                 self.add_rect(anno, context)
             else:
-                assert True, 'Unknown annotation type'
+                raise ValueError('Unknown annotation type')
         return context
 
     @abstractmethod
     def add_rect(self, rect: RectAnnotation, context: Any) -> None:
         ''' Subclasses should implement this method to add a rectangle to the frame. '''
-        raise NotImplementedError
 
     @abstractmethod
     def add_label(self, label: LabelAnnotation, context: Any) -> None:
         ''' Subclasses should implement this method to add a label to the frame. '''
-        raise NotImplementedError
 
 
 
@@ -151,16 +149,3 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             self.DEFAULT_OPENCV_FONT_SCALE,
             self.DEFAULT_OPENCV_COLOR
         )
-
-
-if __name__ == '__main__':
-    import numpy as np
-    image = np.zeros((500, 500, 3), np.uint8)
-    annos = [
-        RectAnnotation(Point(0.1, 0.1), Point(0.9, 0.9)),
-        LabelAnnotation(Point(0.5, 0.5), 'Hello World'),
-        TimestampAnnotation()
-    ]
-    cv2driver = OpenCVImageAnnotationDriver()
-    rendered = cv2driver.render(annos, image)
-    cv2.imwrite('aw.png', rendered)
