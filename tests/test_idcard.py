@@ -50,7 +50,7 @@ class TestAutoIdentity(unittest.TestCase):
             device_region=self.device_region, 
             parent_logger=self.parent_logger
         )
-        self.assertTrue(panorama.list_application_instances.called)
+        panorama.list_application_instances.assert_called()
         self.assertEqual(ai.application_name, TestAutoIdentity.APPLICATION_NAME)
         self.assertEqual(ai.application_created_time, TestAutoIdentity.APPLICATION_CREATED_TIME)
         self.assertEqual(ai.application_tags, TestAutoIdentity.APPLICATION_TAGS)
@@ -76,9 +76,7 @@ class TestAutoIdentity(unittest.TestCase):
             parent_logger=self.parent_logger
         )
         self.assertEqual(lai.call_count, 2, 'Service called twice')
-        list_inst_args, list_inst_kwargs = lai.call_args_list[-1]
-        self.assertEqual(list_inst_kwargs['NextToken'], TestAutoIdentity.NEXT_TOKEN, 
-                         'Service called with NextToken')
+        lai.assert_called_with(NextToken=TestAutoIdentity.NEXT_TOKEN, StatusFilter=unittest.mock.ANY)
 
     def test_no_app_instance_id(self, backpack_mock_os, backpack_mock_boto3):
         backpack_mock_os.environ.get.return_value = None
@@ -86,7 +84,7 @@ class TestAutoIdentity(unittest.TestCase):
             device_region=self.device_region, 
             parent_logger=self.parent_logger
         )
-        self.assertTrue(self.logger.warning.called)
+        self.logger.warning.assert_called()
         self.assertEqual(ai.application_instance_id, None)
 
     def test_no_app_instance_data(self, backpack_mock_os, backpack_mock_boto3):
@@ -103,7 +101,7 @@ class TestAutoIdentity(unittest.TestCase):
             device_region=self.device_region, 
             parent_logger=self.parent_logger
         )
-        self.assertTrue(self.logger.warning.called)
+        self.logger.warning.assert_called()
         self.assertEqual(ai.application_name, None)
 
     def test_repr(self, backpack_mock_os, backpack_mock_boto3):

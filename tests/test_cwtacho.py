@@ -67,30 +67,26 @@ class TestCWTacho(unittest.TestCase):
         }
         self.assertEqual(cb_return_value, expected_metrics, 'callback returned correct value')
         
-        cw_args, cw_kwargs = self.cloudwatch.put_metric_data.call_args
-        self.assertEqual(cw_kwargs['Namespace'], self.namespace, 
-                         'CloudWatch client was called with correct Namespace')
-        metric_data = cw_kwargs['MetricData']
-        self.assertEqual(len(metric_data), 1)
-        first_metric_data = metric_data[0]
-        self.assertEqual(first_metric_data, expected_metrics, 
-                         'CloudWatch client was called with correct MetricData')
+        self.cloudwatch.put_metric_data.assert_called_with(
+            Namespace=self.namespace,
+            MetricData=[expected_metrics]
+        )
 
     def test_clienterror_handling(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         error_payload = {'Error': {'Code': 'TestException', 'Message': 'test error message'}}
         self.cloudwatch.put_metric_data.side_effect = \
             botocore.exceptions.ClientError(error_payload, 'test_operation')
-        cb_called, cb_return_value = self._do_test_callback(backpack_mock_local_now)
-        self.assertTrue(self.logger.warning.called)
-        log_args, log_kwargs = self.logger.warning.call_args
+        self._do_test_callback(backpack_mock_local_now)
+        self.logger.warning.assert_called()
+        log_args, _ = self.logger.warning.call_args
         self.assertTrue('TestException' in log_args[0])
         
     def test_attributeerror_handling(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self.cloudwatch.put_metric_data.side_effect = AttributeError
-        cb_called, cb_return_value = self._do_test_callback(backpack_mock_local_now)
-        self.assertTrue(self.logger.warning.called)
+        self._do_test_callback(backpack_mock_local_now)
+        self.logger.warning.assert_called()
 
     def test_otherexception_raise(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)

@@ -49,21 +49,16 @@ class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
     def test_rect(self):
         context = Mock()
         self.driver.render(annotations=[TEST_RECT], context=context)
-        self.assertTrue(context.add_rect.called)
-        rect_args, _ = context.add_rect.call_args
-        self.assertEqual(rect_args[0], TEST_RECT.point1.x)
-        self.assertEqual(rect_args[1], TEST_RECT.point1.y)
-        self.assertEqual(rect_args[2], TEST_RECT.point2.x)
-        self.assertEqual(rect_args[3], TEST_RECT.point2.y)
+        context.add_rect.assert_called_once_with(
+            TEST_RECT.point1.x, TEST_RECT.point1.y, TEST_RECT.point2.x, TEST_RECT.point2.y
+        )
 
     def test_label(self):
         context = Mock()
         self.driver.render(annotations=[TEST_LABEL], context=context)
-        self.assertTrue(context.add_label.called)
-        lbl_args, _ = context.add_label.call_args
-        self.assertEqual(lbl_args[0], TEST_LABEL.text)
-        self.assertEqual(lbl_args[1], TEST_LABEL.point.x)
-        self.assertEqual(lbl_args[2], TEST_LABEL.point.y)
+        context.add_label.assert_called_once_with(
+            TEST_LABEL.text, TEST_LABEL.point.x, TEST_LABEL.point.y
+        )
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
@@ -80,26 +75,26 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         img = Mock()
         img.shape = [100, 100, 3] 
         self.driver.render(annotations=[TEST_RECT], context=img)
-        self.assertTrue(mock_cv2.rectangle.called)
-        cv2_rect_args, _ = mock_cv2.rectangle.call_args
-        self.assertIs(cv2_rect_args[0], img)
-        self.assertEqual(cv2_rect_args[1], TEST_RECT.point1.in_image(img))
-        self.assertEqual(cv2_rect_args[2], TEST_RECT.point2.in_image(img))
-        self.assertEqual(cv2_rect_args[3], OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR)
-        self.assertEqual(cv2_rect_args[4], OpenCVImageAnnotationDriver.DEFAULT_OPENCV_LINEWIDTH)
+        mock_cv2.rectangle.assert_called_once_with(
+            img,
+            TEST_RECT.point1.in_image(img),
+            TEST_RECT.point2.in_image(img),
+            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR,
+            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_LINEWIDTH
+        )
 
     def test_label(self):
         img = Mock()
         img.shape = [100, 100, 3] 
         self.driver.render(annotations=[TEST_LABEL], context=img)
-        self.assertTrue(mock_cv2.putText.called)
-        cv2_puttext_args, _ = mock_cv2.putText.call_args
-        self.assertIs(cv2_puttext_args[0], img)
-        self.assertEqual(cv2_puttext_args[1], TEST_LABEL.text)
-        self.assertEqual(cv2_puttext_args[2], TEST_LABEL.point.in_image(img))
-        self.assertEqual(cv2_puttext_args[3], OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT)
-        self.assertEqual(cv2_puttext_args[4], OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT_SCALE)
-        self.assertEqual(cv2_puttext_args[5], OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR)
+        mock_cv2.putText.assert_called_once_with(
+            img, 
+            TEST_LABEL.text, 
+            TEST_LABEL.point.in_image(img),
+            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT,
+            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT_SCALE,
+            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR
+        )
 
     def test_invalid(self):
         with self.assertRaises(ValueError):
