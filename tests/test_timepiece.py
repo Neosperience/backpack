@@ -6,7 +6,8 @@ import datetime
 from backpack.timepiece import (
     local_now, panorama_timestamp_to_datetime,
     Ticker, StopWatch,
-    AtSchedule, IntervalSchedule, OrdinalSchedule, AlarmClock
+    AtSchedule, IntervalSchedule, OrdinalSchedule, AlarmClock,
+    Tachometer
 )
 
 # Mock time to control its behavior
@@ -99,6 +100,18 @@ class TestTicker(unittest.TestCase):
         self.assertEqual(self.ticker.max(), max(self._expected_intervals()),
                         'ticker.max() returned incorrect value')
 
+    def test_sum(self, backpack_mock_time):
+        self._setup_mocks(backpack_mock_time)
+        self._do_test()
+        self.assertEqual(self.ticker.sum(), sum(self._expected_intervals()),
+                        'ticker.sum() returned incorrect value')
+
+    def test_len(self, backpack_mock_time):
+        self._setup_mocks(backpack_mock_time)
+        self._do_test()
+        self.assertEqual(self.ticker.len(), len(self._expected_intervals()),
+                        'ticker.len() returned incorrect value')
+        
     def test_mean_freq(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test()
@@ -245,27 +258,27 @@ class TestAtSchedule(unittest.TestCase):
     
     def test_no_fire_before(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.before_fire
-        res = self.at_schedule.tick()
-        self.assertFalse(res, 'reported fire when it should not')
+        fired, _ = self.at_schedule.tick()
+        self.assertIs(fired, False, 'reported fire when it should not')
         self.assertFalse(self.callback.called, 'called callback when it should not')
 
     def test_fire_after(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.after_fire
-        res = self.at_schedule.tick()
-        self.assertTrue(res, 'reported no fire when it should')
+        fired, _ = self.at_schedule.tick()
+        self.assertIs(fired, True, 'reported no fire when it should')
         self.assertTrue(self.callback.called, 'did not call callback when it should')
 
     def test_no_double_fire(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.after_fire
         res = self.at_schedule.tick()
         backpack_mock_local_now.return_value = self.after_fire + datetime.timedelta(seconds=1)
-        res = self.at_schedule.tick()
-        self.assertFalse(res, 'reported fire second time')
+        fired, _ = self.at_schedule.tick()
+        self.assertIs(fired, False, 'reported fire second time')
         self.assertEqual(self.callback.call_count, 1)
 
     def test_callback_args(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.after_fire
-        res = self.at_schedule.tick()
+        self.at_schedule.tick()
         args, kwargs = self.callback.call_args
         self.assertEqual(args, self.cbargs)
         self.assertEqual(kwargs, self.cbkwargs)
@@ -278,8 +291,8 @@ class TestAtSchedule(unittest.TestCase):
             executor=executor
         )
         backpack_mock_local_now.return_value = self.after_fire
-        res = at_schedule.tick()
-        self.assertTrue(res, 'reported no fire when it should')
+        fired, _ = at_schedule.tick()
+        self.assertIs(fired, True, 'reported no fire when it should')
         self.assertTrue(executor.submit.called, 'did not submit callback to executor')
         args, kwargs = executor.submit.call_args
         self.assertEqual(args[1:], self.cbargs)
@@ -302,48 +315,48 @@ class TestIntervalSchedule(unittest.TestCase):
 
     def test_first_fire(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.start
-        res = self.interval_schedule.tick()
-        self.assertTrue(res, 'reported no fire when it should')
+        fired, _ = self.interval_schedule.tick()
+        self.assertIs(fired, True, 'reported no fire when it should')
         self.assertTrue(self.callback.called, 'did not call callback when it should')
 
     def test_no_double_fire(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.start
-        res = self.interval_schedule.tick()
-        res = self.interval_schedule.tick()
-        self.assertFalse(res, 'reported fire second time')
+        self.interval_schedule.tick()
+        fired, _ = self.interval_schedule.tick()
+        self.assertIs(fired, False, 'reported fire second time')
         self.assertEqual(self.callback.call_count, 1, 'did not fire once')
 
     def test_no_early_call(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.start
-        res = self.interval_schedule.tick()
+        self.interval_schedule.tick()
         backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=3)
-        res = self.interval_schedule.tick()
-        self.assertFalse(res, 'reported fire early')
+        fired, _ = self.interval_schedule.tick()
+        self.assertIs(fired, False, 'reported fire early')
         self.assertEqual(self.callback.call_count, 1, 'did not fire once')
 
     def test_interval_call(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.start
-        res = self.interval_schedule.tick()
+        self.interval_schedule.tick()
         backpack_mock_local_now.return_value = self.start + self.interval
-        res = self.interval_schedule.tick()
-        self.assertTrue(res, 'did not fire second time')
+        fired, _ = self.interval_schedule.tick()
+        self.assertIs(fired, True, 'did not fire second time')
         self.assertEqual(self.callback.call_count, 2, 'did not fire two times')
 
     def test_second_call_schedule(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.start
-        res = self.interval_schedule.tick()
+        self.interval_schedule.tick()
         backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=8)
-        res = self.interval_schedule.tick()
-        self.assertTrue(res, 'did not fire second time')
+        fired, _ = self.interval_schedule.tick()
+        self.assertIs(fired, True, 'did not fire second time')
         # even if last tick was at 8s, next call should be scheduled at 10s (not 13s)
         backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=11)
-        res = self.interval_schedule.tick()
-        self.assertTrue(res, 'did not fire third time')
+        fired, _ = self.interval_schedule.tick()
+        self.assertIs(fired, True, 'did not fire third time')
         self.assertEqual(self.callback.call_count, 3, 'did not fire three times')
 
     def test_callback_args(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.start
-        res = self.interval_schedule.tick()
+        self.interval_schedule.tick()
         args, kwargs = self.callback.call_args
         self.assertEqual(args, self.cbargs)
         self.assertEqual(kwargs, self.cbkwargs)
@@ -362,27 +375,27 @@ class TestOrdinalSchedule(unittest.TestCase):
         )
 
     def test_no_first_call(self):
-        res = self.ordinal_schedule.tick()
-        self.assertFalse(res, 'reported fire when it should not')
+        fired, _ = self.ordinal_schedule.tick()
+        self.assertFalse(fired, 'reported fire when it should not')
         self.assertFalse(self.callback.called, 'called callback when it should not')
 
     def test_called_in_order(self):
-        res = self.ordinal_schedule.tick()
-        res = self.ordinal_schedule.tick()
-        self.assertFalse(res, 'reported fire when it should not')
+        self.ordinal_schedule.tick()
+        fired, _ = self.ordinal_schedule.tick()
+        self.assertIs(fired, False, 'reported fire when it should not')
         self.assertFalse(self.callback.called, 'called callback when it should not')
-        res = self.ordinal_schedule.tick()
-        self.assertTrue(res, 'did not report fire when it should')
+        fired, _ = self.ordinal_schedule.tick()
+        self.assertIs(fired, True, 'did not report fire when it should')
         self.assertTrue(self.callback.called, 'did not call callback when it should')
 
     def test_zero_ordinal(self):
         zero_ordinal_schedule = OrdinalSchedule(
             ordinal=0, callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
         )
-        res = zero_ordinal_schedule.tick()
-        res = zero_ordinal_schedule.tick()
-        res = zero_ordinal_schedule.tick()
-        self.assertFalse(res, 'reported fire when it should not')
+        zero_ordinal_schedule.tick()
+        zero_ordinal_schedule.tick()
+        fired, _ = zero_ordinal_schedule.tick()
+        self.assertIs(fired, False, 'reported fire when it should not')
         self.assertFalse(self.callback.called, 'called callback when it should not')
 
     def test_negative_ordinal(self):
@@ -396,8 +409,10 @@ class TestAlarmClock(unittest.TestCase):
 
     def setUp(self):
         self.schedule1 = Mock()
+        self.schedule1.tick.return_value = (True, None)
         type(self.schedule1).repeating = PropertyMock(return_value=True)
         self.schedule2 = Mock()
+        self.schedule2.tick.return_value = (True, None)
         type(self.schedule2).repeating = PropertyMock(return_value=False)
         self.alarm_clock = AlarmClock([self.schedule1, self.schedule2])
 
@@ -412,3 +427,57 @@ class TestAlarmClock(unittest.TestCase):
         self.assertEqual(self.schedule1.tick.call_count, 2)
         self.assertEqual(self.schedule2.tick.call_count, 1)
         self.assertFalse(self.schedule2 in self.alarm_clock.schedules)
+
+
+@patch('backpack.timepiece.time')
+@patch('backpack.timepiece.local_now')
+class TestTachometer(unittest.TestCase):
+    
+    def setUp(self):
+        self.stats_callback = Mock(side_effect=self._stats_callback)
+        self.stats_interval = datetime.timedelta(seconds=60)
+        self.tachometer = Tachometer(
+            stats_callback=self.stats_callback,
+            stats_interval=self.stats_interval
+        )
+        self.start = datetime.datetime(2022, 2, 22, 22, 22, 0)
+        self.current_perf_time = 0
+        
+    def _stats_callback(self, timestamp, ticker):
+        self.stats_callback_timestamp = timestamp
+        self.stats_callback_ticker = ticker
+        self.stats_callback_ticker_intervals = ticker.intervals.copy()
+
+    def _setup_mocks(self, backpack_mock_time):
+        def _mock_time_sleep( secs):
+            self.current_perf_time += secs
+        def _mock_time_perf_counter():
+            return self.current_perf_time
+        backpack_mock_time.perf_counter.side_effect = _mock_time_perf_counter
+        time.sleep.side_effect = _mock_time_sleep
+    
+    def test_init(self, backpack_mock_local_now, backpack_mock_time):
+        self.assertIsInstance(self.tachometer.ticker, Ticker)
+        min_interval_len = Tachometer.EXPECTED_MAX_FPS * self.stats_interval.total_seconds()
+        self.assertTrue(self.tachometer.ticker.intervals.maxlen >= min_interval_len)
+
+    def test_first_tick_no_stats(self, backpack_mock_local_now, backpack_mock_time):
+        backpack_mock_local_now.return_value = self.start
+        fired, res = self.tachometer.tick()
+        self.assertIs(res, False, 'Stats callback was reported to be called')
+        self.assertFalse(self.stats_callback.called)
+
+    def test_stats_called(self, backpack_mock_local_now, backpack_mock_time):
+        self._setup_mocks(backpack_mock_time)
+        for i in range(60 + 1):
+            backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=i)
+            fired, res = self.tachometer.tick()
+            time.sleep(1)
+        self.assertIs(res, True, 'Stats callback was not reported to be called')
+        self.assertTrue(self.stats_callback.called)
+        args, kwargs = self.stats_callback.call_args
+        self.assertEqual(args[0], self.start + datetime.timedelta(seconds=60), 
+                         'Stats callback was called with incorrect timestamp')
+        self.assertIsInstance(args[1], Ticker, 'Stats callback was not called Ticker instance')
+        self.assertEqual(len(self.stats_callback_ticker_intervals), 60, 
+                         'Stast callback Ticker has incorrect number of intervals')
