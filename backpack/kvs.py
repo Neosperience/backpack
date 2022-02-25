@@ -70,7 +70,12 @@ class KVSSpyGlass(SpyGlass):
         self.stream_region = stream_region
         self.stream_name = stream_name
         self.credentials_handler = credentials_handler
-        self._check_gst_plugin('kvssink')
+        if not self._check_gst_plugin('kvssink'):
+            raise RuntimeError(
+                'kvssink GSTreamer plugin was not found. Please check you have installed it '
+                'correctly and set the path to it in the GST_PLUGIN_PATH environment variable '
+                '(or in .env file)'
+            )
 
     def _get_pipeline(self, fps, width, height):
         credentials_config_str = self.credentials_handler.plugin_config()

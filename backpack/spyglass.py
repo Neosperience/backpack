@@ -131,9 +131,6 @@ class SpyGlass(ABC):
 
         Implement this method in subclasses and return the GStreamer pipeline
         definition.'''
-        raise NotImplementedError(
-            'SpyGlass._get_pipeline() should be implemented in subclasses'
-        )
 
     def _put_frame(self, frame):
         size = (self._int_width, self._int_height)
@@ -150,8 +147,7 @@ class SpyGlass(ABC):
         dotenv_path = dotenv_path or find_dotenv()
         self.logger.info(f'Loading config variables from {dotenv_path}')
         if not dotenv_path or not os.path.isfile(dotenv_path):
-            self.logger.warning(f'dotenv configuration file was not found at path: {dotenv_path}')
-            return
+            raise RuntimeError(f'dotenv configuration file was not found at path: {dotenv_path}')
         cfg = dotenv_values(dotenv_path=dotenv_path)
         self.logger.info(f'Loaded env config structure: {cfg}')
         if 'GST_PLUGIN_PATH' in cfg:
