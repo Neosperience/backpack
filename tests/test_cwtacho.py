@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import patch
-from unittest.mock import Mock
+from unittest.mock import patch, Mock
 import datetime
 
 import botocore

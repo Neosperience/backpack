@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import patch
-from unittest.mock import Mock, PropertyMock
+from unittest.mock import patch, Mock, PropertyMock
 import datetime
 
 from backpack.timepiece import (
