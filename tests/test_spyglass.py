@@ -11,6 +11,8 @@ with patch.dict('sys.modules', cv2=mock_cv2, dotenv=mock_dotenv):
 
 time = Mock()
 
+logging.basicConfig(level='CRITICAL')
+
 LD_LIBRARY_PATH = 'dummy_ld_library_path'
 GST_PLUGIN_PATH = 'dummy_gst_plugin_path'
 GST_DEBUG = 'dummy_gst_debug_level'
