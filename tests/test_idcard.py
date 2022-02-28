@@ -1,3 +1,4 @@
+import logging
 import unittest
 from unittest.mock import patch, Mock
 
@@ -34,8 +35,8 @@ class TestAutoIdentity(unittest.TestCase):
 
     def setUp(self):
         self.device_region = 'dummy-region'
-        self.parent_logger = Mock()
-        self.logger = self.parent_logger.getChild()
+        self.parent_logger = logging.getLogger()
+        self.logger = self.parent_logger.getChild('AutoIdentity')
         
     def _setup_mocks(self, backpack_mock_os, backpack_mock_boto3):
         backpack_mock_os.environ.get.return_value = TestAutoIdentity.APPLICATION_ID
@@ -80,11 +81,11 @@ class TestAutoIdentity(unittest.TestCase):
 
     def test_no_app_instance_id(self, backpack_mock_os, backpack_mock_boto3):
         backpack_mock_os.environ.get.return_value = None
-        ai = AutoIdentity(
-            device_region=self.device_region, 
-            parent_logger=self.parent_logger
-        )
-        self.logger.warning.assert_called()
+        with self.assertLogs(self.logger, 'WARNING') as logs:
+            ai = AutoIdentity(
+                device_region=self.device_region, 
+                parent_logger=self.parent_logger
+            )
         self.assertEqual(ai.application_instance_id, None)
 
     def test_no_app_instance_data(self, backpack_mock_os, backpack_mock_boto3):
@@ -97,11 +98,11 @@ class TestAutoIdentity(unittest.TestCase):
                 'ApplicationInstances': [wrong_instance]
             }
         ]
-        ai = AutoIdentity(
-            device_region=self.device_region, 
-            parent_logger=self.parent_logger
-        )
-        self.logger.warning.assert_called()
+        with self.assertLogs(self.logger, 'WARNING') as logs:
+            ai = AutoIdentity(
+                device_region=self.device_region, 
+                parent_logger=self.parent_logger
+            )
         self.assertEqual(ai.application_name, None)
 
     def test_repr(self, backpack_mock_os, backpack_mock_boto3):

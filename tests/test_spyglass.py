@@ -57,7 +57,7 @@ class TestSpyGlass(unittest.TestCase):
 
     def setUp(self):
         self.parent_logger = logging.getLogger()
-        self.logger = self.parent_logger.getChild('test_logger')
+        self.logger = self.parent_logger.getChild('DummySpyGlass')
         self.frame = Mock()
         self.frame.shape = [TEST_FRAME_HEIGHT, TEST_FRAME_WIDTH, 3]
         self.current_time = 0
@@ -118,7 +118,7 @@ class TestSpyGlass(unittest.TestCase):
             raise FakeCalledProcessError()
         self._setup_os_mock(mock_os)
         self.parent_logger = Mock()
-        self.logger = self.parent_logger.getChild('test_logger')
+        self.logger = self.parent_logger.getChild('DummySpyGlass')
         mock_subprocess.CalledProcessError = FakeCalledProcessError
         mock_subprocess.check_output.side_effect = fail_check_output
         with self.assertRaises(PluginNotFoundError):
@@ -126,11 +126,9 @@ class TestSpyGlass(unittest.TestCase):
         self.logger.warning.assert_called()
 
     def test_init_missing_env_var(self, mock_os, mock_subprocess):
-        self.parent_logger = Mock()
-        self.logger = self.parent_logger.getChild('test_logger')
         mock_os.environ.get.return_value = None
-        spyglass = DummySpyGlass(parent_logger=self.parent_logger)
-        self.logger.warning.assert_called()
+        with self.assertLogs(self.logger, 'WARNING') as logs:
+            spyglass = DummySpyGlass(parent_logger=self.parent_logger)
 
     # ---------- Runtime tests ----------
 

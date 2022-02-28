@@ -1,3 +1,4 @@
+import logging
 import unittest
 from unittest.mock import patch, Mock
 import datetime
@@ -20,7 +21,7 @@ class TestCWTacho(unittest.TestCase):
         }
         self.boto3_session = Mock()
         self.cloudwatch = self.boto3_session.client('cloudwatch')
-        parent_logger = Mock()
+        parent_logger = logging.getLogger()
         self.logger = parent_logger.getChild('test_logger')
         self.cw_tacho = CWTachometer(
             namespace=self.namespace,
@@ -77,16 +78,15 @@ class TestCWTacho(unittest.TestCase):
         error_payload = {'Error': {'Code': 'TestException', 'Message': 'test error message'}}
         self.cloudwatch.put_metric_data.side_effect = \
             botocore.exceptions.ClientError(error_payload, 'test_operation')
-        self._do_test_callback(backpack_mock_local_now)
-        self.logger.warning.assert_called()
-        log_args, _ = self.logger.warning.call_args
-        self.assertTrue('TestException' in log_args[0])
+        with self.assertLogs(self.cw_tacho.logger, 'WARNING') as logs:
+            self._do_test_callback(backpack_mock_local_now)
+            self.assertTrue(any('TestException' in o for o in logs.output))
         
     def test_attributeerror_handling(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self.cloudwatch.put_metric_data.side_effect = AttributeError
-        self._do_test_callback(backpack_mock_local_now)
-        self.logger.warning.assert_called()
+        with self.assertLogs(self.cw_tacho.logger, 'WARNING') as logs:
+            self._do_test_callback(backpack_mock_local_now)
 
     def test_otherexception_raise(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
