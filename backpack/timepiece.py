@@ -63,6 +63,10 @@ class BaseTimer(ABC):
         mean = self.mean()
         return 1 / mean if mean > 0 else 0.0
 
+    def reset(self) -> None:
+        ''' Resets the timer. '''
+        self.intervals.clear()
+
     def _repr_props(self) -> Iterator[str]:
         if self.intervals:
             iv_list = [f'{iv:.4f}' for iv in islice(self.intervals, self.MAX_REPR_INTERVALS)]

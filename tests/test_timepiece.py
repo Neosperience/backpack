@@ -36,9 +36,11 @@ class TestTicker(unittest.TestCase):
     
     def setUp(self):
         self.current_time = 0
+        self.ticker = None
+        self.test_intervals = None
         
     def _setup_mocks(self, backpack_mock_time):
-        def _mock_time_sleep( secs):
+        def _mock_time_sleep(secs):
             self.current_time += secs
         def _mock_time_perf_counter():
             return self.current_time
@@ -129,6 +131,15 @@ class TestTicker(unittest.TestCase):
         self.ticker.max()
         self.ticker.mean()
         self.ticker.freq()
+
+    def test_reset(self, backpack_mock_time):
+        self._setup_mocks(backpack_mock_time)
+        self._do_test()
+        self.assertEqual(
+            len(self.ticker.intervals), min(len(self.test_intervals), MAX_INTERVALS_CNT)
+        )
+        self.ticker.reset()
+        self.assertEqual(len(self.ticker.intervals), 0)
 
     def test_repr(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)

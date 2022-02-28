@@ -15,6 +15,12 @@ from abc import ABC, abstractmethod
 import cv2
 from dotenv import find_dotenv, dotenv_values
 
+from .timepiece import Ticker
+
+USE_LAST_VALUE = -999
+''' Using this value for dynamic streaming attributes like fps, width and heigth 
+will cause to use the values from the last streaming session. '''
+
 class SpyGlass(ABC):
 
     ''' Abstract base class for sending OpenCV frames to a remote service using GStreamer.
@@ -42,12 +48,6 @@ class SpyGlass(ABC):
     You can define these variables as environment variables, or in a file
     called `.env` in the same folder where this file can be found.
 
-    :param video_width: The declared width of the video. Leave this to the default
-        None to determine this value automatically.
-    :param video_height: The declared heigth of the video. Leave this to the default
-        None to determine this value automatically.
-    :param video_fps: The declared frame per seconds of the video. Leave this to
-        the default None to determine this value automatically.
     :param parent_logger: If you want to connect the logger of KVS to a parent,
         specify it here.
     :param gst_log_file: If you want to redirect GStreamer logs to a file, specify
@@ -75,17 +75,14 @@ class SpyGlass(ABC):
         ERROR = -1
 
     def __init__(self,
-        video_width: Optional[int] = None,
-        video_height: Optional[int] = None,
-        video_fps: Optional[float] = None,
         parent_logger: Optional[logging.Logger] = None,
         gst_log_file: Optional[str] = None,
         gst_log_level: Optional[str] = None,
         dotenv_path: Optional[str] = None
     ):
-        self.video_width = video_width
-        self.video_height = video_height
-        self.video_fps = video_fps
+        self.video_width = None
+        self.video_height = None
+        self.video_fps = None
         self.logger = (
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)
@@ -98,10 +95,10 @@ class SpyGlass(ABC):
         self._check_env()
         self._last_log = datetime.datetime.min
         self._fps_meter_warmup_cnt = 0
-        self._fps_meter_start = None
-        self._int_fps = 0.0
-        self._int_width = 0
-        self._int_height = 0
+        self._fps_meter_ticker = Ticker(self._FPS_METER_WARMUP_FRAMES + 1)
+        self._last_fps = None
+        self._last_width = None
+        self._last_height = None
         self._video_writer = None
         self.state = SpyGlass.State.STOPPED
 
@@ -133,7 +130,7 @@ class SpyGlass(ABC):
         definition.'''
 
     def _put_frame(self, frame):
-        size = (self._int_width, self._int_height)
+        size = (self.video_width, self.video_height)
         resized = cv2.resize(frame, size, interpolation=cv2.INTER_LINEAR)
         if not self._video_writer or not self._video_writer.isOpened():
             self._frame_log(lambda: self.logger.warning(
@@ -185,14 +182,18 @@ class SpyGlass(ABC):
         self._video_writer = cv2.VideoWriter(
             pipeline, cv2.CAP_GSTREAMER, 0, fps, (width, height)
         )
-        self._int_fps = fps
-        self._int_width = width
-        self._int_height = height
+        self.video_fps = fps
+        self.video_width = width
+        self.video_height = height
+        self._last_fps = fps
+        self._last_width = width
+        self._last_height = height
         return self._video_writer.isOpened()
 
     def _close_stream(self):
-        self._video_writer.release()
-        self._video_writer = None
+        if self._video_writer:
+            self._video_writer.release()
+            self._video_writer = None
 
     def _frame_log(self, log_fn):
         now = datetime.datetime.now()
@@ -201,16 +202,22 @@ class SpyGlass(ABC):
             self._last_log = now
 
     def _start_warmup(self):
-        self._fps_meter_start = time.perf_counter()
+        self._fps_meter_ticker.reset()
         self._fps_meter_warmup_cnt = self._FPS_METER_WARMUP_FRAMES
 
     def _finish_warmup(self, frame):
-        fps = round(self._FPS_METER_WARMUP_FRAMES / (time.perf_counter() - self._fps_meter_start))
-        height, width = frame.shape[0], frame.shape[1]
-        fps = fps if self.video_fps is None else self.video_fps
-        width = width if self.video_width is None else self.video_width
-        height = height if self.video_height is None else self.video_height
+        fps = self.video_fps or round(self._fps_meter_ticker.freq())
+        width = self.video_width or frame.shape[1]
+        height = self.video_height or frame.shape[0]
         return fps, width, height
+
+    def _try_open_stream(self, fps, width, height):
+        if not self._open_stream(fps, width, height):
+            self.logger.warning('Could not open cv2.VideoWriter')
+            self.state = SpyGlass.State.ERROR
+            return False
+        self.state = SpyGlass.State.STREAMING
+        return True
 
     @property
     def state(self) -> 'SpyGlass.State':
@@ -225,13 +232,36 @@ class SpyGlass(ABC):
 
     # Events
 
-    def start_streaming(self) -> None:
+    def start_streaming(
+        self,
+        fps=USE_LAST_VALUE,
+        width=USE_LAST_VALUE,
+        height=USE_LAST_VALUE
+    ) -> None:
         ''' Start the streaming.
 
         After calling this method, you are exepcted to call the `put` method at
         regular intervals. The streaming can be stopped and restarted arbitrary times on
         the same SpyGlass() instance.
+
+        You should specify the desired frame rate and frame dimensions. Using USE_LAST_VALUE
+        for any of theses attributes will use the value from the last streaming session. If no
+        values are found (or the values are explicitly set to None), a warmup session will be 
+        started.
+
+        :param fps: The declared frame per seconds of the video. Set this to None to determine 
+            this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
+            the last streaming session.
+        :param width: The declared width of the video. Set this to None to determine 
+            this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
+            the last streaming session.
+        :param height: The declared heigth of the video. Set this to None to determine 
+            this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
+            the last streaming session.
         '''
+        self.video_fps = self._last_fps if fps == USE_LAST_VALUE else fps
+        self.video_width = self._last_width if width == USE_LAST_VALUE else width
+        self.video_height = self._last_height if width == USE_LAST_VALUE else height
         if self.state in [SpyGlass.State.WARMUP, SpyGlass.State.STREAMING]:
             self._close_stream()
         if any(p is None for p in (self.video_fps, self.video_width, self.video_height)):
@@ -239,8 +269,7 @@ class SpyGlass(ABC):
             self.state = SpyGlass.State.START_WARMUP
         else:
             self.logger.info('No FPS meter warmup needed.')
-            self._open_stream(self.video_fps, self.video_width, self.video_height)
-            self.state = SpyGlass.State.STREAMING
+            self._try_open_stream(self.video_fps, self.video_width, self.video_height)
 
     def put(
         self,
@@ -270,18 +299,16 @@ class SpyGlass(ABC):
             return False
 
         if self.state == SpyGlass.State.WARMUP:
+            self._fps_meter_ticker.tick()
             self._fps_meter_warmup_cnt -= 1
-            if self._fps_meter_warmup_cnt == 0:
+            if self._fps_meter_warmup_cnt <= 0:
                 fps, width, height = self._finish_warmup(frame)
                 self.logger.info(
                     'Finished FPS meter warmup. Determined '
                     f'fps={fps}, width={width}, height={height}'
                 )
-                if self._open_stream(fps, width, height):
-                    self.state = SpyGlass.State.STREAMING
-                else:
-                    self.logger.warning('Could not open cv2.VideoWriter')
-                    self.state = SpyGlass.State.ERROR
+                if self._try_open_stream(fps, width, height):
+                    return self._put_frame(frame)
 
             return False
 
@@ -289,8 +316,7 @@ class SpyGlass(ABC):
             return self._put_frame(frame)
 
         # Should not arrive here
-        assert False, f'Unhandled SpyGlass state {self.state}'
-        return False
+        assert False, f'Unhandled SpyGlass state {self.state}' # pragma: no cover
 
     def stop_streaming(self) -> None:
         ''' Stops the streaming.
