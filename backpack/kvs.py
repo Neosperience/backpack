@@ -208,14 +208,14 @@ class KVSCredentialsHandler:
             self.logger.info('Credentials are static')
             next_update = None
             credentials = self.credentials
-        self.save_credentials(credentials, next_update)
+        self._save_credentials(credentials, next_update)
         self.schedule.at = next_update
 
     def check_refresh(self) -> None:
         ''' Call this method periodically to refresh credentials. '''
         self.schedule.tick()
 
-    def save_credentials(
+    def _save_credentials(
         self,
         credentials: 'botocore.credentials.Credentials',
         next_update: datetime.datetime
@@ -278,13 +278,12 @@ class KVSEnvironmentCredentialsHandler(KVSCredentialsHandler):
     only with static credentials.
     '''
 
-    def save_credentials(
+    def _save_credentials(
         self,
         credentials: 'botocore.credentials.Credentials',
         next_update: datetime.datetime
     ):
-        if _is_refreshable(self.credentials):
-            credentials = credentials.get_frozen_credentials()
+        if _is_refreshable(credentials):
             os.environ['AWS_SESSION_TOKEN'] = credentials.token
         os.environ['AWS_ACCESS_KEY_ID'] = credentials.access_key
         os.environ['AWS_SECRET_ACCESS_KEY'] = credentials.secret_key
@@ -314,7 +313,7 @@ class KVSFileCredentialsHandler(KVSCredentialsHandler):
         self.credentials_path = credentials_path
         super().__init__(**kwargs)
 
-    def save_credentials(self, credentials, next_update):
+    def _save_credentials(self, credentials, next_update):
         if next_update is not None:
             file_expire = next_update + self.FILE_REFRESH_GRACE_PERIOD
             file_expire_str = _format_time(file_expire)
