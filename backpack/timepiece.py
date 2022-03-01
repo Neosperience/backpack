@@ -13,8 +13,11 @@ from dateutil.tz import tzlocal
 
 def local_now():
     ''' Returns the current time in local time zone. '''
-    return datetime.datetime.now(tzlocal())
+    return datetime.datetime.now(tz=tzlocal())
 
+def local_dt(datetime_):
+    ''' Converts the supplied naive datetime to be time zone aware in the local time zone. '''
+    return datetime_.astimezone(tz=tzlocal())
 
 def panorama_timestamp_to_datetime(panorama_ts: Tuple[int, int]) -> datetime.datetime:
     ''' Converts panoramasdk.media.time_stamp (seconds, microsececonds)
