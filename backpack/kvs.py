@@ -126,6 +126,7 @@ class KVSCredentialsHandler:
         AWS access key ID here. This method is not recommended for production builds.
     :param aws_secret_access_key: If you want to use custom static credentials, specify your
         AWS secret access key here. This method is not recommended for production builds.
+    :param executor: Credential refresh operator will be dispatched to this executor.
     :param parent_logger: Connect the logger of this class to a parent logger.
     '''
 
@@ -136,6 +137,7 @@ class KVSCredentialsHandler:
         self,
         aws_access_key_id: str=None,
         aws_secret_access_key: str=None,
+        executor: 'concurrent.futures.Executor'=ThreadPoolExecutor(max_workers=1),
         parent_logger: logging.Logger=None
     ):
         self.logger = (
@@ -152,8 +154,7 @@ class KVSCredentialsHandler:
 
         self.caller_arn = self.session.client('sts').get_caller_identity()['Arn']
         self.credentials = self.session.get_credentials()
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.schedule = AtSchedule(at=None, callback=self._refresh, executor=self.executor)
+        self.schedule = AtSchedule(at=None, callback=self._refresh, executor=executor)
         self._refresh()
 
     def _refresh(self):
