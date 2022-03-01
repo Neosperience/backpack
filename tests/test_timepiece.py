@@ -3,7 +3,7 @@ from unittest.mock import patch, Mock, PropertyMock
 import datetime
 
 from backpack.timepiece import (
-    local_now, panorama_timestamp_to_datetime,
+    local_now, local_dt, panorama_timestamp_to_datetime,
     Ticker, StopWatch,
     AtSchedule, IntervalSchedule, OrdinalSchedule, AlarmClock,
     Tachometer
@@ -18,12 +18,15 @@ TEST_INTERVALS_CNT = 20
 
 class TestGlobal(unittest.TestCase):
     
-    @patch('backpack.timepiece.datetime')
-    def test_local_now(self, datetime_mock):
+    def test_local_now(self):
         now = local_now()
-        datetime_mock.datetime.now.assert_called()
-        args = datetime_mock.datetime.now.call_args[0]
-        self.assertEqual(type(args[0]).__name__, 'tzlocal')
+        self.assertTrue(now.tzinfo)
+        self.assertEqual(now.tzinfo.__class__.__name__, 'tzlocal')
+        
+    def test_local_dt(self):
+        local = local_dt(datetime.datetime.now())
+        self.assertTrue(local.tzinfo)
+        self.assertEqual(local.tzinfo.__class__.__name__, 'tzlocal')
 
     def test_panorama_timestamp_to_datetime(self):
         ts = (1645735796, 142984)

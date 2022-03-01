@@ -2,8 +2,6 @@ import logging
 import unittest
 from unittest.mock import patch, Mock
 
-import subprocess
-
 mock_cv2 = Mock()
 mock_dotenv = Mock()
 with patch.dict('sys.modules', cv2=mock_cv2, dotenv=mock_dotenv):
@@ -199,6 +197,7 @@ class TestSpyGlass(unittest.TestCase):
             (TEST_FRAME_WIDTH, TEST_FRAME_HEIGHT),
             interpolation=unittest.mock.ANY
         )
+        mock_cv2.VideoWriter().write.assert_called_with(mock_cv2.resize())
 
     def test_run_restart_use_last(self, mock_os, mock_subprocess):
         self._setup_os_mock(mock_os)
