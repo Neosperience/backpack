@@ -2,15 +2,17 @@ import logging
 import datetime
 
 import unittest
-from unittest.mock import patch, Mock, PropertyMock
+from unittest.mock import patch, Mock, MagicMock, PropertyMock
 
 mock_cv2 = Mock()
 mock_boto3 = Mock()
+mock_dotenv = Mock()
+mock_os = MagicMock()
 mock_session = mock_boto3.Session()
 mock_credentials = mock_session.get_credentials()
 mock_frozen = mock_credentials.get_frozen_credentials()
 
-with patch.dict('sys.modules', cv2=mock_cv2, boto3=mock_boto3):
+with patch.dict('sys.modules', cv2=mock_cv2, boto3=mock_boto3, dotenv=mock_dotenv, os=mock_os):
     import backpack.kvs
     from backpack.kvs import (
         KVSCredentialsHandler, KVSInlineCredentialsHandler, 
@@ -34,6 +36,9 @@ TEST_FRAME_WIDTH = 600
 TEST_FRAME_HEIGHT = 400
 TEST_FPS = 15
 
+LD_LIBRARY_PATH = 'dummy_ld_library_path'
+GST_PLUGIN_PATH = 'dummy_gst_plugin_path'
+
 # Setup global mocks
 
 mock_session.client('sts').get_caller_identity.return_value = {
@@ -47,6 +52,14 @@ mock_credentials._expiry_time = TEST_EXPIRY_TIME
 mock_frozen.access_key = TEST_AWS_ACCESS_KEY_ID
 mock_frozen.secret_key = TEST_AWS_SECRET_KEY
 mock_frozen.token = TEST_TOKEN
+
+mock_dotenv.find_dotenv.return_value = '/dummy_dotenv_path'
+mock_dotenv.dotenv_values.return_value = {
+    'LD_LIBRARY_PATH': LD_LIBRARY_PATH,
+    'GST_PLUGIN_PATH': GST_PLUGIN_PATH
+}
+
+mock_os.path.isfile.return_value = True
 
 @patch('backpack.kvs.local_now', return_value=TEST_LOCAL_NOW)
 class TestInlineCredentialsHandler(unittest.TestCase):
@@ -210,6 +223,7 @@ class TestFileCredentialsHandler(unittest.TestCase):
 
 
 @patch('subprocess.check_output')
+@patch('backpack.spyglass.os')
 class TestKVSSpyGlass(unittest.TestCase):
     
     STREAM_NAME = 'test_stream'
