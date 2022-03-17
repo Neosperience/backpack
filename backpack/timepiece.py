@@ -254,6 +254,40 @@ class StopWatch(BaseTimer):
         return f'{newline if lvl > 0 else ""}{indent}<{self.__class__.__name__} {" ".join(props)}>'
 
 
+class Callback:
+    ''' Encapsulates a callback function and its arguments.
+
+    The callback can be optionally called asynchronously.
+
+    :param cb: The callback function to be called
+    :param cbargs: Positional arguments of the callback
+    :param cbkwargs: Keyword arguments of the callback
+    :param executor: If specified, the callback function will be called asynchronously, using
+        this executor.
+    '''
+
+    # pylint: disable=invalid-name,too-few-public-methods
+    # invalid-name disabled for the `cb` parameter. callable is also taken.
+    # too-few-public-methods disabled because this is a wrapper class around a callback function.
+    def __init__(
+        self,
+        cb: Callable,
+        cbargs: Optional[List[Any]] = None,
+        cbkwargs: Optional[Dict[str, Any]] = None,
+        executor: Optional['concurrent.futures.Executor'] = None
+    ) -> None:
+        self.cb = cb
+        self.cbargs = cbargs or []
+        self.cbkwargs = cbkwargs or {}
+        self.executor = executor
+
+    def __call__(self):
+        if self.executor:
+            self.executor.submit(self.cb, *self.cbargs, **self.cbkwargs)
+            return None
+        return self.cb(*self.cbargs, **self.cbkwargs)
+
+
 class Schedule(ABC):
     ''' Schedules a task to be called later with the help of an external
     scheduler.
@@ -263,37 +297,23 @@ class Schedule(ABC):
 
     :param repeating: If this schedule fires repeatedly
     :param callback: The callback to be called when the scheduler fires
-    :param cbargs: Positional arguments of the callback
-    :param cbkwargs: Keyword arguments of the callback
-    :param executor: If specified, callback will be called asynchronously, using
-        this executor.
     '''
 
     def __init__(
         self,
         repeating: bool,
-        callback: Callable,
-        cbargs: Optional[List[Any]] = None,
-        cbkwargs: Optional[Dict[str, Any]] = None,
-        executor: Optional['concurrent.futures.Executor'] = None
+        callback: Callback
     ) -> None:
         self.repeating = repeating
         self.callback = callback
-        self.cbargs = cbargs or []
-        self.cbkwargs = cbkwargs or {}
-        self.executor = executor
 
     def fire(self) -> None:
-        ''' Fires the schedule calling the callback. 
-        
-        :returns: If not using an executor (the callback is called synchronously), `fire()` 
+        ''' Fires the schedule calling the callback.
+
+        :returns: If not using an executor (the callback is called synchronously), `fire()`
             returns the return value of the callback. Otherwise it returns None.
         '''
-        if self.executor:
-            self.executor.submit(self.callback, *self.cbargs, **self.cbkwargs)
-            return None
-        else:
-            return self.callback(*self.cbargs, **self.cbkwargs)
+        return self.callback()
 
     @abstractmethod
     def tick(self) -> bool: # pylint: disable=no-self-use
@@ -305,7 +325,6 @@ class Schedule(ABC):
 
 
 class AtSchedule(Schedule):
-    # pylint: disable=invalid-name
     ''' Schedules a task to be executed only once at a specific time.
 
     The task will be executed at the next tick after the specified datetime.
@@ -314,6 +333,9 @@ class AtSchedule(Schedule):
     :param args: Positional arguments to be passed to superclass initializer
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
+
+    # pylint: disable=invalid-name
+    # Disabled for the `at` parameter
 
     def __init__(self, at: datetime.datetime, *args: Any, **kwargs: Any) -> None:
         super().__init__(False, *args, **kwargs)
@@ -342,7 +364,7 @@ class AtSchedule(Schedule):
         return (False, None)
 
     def tick(self) -> bool:
-        if self.executor:
+        if self.callback.executor:
             with self.fire_lock:
                 return self._do_tick()
         return self._do_tick()
@@ -416,6 +438,10 @@ class AlarmClock:
     :param schedules: The list of the schedules.
     '''
 
+    # pylint: disable=too-few-public-methods
+    # It happens that an alarm clock should only tick:
+    # real functionality is implemented by wrapped schedules
+
     def __init__(self, schedules: List[Schedule]=None) -> None:
         self.schedules = schedules or []
 
@@ -426,7 +452,7 @@ class AlarmClock:
         '''
         removables = []
         for schedule in self.schedules:
-            fired, res = schedule.tick()
+            fired, _ = schedule.tick()
             if fired and not schedule.repeating:
                 removables.append(schedule)
         for schedule in removables:
@@ -466,6 +492,9 @@ class Tachometer:
     :param executor: If specified, callback will be called asynchronously using this executor
     '''
 
+    # pylint: disable=too-few-public-methods
+    # It happens that a Tachometer should only tick and sometimes call the callback.
+
     EXPECTED_MAX_FPS = 100
 
     def __init__(
@@ -477,8 +506,7 @@ class Tachometer:
         self.stats_callback = stats_callback
         self.schedule = IntervalSchedule(
             interval=stats_interval,
-            callback=self._calculate_stats,
-            executor=executor
+            callback=Callback(cb=self._calculate_stats, executor=executor)
         )
         ticker_intervals = int(self.EXPECTED_MAX_FPS * stats_interval.total_seconds())
         self.ticker = Ticker(max_intervals=ticker_intervals)

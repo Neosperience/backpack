@@ -30,6 +30,9 @@ class AutoIdentity:
     :ivar device_name: Name of the appliance running this application.
     '''
 
+    # pylint: disable=too-many-instance-attributes,too-few-public-methods
+    # This class functions as a data class that reads its values from the environment
+
     def __init__(self, device_region, application_instance_id=None, parent_logger=None):
         self._logger = (
             logging.getLogger(self.__class__.__name__) if parent_logger is None else

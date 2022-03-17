@@ -4,7 +4,7 @@ import datetime
 
 from backpack.timepiece import (
     local_now, local_dt, panorama_timestamp_to_datetime,
-    Ticker, StopWatch,
+    Ticker, StopWatch, Callback,
     AtSchedule, IntervalSchedule, OrdinalSchedule, AlarmClock,
     Tachometer
 )
@@ -266,7 +266,7 @@ class TestAtSchedule(unittest.TestCase):
         self.cbkwargs = {'foo': 'bar'}
         self.at_schedule = AtSchedule(
             at=self.fire, 
-            callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+            callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
         )
     
     def test_no_fire_before(self, backpack_mock_local_now):
@@ -296,11 +296,8 @@ class TestAtSchedule(unittest.TestCase):
 
     def test_with_executor(self, backpack_mock_local_now):
         executor = Mock()
-        at_schedule = AtSchedule(
-            at=self.fire, 
-            callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs,
-            executor=executor
-        )
+        cb = Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs,executor=executor)
+        at_schedule = AtSchedule(at=self.fire, callback=cb)
         backpack_mock_local_now.return_value = self.after_fire
         fired, _ = at_schedule.tick()
         self.assertIs(fired, True, 'reported no fire when it should')
@@ -318,7 +315,7 @@ class TestIntervalSchedule(unittest.TestCase):
         self.cbkwargs = {'foo': 'bar'}
         self.interval_schedule = IntervalSchedule(
             interval=self.interval,
-            callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+            callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
         )
 
     def test_first_fire(self, backpack_mock_local_now):
@@ -377,7 +374,7 @@ class TestOrdinalSchedule(unittest.TestCase):
         self.cbkwargs = {'foo': 'bar'}
         self.ordinal_schedule = OrdinalSchedule(
             ordinal=self.ordinal,
-            callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+            callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
         )
 
     def test_no_first_call(self):
@@ -396,7 +393,8 @@ class TestOrdinalSchedule(unittest.TestCase):
 
     def test_zero_ordinal(self):
         zero_ordinal_schedule = OrdinalSchedule(
-            ordinal=0, callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+            ordinal=0, 
+            callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
         )
         zero_ordinal_schedule.tick()
         zero_ordinal_schedule.tick()
@@ -407,7 +405,8 @@ class TestOrdinalSchedule(unittest.TestCase):
     def test_negative_ordinal(self):
         with self.assertRaises(ValueError):
             zero_ordinal_schedule = OrdinalSchedule(
-                ordinal=-1, callback=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs
+                ordinal=-1, 
+                callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
             )
 
 

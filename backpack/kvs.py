@@ -26,7 +26,7 @@ import boto3
 from botocore.credentials import RefreshableCredentials
 
 from .spyglass import SpyGlass
-from .timepiece import AtSchedule, local_now
+from .timepiece import AtSchedule, Callback, local_now
 
 def _is_refreshable(credentials):
     return isinstance(credentials, RefreshableCredentials)
@@ -154,7 +154,10 @@ class KVSCredentialsHandler:
 
         self.caller_arn = self.session.client('sts').get_caller_identity()['Arn']
         self.credentials = self.session.get_credentials()
-        self.schedule = AtSchedule(at=None, callback=self._refresh, executor=executor)
+        self.schedule = AtSchedule(
+            at=None,
+            callback=Callback(cb=self._refresh, executor=executor)
+        )
         self._refresh()
 
     def _refresh(self):

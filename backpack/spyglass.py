@@ -3,7 +3,6 @@ annotation drivers unify the drawing API of different backends (for example,
 OpenCV or panoramasdk.media). '''
 
 import os
-import time
 import subprocess
 import logging
 from collections import OrderedDict
@@ -18,7 +17,7 @@ from dotenv import find_dotenv, dotenv_values
 from .timepiece import Ticker
 
 USE_LAST_VALUE = -999
-''' Using this value for dynamic streaming attributes like fps, width and heigth 
+''' Using this value for dynamic streaming attributes like fps, width and heigth
 will cause to use the values from the last streaming session. '''
 
 class SpyGlass(ABC):
@@ -58,6 +57,9 @@ class SpyGlass(ABC):
         SpyGlass will use the default search mechanism of the python-dotenv library
         to search for the .env file (searching in the current and parent folders).
     '''
+
+    # pylint: disable=too-many-instance-attributes
+    # We could group the stream parameters like fps, width and height into a structure, but why?
 
     _FRAME_LOG_FREQUENCY = datetime.timedelta(seconds=60)
 
@@ -113,12 +115,12 @@ class SpyGlass(ABC):
             env = os.environ.copy()
             env['GST_DEBUG'] = '0'
             subprocess.check_output(cmd.split(' '), stderr=subprocess.STDOUT, env=env)
-            self.logger.info(f'"{cmd}" returned no error')
+            self.logger.info('"%s" returned no error', cmd)
             return True
         except subprocess.CalledProcessError as error:
             self.logger.warning(
-                f'"{cmd}" returned error code={error.returncode}, '
-                f'output:\n{error.output.decode()}'
+                '"%s" returned error code=%d, output:\n%s',
+                cmd, error.returncode, error.output.decode()
             )
             return False
 
@@ -142,11 +144,11 @@ class SpyGlass(ABC):
 
     def _config_env(self, dotenv_path=None):
         dotenv_path = dotenv_path or find_dotenv()
-        self.logger.info(f'Loading config variables from {dotenv_path}')
+        self.logger.info('Loading config variables from %s', dotenv_path)
         if not dotenv_path or not os.path.isfile(dotenv_path):
             raise RuntimeError(f'dotenv configuration file was not found at path: {dotenv_path}')
         cfg = dotenv_values(dotenv_path=dotenv_path)
-        self.logger.info(f'Loaded env config structure: {cfg}')
+        self.logger.info('Loaded env config structure: %s', cfg)
         if 'GST_PLUGIN_PATH' in cfg:
             os.environ['GST_PLUGIN_PATH'] = cfg['GST_PLUGIN_PATH']
         path_elems = []
@@ -164,17 +166,17 @@ class SpyGlass(ABC):
         def _check_var(var_name, warn=True):
             val = os.environ.get(var_name)
             if val:
-                self.logger.info(f'{var_name}={val}')
+                self.logger.info('%s=%s', var_name, val)
             elif warn:
-                self.logger.warning(f'{var_name} environment variable is not defined')
+                self.logger.warning('%s environment variable is not defined', var_name)
 
         _check_var('GST_PLUGIN_PATH')
         _check_var('LD_LIBRARY_PATH')
         _check_var('GST_DEBUG', warn=False)
         _check_var('GST_DEBUG_FILE', warn=False)
 
-        self.logger.info(f'Local time on host: {datetime.datetime.now().isoformat()}')
-        self.logger.info(f'UTC time on host: {datetime.datetime.utcnow().isoformat()}')
+        self.logger.info('Local time on host: %s', datetime.datetime.now().isoformat())
+        self.logger.info('UTC time on host: %s', datetime.datetime.utcnow().isoformat())
 
     def _open_stream(self, fps, width, height):
         pipeline = self._get_pipeline(fps, width, height)
@@ -227,7 +229,7 @@ class SpyGlass(ABC):
     @state.setter
     def state(self, state: 'SpyGlass.State') -> None:
         ''' Set the state of the SpyGlass. '''
-        self.logger.info(f'state = {state}')
+        self.logger.info('state = %s', state)
         self._state = state
 
     # Events
@@ -246,16 +248,16 @@ class SpyGlass(ABC):
 
         You should specify the desired frame rate and frame dimensions. Using USE_LAST_VALUE
         for any of theses attributes will use the value from the last streaming session. If no
-        values are found (or the values are explicitly set to None), a warmup session will be 
+        values are found (or the values are explicitly set to None), a warmup session will be
         started.
 
-        :param fps: The declared frame per seconds of the video. Set this to None to determine 
+        :param fps: The declared frame per seconds of the video. Set this to None to determine
             this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
             the last streaming session.
-        :param width: The declared width of the video. Set this to None to determine 
+        :param width: The declared width of the video. Set this to None to determine
             this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
             the last streaming session.
-        :param height: The declared heigth of the video. Set this to None to determine 
+        :param height: The declared heigth of the video. Set this to None to determine
             this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
             the last streaming session.
         '''
@@ -288,7 +290,7 @@ class SpyGlass(ABC):
         if self.state == SpyGlass.State.ERROR:
             self._frame_log(
                 lambda: self.logger.warning(
-                    f'{self.__class__.__name__}.put() was called in {self.state} state'
+                    '%s.put() was called in %s state', self.__class__.__name__, self.state
                 )
             )
             return False
@@ -304,8 +306,8 @@ class SpyGlass(ABC):
             if self._fps_meter_warmup_cnt <= 0:
                 fps, width, height = self._finish_warmup(frame)
                 self.logger.info(
-                    'Finished FPS meter warmup. Determined '
-                    f'fps={fps}, width={width}, height={height}'
+                    'Finished FPS meter warmup. Determined fps=%f, width=%d, height=%d',
+                    fps, width, height
                 )
                 if self._try_open_stream(fps, width, height):
                     return self._put_frame(frame)

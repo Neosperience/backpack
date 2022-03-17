@@ -33,6 +33,11 @@ class CWTachometer(Tachometer):
     :param parent_logger: If you want to connect the logger of this class to a parent,
         specify it here.
     '''
+
+    # pylint: disable=too-many-arguments,too-few-public-methods
+    # We could group the CloudWatch related parameters into a group, but why?
+    # Also, public methods are inherited from base class
+
     def __init__(
         self,
         namespace: str,
