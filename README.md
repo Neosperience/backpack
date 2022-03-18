@@ -1,6 +1,6 @@
 # Backpack 🎒
 
-![unit tests](https://github.com/neosperience/backpack/actions/workflows/test.yml/badge.svg)
+![unit tests](https://github.com/neosperience/backpack/actions/workflows/build.yml/badge.svg)
 
 > Your hiking equipment for an enjoyable Panorama development experience
 
