@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7']
 
     steps:
     - uses: actions/checkout@v1
@@ -34,5 +34,14 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-1
+    - name: Convert coverage report to shields.io format
+      run: |
+        import json
+        with open('htmlcov/coverage.json') as f: cv = json.load(f)['totals']
+        p, pd = cv['percent_covered'], cv['percent_covered_display']
+        col = lambda p: 'green' if p > 95 else 'orange' if p > 90 else 'red'
+        sh = {'schemaVersion': 1, 'label': 'coverage', 'message': pd, 'color': col(p)}
+        with open('htmlcov/shieldscov.json', 'w') as f: json.dump(sh, f)
+      shell: python
     - name: Upload coverage report to S3
       run: aws s3 sync ./htmlcov s3://github-ci.experiments.neosperience.com/Neosperience/backpack/coverage/ --acl public-read

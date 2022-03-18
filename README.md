@@ -1,5 +1,6 @@
 # Backpack 🎒
 
+![hit count](https://hits.dwyl.com/Neosperience/backpack.svg?style=flat-square)
 ![unit tests](https://github.com/neosperience/backpack/actions/workflows/build.yml/badge.svg)
 
 > Your hiking equipment for an enjoyable Panorama development experience
