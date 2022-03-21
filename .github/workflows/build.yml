@@ -70,22 +70,22 @@ jobs:
         python -m pip install anybadge
         mkdir -p ./build
     - name: Create lint badge
-      if: ${{ needs.lint.result == "success" }}
+      if: ${{ needs.lint.result == 'success' }}
       run: anybadge --value="${{ needs.lint.outputs.score }}" --file="build/pylint.svg" pylint
     - name: Create lint n/a badge
-      if: ${{ needs.lint.result != "success" }}
+      if: ${{ needs.lint.result != 'success' }}
       run: anybadge --label="pylint" --value="n/a" --file="build/pylint.svg" --color gray
     - name: Create coverage badge
-      if: ${{ needs.unittest.result == "success" }}
+      if: ${{ needs.unittest.result == 'success' }}
       run: anybadge --label "coverage" --value=${{ needs.unittest.outputs.coverage }} --file="build/coverage.svg"
     - name: Create coverage n/a badge
-      if: ${{ needs.unittest.result != "success" }}
+      if: ${{ needs.unittest.result != 'success' }}
       run: anybadge --label="coverage" --value="n/a" --file="build/coverage.svg" --color gray
     - name: Create pipeline success badge
-      if: ${{ needs.unittest.result == "success" && needs.lint.result == "success" }}
+      if: ${{ needs.unittest.result == 'success' && needs.lint.result == 'success' }}
       run: anybadge --label="pipeline" --value="passing" --file="build/pipeline.svg" passing=green failing=red
     - name: Create pipeline failure badge
-      if: ${{ needs.unittest.result != "success" || needs.lint.result != "success" }}
+      if: ${{ needs.unittest.result != 'success' || needs.lint.result != 'success' }}
       run: anybadge --label="pipeline" --value="failing" --file="build/pipeline.svg" passing=green failing=red
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
