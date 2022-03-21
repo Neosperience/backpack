@@ -19,8 +19,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install jq
         python -m pip install --upgrade pip
         python -m pip install tox tox-gh-actions anybadge
     - name: Lint with pylint
@@ -32,7 +30,7 @@ jobs:
       run: tox
     - name: Create coverage badge
       run: |
-        anybadge --value=$(jq ".totals.percent_covered" build/coverage.json) --file=build/coverage.svg
+        anybadge --value=$(jq ".totals.percent_covered" build/coverage.json) --label "coverage" --file=build/coverage.svg
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v2
       with:
