@@ -1,8 +1,9 @@
 # Backpack 🎒
 
 ![hit count](https://hits.dwyl.com/Neosperience/backpack.svg?style=flat-square)
-![unit tests](https://github.com/neosperience/backpack/actions/workflows/build.yml/badge.svg)
-[![coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fs3.eu-west-1.amazonaws.com%2Fgithub-ci.experiments.neosperience.com%2FNeosperience%2Fbackpack%2Fcoverage%2Fshieldscov.json)](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/coverage/index.html)
+![pipeline](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/pipeline.svg)
+[![coverage](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/coverage.svg)](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/coverage/index.html)
+[![pylint](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/pylint.svg)](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/lint/pylint.txt)
 
 > Your hiking equipment for an enjoyable Panorama development experience
 
