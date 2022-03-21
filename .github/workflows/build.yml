@@ -24,7 +24,7 @@ jobs:
       run: |
         mkdir -p ./build
         pylint backpack --exit-zero --output-format=text | tee build/pylint.txt
-        echo "::set-output score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt)"
+        echo ::set-output name=score::$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt)
     - name: Upload lint report artifact
       uses: actions/upload-artifact@v2
       with:
@@ -52,7 +52,7 @@ jobs:
       id: tox
       run: |
         tox
-        echo "::set-output coverage=$(jq '.totals.percent_covered' build/coverage.json)"
+        echo ::set-output name=coverage::$(jq '.totals.percent_covered' build/coverage.json)
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v2
       with:
