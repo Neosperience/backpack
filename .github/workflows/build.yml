@@ -19,10 +19,20 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install jq
         python -m pip install --upgrade pip
-        python -m pip install tox tox-gh-actions
+        python -m pip install tox tox-gh-actions anybadge
+    - name: Lint with pylint
+      run: |
+        mkdir -p ./build
+        pylint backpack --exit-zero --output-format=text | tee build/pylint.txt
+        anybadge --value=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt) --file=build/pylint.svg pylint
     - name: Test with tox
       run: tox
+    - name: Create coverage badge
+      run: |
+        anybadge --value=$(jq ".totals.percent_covered" build/coverage.json) --file=build/coverage.svg
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v2
       with:
@@ -34,14 +44,5 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-1
-    - name: Convert coverage report to shields.io format
-      run: |
-        import json
-        with open('htmlcov/coverage.json') as f: cv = json.load(f)['totals']
-        p, pd = cv['percent_covered'], cv['percent_covered_display']
-        col = lambda p: 'green' if p > 95 else 'orange' if p > 90 else 'red'
-        sh = {'schemaVersion': 1, 'label': 'coverage', 'message': pd, 'color': col(p)}
-        with open('htmlcov/shieldscov.json', 'w') as f: json.dump(sh, f)
-      shell: python
     - name: Upload coverage report to S3
-      run: aws s3 sync ./htmlcov s3://github-ci.experiments.neosperience.com/Neosperience/backpack/coverage/ --acl public-read
+      run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --acl public-read
