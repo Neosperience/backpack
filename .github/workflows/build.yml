@@ -26,7 +26,6 @@ jobs:
         mkdir -p ./build
         pylint backpack --exit-zero --output-format=text | tee build/pylint.txt
         anybadge --value=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt) --file=build/pylint.svg pylint
-        exit 1
     - name: Test with tox
       id: unittest
       run: tox
