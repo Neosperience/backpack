@@ -5,12 +5,39 @@ on:
   - pull_request
 
 jobs:
-  build:
+  lint:
+    runs-on: ubuntu-latest
+    outputs:
+      score: ${{ steps.pylint.outputs.score }}
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.7"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pylint
+    - name: Lint with pylint
+      id: pylint
+      run: |
+        mkdir -p ./build
+        pylint backpack --exit-zero --output-format=text | tee build/pylint.txt
+        echo "::set-output score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt)"
+    - name: Upload lint report artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: lint-report
+        path: build
+
+  unittest:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.7']
-
+    outputs:
+      coverage: ${{ steps.tox.outputs.coverage }}
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }}
@@ -20,34 +47,20 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install pylint tox tox-gh-actions anybadge
-    - name: Lint with pylint
-      run: |
-        mkdir -p ./build
-        pylint backpack --exit-zero --output-format=text | tee build/pylint.txt
-        anybadge --value=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt) --file=build/pylint.svg pylint
+        python -m pip install tox tox-gh-actions
     - name: Test with tox
-      id: unittest
-      run: tox
-    - name: Create coverage badge
+      id: tox
       run: |
-        anybadge --value=$(jq ".totals.percent_covered" build/coverage.json) --label "coverage" --file=build/coverage.svg
+        tox
+        echo "::set-output coverage=$(jq '.totals.percent_covered' build/coverage.json)"
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v2
       with:
-        name: build-report
+        name: code-coverage-report
         path: build
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-west-1
-    - name: Upload build report to S3
-      run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --acl public-read
 
   report:
-    needs: [build]
+    needs: [lint, unittest]
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
@@ -55,21 +68,30 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install anybadge
+        mkdir -p ./build
+    - name: Create lint badge
+      if: ${{ needs.lint.result == "success" }}
+      run: anybadge --value="${{ needs.lint.outputs.score }}" --file="build/pylint.svg" pylint
+    - name: Create lint n/a badge
+      if: ${{ needs.lint.result != "success" }}
+      run: anybadge --label="pylint" --value="n/a" --file="build/pylint.svg" --color gray
+    - name: Create coverage badge
+      if: ${{ needs.unittest.result == "success" }}
+      run: anybadge --label "coverage" --value=${{ needs.unittest.outputs.coverage }} --file="build/coverage.svg"
+    - name: Create coverage n/a badge
+      if: ${{ needs.unittest.result != "success" }}
+      run: anybadge --label="coverage" --value="n/a" --file="build/coverage.svg" --color gray
     - name: Create pipeline success badge
-      if: ${{ needs.build.result == 'success' }}
-      run: |
-        mkdir -p ./build
-        anybadge --label=pipeline --value=passing --file=./build/pipeline.svg passing=green failing=red
+      if: ${{ needs.unittest.result == "success" && needs.lint.result == "success" }}
+      run: anybadge --label="pipeline" --value="passing" --file="build/pipeline.svg" passing=green failing=red
     - name: Create pipeline failure badge
-      if: ${{ needs.build.result == 'failure' }}
-      run: |
-        mkdir -p ./build
-        anybadge --label=pipeline --value=failing --file=./build/pipeline.svg passing=green failing=red
+      if: ${{ needs.unittest.result != "success" || needs.lint.result != "success" }}
+      run: anybadge --label="pipeline" --value="failing" --file="build/pipeline.svg" passing=green failing=red
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-1
-    - name: Upload report to S3
+    - name: Upload badges to S3
       run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --acl public-read
