@@ -27,6 +27,7 @@ jobs:
         pylint backpack --exit-zero --output-format=text | tee build/pylint.txt
         anybadge --value=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' build/pylint.txt) --file=build/pylint.svg pylint
     - name: Test with tox
+      id: unittest
       run: tox
     - name: Create coverage badge
       run: |
@@ -34,13 +35,40 @@ jobs:
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v2
       with:
-        name: code-coverage-report
-        path: htmlcov
+        name: build-report
+        path: build
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-1
-    - name: Upload coverage report to S3
+    - name: Upload build report to S3
+      run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --acl public-read
+
+  report:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install anybadge
+    - name: Create pipeline success badge
+      if: ${{ needs.build.result == 'success' }}
+      run: |
+        mkdir -p ./build
+        anybadge --label=pipeline --value=passing --file=./build/pipeline.svg passing=green failing=red
+    - name: Create pipeline failure badge
+      if: ${{ needs.build.result == 'failure' }}
+      run: |
+        mkdir -p ./build
+        anybadge --label=pipeline --value=failing --file=./build/pipeline.svg passing=green failing=red
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-west-1
+    - name: Upload report to S3
       run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --acl public-read
