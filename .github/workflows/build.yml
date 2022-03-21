@@ -93,5 +93,17 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: eu-west-1
-    - name: Upload badges to S3
-      run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --acl public-read
+    - name: Download lint artifact
+      if: ${{ needs.lint.result == 'success' }}
+      uses: actions/download-artifact@v3
+      with:
+        name: lint-report
+        path: ./build/lint
+    - name: Download coverage artifact
+      if: ${{ needs.unittest.result == 'success' }}
+      uses: actions/download-artifact@v3
+      with:
+        name: code-coverage-report
+        path: ./build/coverage
+    - name: Upload artifacts to S3
+      run: aws s3 sync ./build s3://github-ci.experiments.neosperience.com/Neosperience/backpack/build/ --delete --acl public-read
