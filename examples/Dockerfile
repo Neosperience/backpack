@@ -9,7 +9,7 @@ RUN apt-get update -y
 # Install build tools
 
 RUN apt-get -y install build-essential cmake m4 git
-RUN apt-get -y install pkg-config
+RUN apt-get -y install pkg-config python3.7-dev
 
 # Install gstreamer
 
@@ -39,39 +39,6 @@ RUN git clone https://github.com/opencv/opencv.git
 WORKDIR /opt/opencv
 RUN git checkout 4.2.0
 
-# Build OpenCV
-
-RUN mkdir -p /opt/opencv/build
-WORKDIR /opt/opencv/build
-
-ENV PYTHON_EXECUTABLE=/usr/bin/python3
-
-RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
-    -D INSTALL_PYTHON_EXAMPLES=OFF \
-    -D INSTALL_C_EXAMPLES=OFF \
-    -D PYTHON2_EXECUTABLE=$(which python) \
-    -D PYTHON_EXECUTABLE=$(which python3) \
-    -D BUILD_opencv_python2=OFF \
-    -D BUILD_opencv_python3=ON \
-    -D BUILD_TESTS=OFF \
-    -D DBUILD_PERF_TESTS=OFF \
-    -D CMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
-    -D PYTHON3_EXECUTABLE=$(which python3) \
-    -D PYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-    -D PYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
-    -D WITH_GSTREAMER=ON \
-    -D BUILD_EXAMPLES=OFF \
-    -D WITH_GTK=OFF \
-    ..
-RUN make -j$(nproc)
-
-# Install OpenCV
-
-RUN make install
-RUN ldconfig
-
-ENV LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1
-
 # Download Kinesis Video Streams producer C++ SDK
 
 WORKDIR /opt
@@ -85,10 +52,52 @@ RUN cmake -D BUILD_GSTREAMER_PLUGIN=ON \
     -D BUILD_TEST=FALSE \
     ..
 
-RUN make -j$(nproc)
+RUN make -j $(($(nproc) <= 4 ? $(nproc) : 4))
 
 ENV GST_PLUGIN_PATH=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/build
 ENV LD_LIBRARY_PATH=/opt/amazon-kinesis-video-streams-producer-sdk-cpp/open-source/local/lib
+
+# Build OpenCV
+
+RUN mkdir -p /opt/opencv/build
+WORKDIR /opt/opencv/build
+
+ENV PYTHON_EXECUTABLE=/usr/bin/python3
+
+RUN PYTHON3_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") && \
+    PYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") && \
+    mkdir -p $PYTHON3_INCLUDE_DIR && \
+    mkdir -p $PYTHON3_PACKAGES_PATH && \
+    cmake -D CMAKE_BUILD_TYPE=RELEASE \
+        -D INSTALL_PYTHON_EXAMPLES=OFF \
+        -D INSTALL_C_EXAMPLES=OFF \
+        -D PYTHON2_EXECUTABLE=$(which python) \
+        -D PYTHON_EXECUTABLE=$(which python3) \
+        -D PYTHON3_EXECUTABLE=$(which python3) \
+        -D PYTHON3_INCLUDE_DIR=$PYTHON3_INCLUDE_DIR \
+        -D PYTHON3_PACKAGES_PATH=$PYTHON3_PACKAGES_PATH \
+        -D PYTHON_DEFAULT_EXECUTABLE=$(which python3) \
+        -D PYTHON3_LIBRARY=$PYTHON3_PACKAGES_PATH \
+        -D BUILD_NEW_PYTHON_SUPPORT=ON \
+        -D BUILD_opencv_python3=ON \
+        -D HAVE_opencv_python3=ON \
+        -D BUILD_opencv_python2=OFF \
+        -D BUILD_TESTS=OFF \
+        -D DBUILD_PERF_TESTS=OFF \
+        -D CMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
+        -D WITH_GSTREAMER=ON \
+        -D BUILD_EXAMPLES=OFF \
+        -D WITH_GTK=OFF \
+        ..
+RUN make -j $(($(nproc) <= 4 ? $(nproc) : 4))
+
+# Install OpenCV
+
+RUN make install
+RUN ldconfig
+
+ENV LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1
+ENV PYTHONPATH=/usr/lib/python3.7/site-packages
 
 # Create GStreamer cache directory
 RUN mkdir -p /root/.cache/gstreamer-1.0/
