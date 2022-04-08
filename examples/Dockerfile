@@ -143,3 +143,4 @@ COPY . /opt/backpack
 RUN python3 -m pip install /opt/backpack
 
 WORKDIR /panorama
+COPY tests /panorama
