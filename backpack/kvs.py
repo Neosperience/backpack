@@ -287,6 +287,10 @@ class KVSInlineCredentialsHandler(KVSCredentialsHandler):
         res = re.sub(r'access-key="([^"]*)"', 'access-key="*****"', res)
         return res
 
+    def _save_credentials(self, *args, **kwargs) -> None:
+        # Empty implementation, credentials are passed in plugin config
+        pass
+
 
 class KVSEnvironmentCredentialsHandler(KVSCredentialsHandler):
     ''' Saves AWS credentials in environment variables.

@@ -7,7 +7,6 @@ from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union
 import datetime
 import logging
 from abc import ABC, abstractmethod
-import numpy as np
 import cv2
 
 from .timepiece import local_now
@@ -34,7 +33,7 @@ class Point(NamedTuple):
         '''
         return (int(self.x * width), int(self.y * height))
 
-    def in_image(self, img: np.ndarray) -> Tuple[int, int]:
+    def in_image(self, img: 'numpy.ndarray') -> Tuple[int, int]:
         ''' Scales this point in an OpenCV image.
 
         :param img: The OpenCV image of ``(height, width, channels)`` shape
@@ -166,7 +165,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     DEFAULT_OPENCV_FONT = cv2.FONT_HERSHEY_PLAIN
     DEFAULT_OPENCV_FONT_SCALE = 1.0
 
-    def add_rect(self, rect: RectAnnotation, context: np.ndarray) -> None:
+    def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
         cv2.rectangle(
             context,
             rect.point1.in_image(context),
@@ -175,7 +174,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             self.DEFAULT_OPENCV_LINEWIDTH
         )
 
-    def add_label(self, label: LabelAnnotation, context: np.ndarray) -> None:
+    def add_label(self, label: LabelAnnotation, context: 'numpy.ndarray') -> None:
         cv2.putText(
             context,
             label.text,
