@@ -30,8 +30,8 @@ class TestGlobal(unittest.TestCase):
 
     def test_panorama_timestamp_to_datetime(self):
         ts = (1645735796, 142984)
-        dt = panorama_timestamp_to_datetime(ts)
-        expected_dt = datetime.datetime(2022, 2, 24, 20, 49, 56, 142984)
+        dt = panorama_timestamp_to_datetime(ts).astimezone(datetime.timezone.utc)
+        expected_dt = datetime.datetime(2022, 2, 24, 20, 49, 56, 142984, tzinfo=datetime.timezone.utc)
         self.assertEqual(dt, expected_dt)
 
 @patch('backpack.timepiece.time')

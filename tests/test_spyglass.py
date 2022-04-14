@@ -40,7 +40,7 @@ class DummySpyGlass(SpyGlass):
     ''' As SpyGlass is an abstract base class, we will create this dummy child class
     in order to be able to test it. '''
     PIPELINE_TEMPLATE = 'dummy_pipeline fps={} width={} height={}'
-    _FPS_METER_WARMUP_FRAMES = WARMUP_FRAMES
+    FPS_METER_WARMUP_FRAMES = WARMUP_FRAMES
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -172,11 +172,12 @@ class TestSpyGlass(unittest.TestCase):
         self._setup_time_mock(mock_time)
         spyglass = DummySpyGlass(parent_logger=self.parent_logger)
         spyglass.start_streaming()
-        for i in range(WARMUP_FRAMES):
+        for i in range(DummySpyGlass.FPS_METER_WARMUP_FRAMES):
             self.assertFalse(spyglass.put(self.frame))
             self.assertEqual(spyglass.state, SpyGlass.State.WARMUP)
             time.sleep(1 / TEST_FPS)
         self.assertTrue(spyglass.put(self.frame))
+        self.assertEqual(spyglass.state, SpyGlass.State.STREAMING)
         self.assertStreaming(spyglass)
 
     def test_run_start_streaming(self, mock_os, mock_subprocess):
