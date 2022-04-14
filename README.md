@@ -1,6 +1,6 @@
 # Backpack 🎒
 
-![hit count](https://hits.dwyl.com/Neosperience/backpack.svg?style=flat&show=unique)
+<!-- ![hit count](https://hits.dwyl.com/Neosperience/backpack.svg?style=flat&show=unique) -->
 ![pipeline](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/pipeline.svg)
 [![coverage](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/coverage.svg)](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/coverage/index.html)
 [![pylint](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/pylint.svg)](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/lint/pylint.txt)
