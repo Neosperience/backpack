@@ -78,7 +78,7 @@ jobs:
       run: anybadge --label="pylint" --value="n/a" --file="build/pylint.svg" --color gray
     - name: Create coverage badge
       if: ${{ needs.unittest.result == 'success' }}
-      run: anybadge --label "coverage" --value=${{ needs.unittest.outputs.coverage }} --file="build/coverage.svg"
+      run: anybadge --label "coverage" --value=$(printf "%.1f%%" ${{ needs.unittest.outputs.coverage }}) --file="build/coverage.svg"
     - name: Create coverage n/a badge
       if: ${{ needs.unittest.result != 'success' }}
       run: anybadge --label="coverage" --value="n/a" --file="build/coverage.svg" --color gray
