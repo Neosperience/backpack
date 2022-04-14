@@ -11,34 +11,50 @@ from abc import ABC, abstractmethod
 
 from dateutil.tz import tzlocal
 
-def local_now():
-    ''' Returns the current time in local time zone. '''
+def local_now() -> datetime.datetime:
+    ''' Returns the current time in local time zone. 
+    
+    Returns:
+        A timezone aware datettime instance in the local time zone.
+    '''
     return datetime.datetime.now(tz=tzlocal())
 
-def local_dt(datetime_):
-    ''' Converts the supplied naive datetime to be time zone aware in the local time zone. '''
-    return datetime_.astimezone(tz=tzlocal())
+def local_dt(dt: datetime.datetime) -> datetime.datetime:
+    ''' Converts the supplied naive datetime to be time zone aware in the local time zone. 
+    
+    Args:
+        dt: The naive datetime instance.
+
+    Returns:
+        A timezone aware datettime instance in the local time zone.
+    '''
+    return dt.astimezone(tz=tzlocal())
 
 def panorama_timestamp_to_datetime(panorama_ts: Tuple[int, int]) -> datetime.datetime:
     ''' Converts panoramasdk.media.time_stamp (seconds, microsececonds)
     tuple to python datetime.
+
+    Args:
+        panorama_ts: The Panorama timestamp
+
+    Returns:
+        A python datetime instance.
     '''
     sec, microsec = panorama_ts
     return datetime.datetime.fromtimestamp(sec + microsec / 1000000.0)
 
 
 class BaseTimer(ABC):
-    ''' Base class for code execution time measuring timers.'''
+    ''' Base class for code execution time measuring timers.
+    
+    Args:
+        max_intervals: Maximum number of intervals to remember.
+    '''
 
     # Print at most this many intervals in __repr__
     MAX_REPR_INTERVALS = 5
 
-    ''' Base clock the registers time intervals.
-
-    :param max_intervals: Maximum number of intervals to remember.
-    '''
-
-    def __init__(self, max_intervals:int=10) -> None:
+    def __init__(self, max_intervals:int=10):
         self.intervals: Deque[float] = deque(maxlen=max_intervals)
 
     def min(self) -> float:
@@ -92,25 +108,24 @@ class Ticker(BaseTimer):
 
     Ticker can also calculate basic statistics of the time intervals.
 
-    Example usage:
-    ```python
-    ticker = Ticker(max_intervals=5)
-    for i in range(10):
-        ticker.tick()
-        time.sleep(random.random() / 10)
-    print(ticker)
-    ```
-    Results:
-    ```
-    <Ticker intervals=[0.0899, 0.0632, 0.0543, 0.0713, 0.0681] min=0.0543 mean=0.0694 max=0.0899>
-    ```
+    Example usage::
+
+        ticker = Ticker(max_intervals=5)
+        for i in range(10):
+            ticker.tick()
+            time.sleep(random.random() / 10)
+        print(ticker)
+
+    Results::
+
+        <Ticker intervals=[0.0899, 0.0632, 0.0543, 0.0713, 0.0681] min=0.0543 mean=0.0694 max=0.0899>
 
     :ivar max_intervals: Maximum number of time intervals to be recorded.
         Only the last max_intervals number of intervals will be kept.
     :ivar intervals: The recorded intervals in seconds between the successive events.
     '''
 
-    def __init__(self, max_intervals:int=10) -> None:
+    def __init__(self, max_intervals:int=10):
         super().__init__(max_intervals=max_intervals)
         self._last_tick: Optional[float] = None
 
@@ -138,52 +153,51 @@ class StopWatch(BaseTimer):
     `tick()`, you can calculate the average execution of the task calling
     `mean_tick()`.
 
-    Example usage:
-    ```python
-    import time
-    with StopWatch('root') as root:
-        with root.child('task1', max_ticks=5) as task:
-            time.sleep(0.01)
-            with task.child('subtask1.1'):
-                time.sleep(0.03)
-            with task.child('subtask1.2'):
-                time.sleep(0.07)
-            with task.child('subtask1.3'):
-                time.sleep(0.09)
-        with root.child('task2') as task:
-            time.sleep(0.17)
-    print(root)
-    ```
+    Example usage::
 
-    Results:
-    ```
-    <StopWatch name=root total_elapsed=0.9222 children=[
-        <StopWatch
-            name=task1
-            total_elapsed=0.7520
-            ticks=[0.0501, 0.0601, 0.0701, 0.0802, 0.0902]
-            mean_tick=0.0701
-            children=[
-                <StopWatch name=subtask1.1 total_elapsed=0.0301>,
-                <StopWatch name=subtask1.2 total_elapsed=0.0701>,
-                <StopWatch name=subtask1.3 total_elapsed=0.0902>
-            ]
-        >,
-        <StopWatch name=task2 total_elapsed=0.1702>
-    ]>
-    ```
+        import time
+        with StopWatch('root') as root:
+            with root.child('task1', max_ticks=5) as task:
+                time.sleep(0.01)
+                with task.child('subtask1.1'):
+                    time.sleep(0.03)
+                with task.child('subtask1.2'):
+                    time.sleep(0.07)
+                with task.child('subtask1.3'):
+                    time.sleep(0.09)
+            with root.child('task2') as task:
+                time.sleep(0.17)
+        print(root)
 
-    :param name: The name of this StopWatch
-    :param max_intervals: Maximum number of intervals to be recorded.
 
-    :ivar parent: The parent StopWatch
-    :ivar children: The name-indexed dictionary of the children StopWatches
-    :ivar intervals: The recorded time intervals in seconds spent in the
-        context. If the same object was used multiple times as a context manager,
-        up to max_intervals intervals will be accumulated in this variable.
+    Results::
+
+        <StopWatch name=root total_elapsed=0.9222 children=[
+            <StopWatch
+                name=task1
+                total_elapsed=0.7520
+                ticks=[0.0501, 0.0601, 0.0701, 0.0802, 0.0902]
+                mean_tick=0.0701
+                children=[
+                    <StopWatch name=subtask1.1 total_elapsed=0.0301>,
+                    <StopWatch name=subtask1.2 total_elapsed=0.0701>,
+                    <StopWatch name=subtask1.3 total_elapsed=0.0902>
+                ]
+            >,
+            <StopWatch name=task2 total_elapsed=0.1702>
+        ]>
+
+    Args:
+        name: The name of this StopWatch
+        max_intervals: Maximum number of intervals to be recorded.
+
+    Attributes:
+        name (str): The name of this StopWatch
+        parent (Optional['StopWatch']): The parent StopWatch
+        children (Dict[str, 'StopWatch']): The name-indexed dictionary of the children StopWatches
     '''
 
-    def __init__(self, name:str, max_intervals:int=10) -> None:
+    def __init__(self, name:str, max_intervals:int=10):
         super().__init__(max_intervals=max_intervals)
         self.name: str = name
         self.parent: Optional['StopWatch'] = None
@@ -193,9 +207,10 @@ class StopWatch(BaseTimer):
     def child(self, name:str, max_intervals:Optional[int]=None) -> 'StopWatch':
         ''' Creates a new or returns an existing child of this StopWatch.
 
-        :param name: Name of the child StopWatch.
-        :param max_intervals: Maximum number of intervals to be recorded in the
-            child. If None, max_intervals of the parent (this object) will be used.
+        Args:
+            name: Name of the child StopWatch.
+            max_intervals: Maximum number of intervals to be recorded in the
+                child. If None, max_intervals of the parent (this object) will be used.
         '''
         if name in self.children:
             return self.children[name]
@@ -275,7 +290,7 @@ class Callback:
         cbargs: Optional[List[Any]] = None,
         cbkwargs: Optional[Dict[str, Any]] = None,
         executor: Optional['concurrent.futures.Executor'] = None
-    ) -> None:
+    ):
         self.cb = cb
         self.cbargs = cbargs or []
         self.cbkwargs = cbkwargs or {}
@@ -303,7 +318,7 @@ class Schedule(ABC):
         self,
         repeating: bool,
         callback: Callback
-    ) -> None:
+    ):
         self.repeating = repeating
         self.callback = callback
 
@@ -337,7 +352,7 @@ class AtSchedule(Schedule):
     # pylint: disable=invalid-name
     # Disabled for the `at` parameter
 
-    def __init__(self, at: datetime.datetime, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, at: datetime.datetime, *args: Any, **kwargs: Any):
         super().__init__(False, *args, **kwargs)
         self.at_lock = threading.Lock()
         self.fire_lock = threading.Lock()
@@ -381,7 +396,7 @@ class IntervalSchedule(Schedule):
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
 
-    def __init__(self, interval: datetime.timedelta, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, interval: datetime.timedelta, *args: Any, **kwargs: Any):
         super().__init__(True, *args, **kwargs)
         self.interval = interval
         self._next_fire = None
@@ -413,7 +428,7 @@ class OrdinalSchedule(Schedule):
     :param kwargs: Keyword arguments to be passed to superclass initializer
     '''
 
-    def __init__(self, ordinal: int, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, ordinal: int, *args: Any, **kwargs: Any):
         super().__init__(True, *args, **kwargs)
         if ordinal < 0:
             raise ValueError('ordinal must be greater or equal than zero')
@@ -442,7 +457,7 @@ class AlarmClock:
     # It happens that an alarm clock should only tick:
     # real functionality is implemented by wrapped schedules
 
-    def __init__(self, schedules: List[Schedule]=None) -> None:
+    def __init__(self, schedules: List[Schedule]=None):
         self.schedules = schedules or []
 
     def tick(self) -> None:
@@ -463,18 +478,16 @@ class Tachometer:
     ''' A Tachometer can be used to measure the frequency of recurring events,
     and periodically report statistics about it.
 
-    Call the `tick()` method of the tachimeter each time an atomic event happens.
+    Call the `tick()` method of the tachometer each time an atomic event happens.
     For example, if you are interested in the stastics of the frame processing
     time of your application, call `tick` method each time you process a new
     frame.
 
     Tachometer will periodically call a callback function with the following
-    signature:
+    signature::
 
-    ```python
-    def stats_callback(timestamp, ticker):
-        pass
-    ```
+        def stats_callback(timestamp, ticker):
+            pass
 
     passing the timestamp of the last event, as well as the `Ticker` instance that
     collected the events. You can access the `min()`, `max()`, `sum()` (total processing time)
@@ -502,7 +515,7 @@ class Tachometer:
         stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional['concurrent.futures.Executor'] = None
-    ) -> None:
+    ):
         self.stats_callback = stats_callback
         self.schedule = IntervalSchedule(
             interval=stats_interval,

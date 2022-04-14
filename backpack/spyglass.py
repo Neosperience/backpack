@@ -24,38 +24,45 @@ class SpyGlass(ABC):
 
     ''' Abstract base class for sending OpenCV frames to a remote service using GStreamer.
 
-    SpyGlass can be used to create programatically a video stream and send it to
-    an external video ingestion service supported by GStreamer. Once the SpyGlass
+    :class:`SpyGlass` can be used to create programatically a video stream and send it to
+    an external video ingestion service supported by GStreamer. Once the :class:`SpyGlass`
     instances is configured and the streaming pipeline was opened by calling
-    `start_streaming`, successive frames can be passed to the `put` method of the
-    instance in OpenCV image format (numpy arrays with a shape of `(height, width, 3)`,
-    BGR channel order, `np.uint8` type).
+    :meth:`start_streaming`, successive frames can be passed to the :meth:`put` method of the
+    instance in OpenCV image format (:class:`numpy.ndarray` with a shape of ``(height, width, 3)``,
+    BGR channel order, :class:`numpy.uint8` type).
 
     The frequency of frames (frames per second) as well as the image
     dimensions (width, heigth) are static during the streaming. You can either
     specify these properties upfront in the constructor, or let SpyGlass figure out
-    these values. In the later case, up to `SpyGlass._FPS_METER_WARMUP_FRAMES`
+    these values. In the later case, up to :attr:`FPS_METER_WARMUP_FRAMES`
     frames (by default 100) will be discarded at the begining of the streaming
     and during this period the value of the stream fps, width and height will
-    be determined automatically. In all cases you are expected to call the `put`
-    method with the frequency of the `video_fps` property, and send images
-    of (`video_width`, `video_height`) size.
+    be determined automatically. In all cases you are expected to call the :meth:`put`
+    method with the frequency of the :attr:`video_fps` property, and send images
+    of (:attr:`video_width`, :attr:`video_height`) size.
 
-    You should also specify `GST_PLUGIN_PATH` variable to the folder
+    You should also specify ``GST_PLUGIN_PATH`` variable to the folder
     where the kvssink plugin binaries were built, and add the open-source
-    dependency folder of kvssink to the `LD_LIBRARY_PATH` variable.
+    dependency folder of kvssink to the ``LD_LIBRARY_PATH`` variable.
     You can define these variables as environment variables, or in a file
-    called `.env` in the same folder where this file can be found.
+    called ``.env`` in the same folder where this file can be found.
 
-    :param parent_logger: If you want to connect the logger of KVS to a parent,
-        specify it here.
-    :param gst_log_file: If you want to redirect GStreamer logs to a file, specify
-        the full path of the file in this parameter.
-    :param gst_log_level: If you want to override GStreamer log level configuration,
-        specify in this parameter.
-    :param dotenv_path: The path of the .env configuration file. If left to None,
-        SpyGlass will use the default search mechanism of the python-dotenv library
-        to search for the .env file (searching in the current and parent folders).
+    Args:
+        parent_logger: If you want to connect the logger of KVS to a parent,
+            specify it here.
+        gst_log_file: If you want to redirect GStreamer logs to a file, specify
+            the full path of the file in this parameter.
+        gst_log_level: If you want to override GStreamer log level configuration,
+            specify in this parameter.
+        dotenv_path: The path of the .env configuration file. If left to None,
+            SpyGlass will use the default search mechanism of the python-dotenv library
+            to search for the .env file (searching in the current and parent folders).
+    
+    Attributes:
+        video_width (int): The width of the frames in the video stream.
+        video_height (int): The height of the frames in the video stream.
+        video_fps (float): The number of frames per second sent to the video stream.
+        logger (logging.Logger): The logger instance.
     '''
 
     # pylint: disable=too-many-instance-attributes
@@ -66,10 +73,20 @@ class SpyGlass(ABC):
     # Wait for so many put() requests before starting streaming.
     # During this period the avgerage FPS will be measured and the
     # stream will be initialized with this FPS
-    _FPS_METER_WARMUP_FRAMES = 100
+    FPS_METER_WARMUP_FRAMES = 100
 
     class State(Enum):
-        ''' States of the SpyGlass. '''
+        ''' States of the :class:`SpyGlass`. 
+        
+        Attributes:
+            STOPPED: The :class:`SpyGlass` instance is stopped.
+            START_WARMUP: The :class:`SpyGlass` instance is about to start the warmup period.
+            WARMUP: The :class:`SpyGlass` instance is measuring frame rate and frame size during 
+                the warmup period.
+            STREAMING: The :class:`SpyGlass` instance is streaming. The 
+                :meth:`~backpack.spyglass.SpyGlass.put` method should be called regularly.
+            ERROR: The :class:`SpyGlass` instance is encountered an error.
+        '''
         STOPPED = 0
         START_WARMUP = 1
         WARMUP = 2
@@ -97,7 +114,7 @@ class SpyGlass(ABC):
         self._check_env()
         self._last_log = datetime.datetime.min
         self._fps_meter_warmup_cnt = 0
-        self._fps_meter_ticker = Ticker(self._FPS_METER_WARMUP_FRAMES + 1)
+        self._fps_meter_ticker = Ticker(self.FPS_METER_WARMUP_FRAMES + 1)
         self._last_fps = None
         self._last_width = None
         self._last_height = None
@@ -205,7 +222,7 @@ class SpyGlass(ABC):
 
     def _start_warmup(self):
         self._fps_meter_ticker.reset()
-        self._fps_meter_warmup_cnt = self._FPS_METER_WARMUP_FRAMES
+        self._fps_meter_warmup_cnt = self.FPS_METER_WARMUP_FRAMES
 
     def _finish_warmup(self, frame):
         fps = self.video_fps or round(self._fps_meter_ticker.freq())
@@ -236,30 +253,31 @@ class SpyGlass(ABC):
 
     def start_streaming(
         self,
-        fps=USE_LAST_VALUE,
-        width=USE_LAST_VALUE,
-        height=USE_LAST_VALUE
+        fps: float = USE_LAST_VALUE,
+        width: int = USE_LAST_VALUE,
+        height: int = USE_LAST_VALUE
     ) -> None:
         ''' Start the streaming.
 
-        After calling this method, you are exepcted to call the `put` method at
+        After calling this method, you are exepcted to call the :meth:`put` method at
         regular intervals. The streaming can be stopped and restarted arbitrary times on
-        the same SpyGlass() instance.
+        the same :class:`SpyGlass` instance.
 
-        You should specify the desired frame rate and frame dimensions. Using USE_LAST_VALUE
+        You should specify the desired frame rate and frame dimensions. Using :attr:`USE_LAST_VALUE`
         for any of theses attributes will use the value from the last streaming session. If no
-        values are found (or the values are explicitly set to None), a warmup session will be
+        values are found (or the values are explicitly set to ``None``), a warmup session will be
         started.
 
-        :param fps: The declared frame per seconds of the video. Set this to None to determine
-            this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
-            the last streaming session.
-        :param width: The declared width of the video. Set this to None to determine
-            this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
-            the last streaming session.
-        :param height: The declared heigth of the video. Set this to None to determine
-            this value automatically, or backpack.spyglass.USE_LAST_VALUE to use the value from
-            the last streaming session.
+        Args:
+            fps: The declared frame per seconds of the video. Set this to ``None`` to determine
+                this value automatically, or :attr:`USE_LAST_VALUE` to use the value from
+                the last streaming session.
+            width: The declared width of the video. Set this to ``None`` to determine
+                this value automatically, or :attr:`USE_LAST_VALUE` to use the value from
+                the last streaming session.
+            height: The declared heigth of the video. Set this to ``None`` to determine
+                this value automatically, or :attr:`USE_LAST_VALUE` to use the value from
+                the last streaming session.
         '''
         self.video_fps = self._last_fps if fps == USE_LAST_VALUE else fps
         self.video_width = self._last_width if width == USE_LAST_VALUE else width
@@ -275,12 +293,15 @@ class SpyGlass(ABC):
 
     def put(
         self,
-        frame: 'np.array',
+        frame: 'numpy.ndarray',
     ) -> bool:
         ''' Put a frame to the video stream.
 
-        :param frame: A numpy array of (height, width, 3) shape and of `np.uint8` type.
-        :return: True if the frame was effectively put on the downstream pipeline.
+        Args:
+            frame: A numpy array of ``(height, width, 3)`` shape and of :class:`numpy.uint8` type.
+        
+        Returns:
+            ``True`` if the frame was effectively put on the downstream pipeline.
         '''
 
         if self.state == SpyGlass.State.STOPPED:
@@ -323,7 +344,7 @@ class SpyGlass(ABC):
     def stop_streaming(self) -> None:
         ''' Stops the streaming.
 
-        Successive calls to `put` method will silently discard the frames.
+        Successive calls to :meth:`put` method will silently discard the frames.
         '''
         self._close_stream()
         self.state = SpyGlass.State.STOPPED

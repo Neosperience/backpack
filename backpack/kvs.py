@@ -1,4 +1,5 @@
-''' SpyGlass implementation that sends OpenCV frames to AWS Kinesis Video Streams.
+''' :class:`~backpack.kvs.KVSSpyGlass` is a :class:`~backpack.spyglass.SpyGlass` implementation 
+that streams the output of the AWS Panorama application to AWS Kinesis Video Streams service.
 
 To use this class you MUST have the following dependencies correctly configured on your system:
  - GStreamer 1.0 installed with standard plugins pack, libav, tools and development libraries
@@ -20,7 +21,8 @@ import os
 import datetime
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from typing import List, Dict, Any
+from abc import ABC, abstractmethod
 
 import boto3
 from botocore.credentials import RefreshableCredentials
@@ -52,19 +54,20 @@ class KVSSpyGlass(SpyGlass):
     You can configure the frame width, height and fps auto-detection as described
     in the SpyGlass class documentation.
 
-    :param stream_region: The AWS region of the Kinesis Video Stream
-    :param stream_name: The name of the Kinesis Video Stream
-    :param credentials_handler: The credentials handler
-    :param *args: Positional arguments to be passed to SpyGlass initializer.
-    :param *kwargs: Keyword arguments to be passed to SpyGlass initializer.
+    Args:
+        stream_region: The AWS region of the Kinesis Video Stream
+        stream_name: The name of the Kinesis Video Stream
+        credentials_handler: The credentials handler
+        args: Positional arguments to be passed to SpyGlass initializer.
+        kwargs: Keyword arguments to be passed to SpyGlass initializer.
     '''
 
     def __init__(self,
         stream_region: str,
         stream_name: str,
         credentials_handler: 'KVSCredentialsHandler',
-        *args: Any,
-        **kwargs: Any
+        *args: List[Any],
+        **kwargs: Dict[str, Any]
     ):
         super().__init__(*args, **kwargs)
         self.stream_region = stream_region
@@ -104,8 +107,10 @@ class KVSSpyGlass(SpyGlass):
         return result
 
 
-class KVSCredentialsHandler:
-    ''' Provide AWS credentials to Kinesis Video Stream Producer library.
+class KVSCredentialsHandler(ABC):
+    ''' Abstract base class for credential providers.
+    
+    Credential providers provide AWS credentials to Kinesis Video Stream Producer library.
 
     If no static credentials are provided in the init method, the Credentials
     Handler will figure out the AWS credentials from the boto3 configuration.
@@ -122,12 +127,15 @@ class KVSCredentialsHandler:
     Video Streams Producer. If the credentials are not expired, this method should add
     almost no overhead.
 
-    :param aws_access_key_id: If you want to use custom static credentials, specify your
-        AWS access key ID here. This method is not recommended for production builds.
-    :param aws_secret_access_key: If you want to use custom static credentials, specify your
-        AWS secret access key here. This method is not recommended for production builds.
-    :param executor: Credential refresh operator will be dispatched to this executor.
-    :param parent_logger: Connect the logger of this class to a parent logger.
+    You should not instantiate this class: use one if its subclasses instead.
+
+    Args:
+        aws_access_key_id: If you want to use custom static credentials, specify your
+            AWS access key ID here. This method is not recommended for production builds.
+        aws_secret_access_key: If you want to use custom static credentials, specify your
+            AWS secret access key here. This method is not recommended for production builds.
+        executor: Credential refresh operator will be dispatched to this executor.
+        parent_logger: Connect the logger of this class to a parent logger.
     '''
 
     REFRESH_BEFORE_EXPIRATION = datetime.timedelta(seconds=2 * 60)
@@ -219,6 +227,7 @@ class KVSCredentialsHandler:
         ''' Call this method periodically to refresh credentials. '''
         self.schedule.tick()
 
+    @abstractmethod
     def _save_credentials(
         self,
         credentials: 'botocore.credentials.Credentials',
@@ -233,7 +242,7 @@ class KVSCredentialsHandler:
         '''
 
     def plugin_config(self) -> str: # pylint: disable=no-self-use
-        ''' Returns a string that should be included in the kvssing plugin config.'''
+        ''' Returns a string that should be included in the kvssink GStreamer plugin config.'''
         return ''
 
     def plugin_config_mask(self, plugin_config: str) -> str: # pylint: disable=no-self-use
@@ -246,9 +255,13 @@ class KVSInlineCredentialsHandler(KVSCredentialsHandler):
 
     This credentials handler can be used only with static credentials as there is
     no way to refresh the credentials once they were passed to KVS Producer.
+
+    Args:
+        args: Positional arguments to be passed to :class:`KVSCredentialsHandler` initializer.
+        kwargs: Keyword arguments to be passed to :class:`KVSCredentialsHandler` initializer.
     '''
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: List[Any], **kwargs: Dict[str, Any]):
         super().__init__(*args, **kwargs)
         if _is_refreshable(self.credentials):
             raise RuntimeError(
@@ -257,14 +270,18 @@ class KVSInlineCredentialsHandler(KVSCredentialsHandler):
                 'kvssink plugin configuration.'
             )
 
-    def plugin_config(self) -> None:
+    def plugin_config(self) -> str:
         return ' '.join([
             f'access-key="{self.credentials.access_key}"',
             f'secret-key="{self.credentials.secret_key}"',
         ])
 
     def plugin_config_mask(self, plugin_config: str) -> str:
-        ''' Masks credentials for printing in logs. '''
+        ''' Masks credentials for printing in logs. 
+        
+        Args:
+            plugin_config: The original plugin config string.
+        '''
         res = plugin_config
         res = re.sub(r'secret-key="([^"]*)"', 'secret-key="*****"', res)
         res = re.sub(r'access-key="([^"]*)"', 'access-key="*****"', res)
@@ -279,13 +296,19 @@ class KVSEnvironmentCredentialsHandler(KVSCredentialsHandler):
     that your stream will stop once the original dynamic credentials expiry.
 
     For this reason, it is recommened that you use this credentials handler
-    only with static credentials.
+    only with static credentials and do not use it in production setting.
+
+    Args:
+        args: Positional arguments to be passed to :class:`KVSCredentialsHandler` initializer.
+        kwargs: Keyword arguments to be passed to :class:`KVSCredentialsHandler` initializer.
     '''
+    def __init__(self, *args: List[Any], **kwargs: Dict[str, Any]):
+        super().__init__(*args, **kwargs)
 
     def _save_credentials(
         self,
         credentials: 'botocore.credentials.Credentials',
-        next_update: datetime.datetime
+        _: datetime.datetime
     ):
         if _is_refreshable(credentials):
             os.environ['AWS_SESSION_TOKEN'] = credentials.token
@@ -304,7 +327,10 @@ class KVSFileCredentialsHandler(KVSCredentialsHandler):
     the refreshed credentials are updated also in the text file, before the
     declared file expiration.
 
-    :param credentials_path: The path of the credentials file.
+    Args:
+        credentials_path: The path of the credentials file.
+        args: Positional arguments to be passed to :class:`KVSCredentialsHandler` initializer.
+        kwargs: Keyword arguments to be passed to :class:`KVSCredentialsHandler` initializer.
     '''
 
     FILE_REFRESH_GRACE_PERIOD = datetime.timedelta(seconds=60)
@@ -313,9 +339,13 @@ class KVSFileCredentialsHandler(KVSCredentialsHandler):
     credentials file after the waiting this time, KVS will find the
     new tokens in the file. '''
 
-    def __init__(self, credentials_path: str='/tmp/credentials.txt', **kwargs):
+    def __init__(
+        self, credentials_path: str='/tmp/credentials.txt', 
+        *args: List[Any], 
+        **kwargs: Dict[str, Any]
+    ):
         self.credentials_path = credentials_path
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
     def _save_credentials(self, credentials, next_update):
         if next_update is not None:

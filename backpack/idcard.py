@@ -1,4 +1,5 @@
-''' AWS Panorama related tools. '''
+''' This module contains the :class:`AutoIdentity` class that provides information about the 
+application execution environment. '''
 
 import os
 import logging
@@ -10,30 +11,43 @@ import boto3
 class AutoIdentity:
     ''' AutoIdentity instance queries metadata of the current application instance.
 
-    The IAM policy associated with the Panorama Application Role of this app should grant
-    the execution of `panorama:ListApplicationInstances` operation.
+    The IAM policy associated with the `Panorama Application Role`_ 
+    of this app should grant the execution of 
+    `panorama:ListApplicationInstances`_ operation.
 
-    :param device_region: The AWS region where this Panorama appliance is registered.
-    :param application_instance_id: The application instance id. If left to None,
-        AutoIdentity will try to find the instance id in the environment variable.
-    :param parent_logger: If you want to connect the logger to a parent, specify it here.
+    Args:
+        device_region: The AWS region where this Panorama appliance is registered.
+        application_instance_id: The application instance id. If left to `None`,
+            :class:`AutoIdentity` will try to find the instance id in the environment variable.
+        parent_logger: If you want to connect the logger to a parent, specify it here.
 
-    Upon successfully initialization, AutoIdentity will fill out the following properties:
+    Upon successfully initialization, :class:`AutoIdentity` will fill out the following properties:
 
-    :ivar application_created_time: Application deployment time.
-    :ivar application_instance_id: Application instance id.
-    :ivar application_name: Name of this application.
-    :ivar application_status: Health status of this application.
-    :ivar application_tags: Tags associated with this application.
-    :ivar application_description: The description of this application.
-    :ivar device_id: Device id of the appliance running this application.
-    :ivar device_name: Name of the appliance running this application.
+    Attributes:
+        application_created_time (datetime.datetime): Application deployment time.
+        application_instance_id (str): Application instance id.
+        application_name (str): Name of this application.
+        application_status (str): Health status of this application.
+        application_tags (Dict[str, str]): Tags associated with this application.
+        application_description (str): The description of this application.
+        device_id (str): Device id of the appliance running this application.
+        device_name (str): Name of the appliance running this application.
+
+    .. _`Panorama Application Role`: 
+        https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html
+    .. _`panorama:ListApplicationInstances`: 
+        https://docs.aws.amazon.com/service-authorization/latest/reference/list_awspanorama.html#awspanorama-actions-as-permissions
     '''
 
     # pylint: disable=too-many-instance-attributes,too-few-public-methods
     # This class functions as a data class that reads its values from the environment
 
-    def __init__(self, device_region, application_instance_id=None, parent_logger=None):
+    def __init__(
+        self, 
+        device_region: str, 
+        application_instance_id: str = None, 
+        parent_logger: logging.Logger = None
+    ):
         self._logger = (
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)

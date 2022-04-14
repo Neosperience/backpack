@@ -1,9 +1,13 @@
-''' Utility functions for AWS Panorama development. '''
+''' This module makes it possible to draw annotations on different
+backends with an unified API. Currently, you can draw rectangles and labels with 
+:mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images 
+(:class:`numpy arrays <numpy.ndarray>`).'''
 
-from typing import Tuple, Optional, Any, Iterable, NamedTuple
+from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union
 import datetime
 import logging
 from abc import ABC, abstractmethod
+import numpy as np
 import cv2
 
 from .timepiece import local_now
@@ -11,11 +15,15 @@ from .timepiece import local_now
 class Point(NamedTuple):
     ''' A point with both coordinates normalized to the [0; 1) range.
 
-    :ivar x: The x coordinate of the point
-    :ivar y: The y coordinate of the point
+    Args:
+        x (float): The x coordinate of the point
+        y (float): The y coordinate of the point
     '''
     x: float
+    ''' The x coordinate of the point '''
+
     y: float
+    ''' The y coordinate of the point '''
 
     def scale(self, width: float, height: float) -> Tuple[int, int]:
         ''' Scales this point to image coordinates.
@@ -26,34 +34,41 @@ class Point(NamedTuple):
         '''
         return (int(self.x * width), int(self.y * height))
 
-    def in_image(self, img: 'np.array') -> Tuple[int, int]:
+    def in_image(self, img: np.ndarray) -> Tuple[int, int]:
         ''' Scales this point in an OpenCV image.
 
-        :param img: The OpenCV image of (height, width, channels) shape
+        :param img: The OpenCV image of ``(height, width, channels)`` shape
         :returns: The integer (pixel) coordinates of the point, scaled to the image dimensions.
         '''
         return self.scale(width=img.shape[1], height=img.shape[0])
 
 
-
 class LabelAnnotation(NamedTuple):
-    ''' A label annotation to be rendered in an AnnotationDriver context.
+    ''' A label annotation to be rendered in an :class:`AnnotationDriver` context.
 
-    :ivar point: The origin of the label
-    :ivar text: The text to be rendered
+    Args:
+        point (Point): The origin of the label
+        text (str): The text to be rendered
     '''
     point: Point
+    ''' The origin of the label. '''
+
     text: str
+    ''' The text to be rendered. '''
 
 
 class RectAnnotation(NamedTuple):
     ''' A rectangle annotation to be rendered in an AnnotationDriver context.
 
-    :ivar point1: The top-left corner of the rectangle
-    :ivar point2: The bottom-right corner of the rectangle
+    Args:
+        point1 (Point): The top-left corner of the rectangle
+        point2 (Point): The bottom-right corner of the rectangle
     '''
     point1: Point
+    ''' The top-left corner of the rectangle '''
+
     point2: Point
+    ''' The bottom-right corner of the rectangle '''
 
 
 class TimestampAnnotation(LabelAnnotation):
@@ -77,21 +92,29 @@ class AnnotationDriverBase(ABC):
     Annotation drivers provide an unified API to draw annotations on images of different backends.
     All annotation driver should derive from `AnnotationDriverBase`.
 
-    :param parent_logger: If you want to connect the logger of the annotation driver to a parent,
-        specify it here.
+    Args:
+        parent_logger: If you want to connect the logger of the annotation driver to a parent,
+            specify it here.
     '''
-    def __init__(self, parent_logger: Optional[logging.Logger] = None) -> None:
+    def __init__(self, parent_logger: Optional[logging.Logger] = None):
         self.logger = (
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)
         )
 
-    def render(self, annotations: Iterable, context: Any) -> Any:
+    def render(
+        self, 
+        annotations: Iterable[Union[LabelAnnotation, RectAnnotation]], 
+        context: Any
+    ) -> Any:
         ''' Renders a collection of annotations on a context.
 
-        :param annotations: An iterable collection of annotation type definied in this module.
-        :param context: The context of the backend. Type is implementation-specific.
-        :returns: The context.
+        Args:
+            annotations: An iterable collection of annotation type definied in this module.
+            context: The context of the backend. Type is implementation-specific.
+
+        Returns: 
+            The context.
         '''
         for anno in annotations:
             if isinstance(anno, LabelAnnotation):
@@ -104,16 +127,26 @@ class AnnotationDriverBase(ABC):
 
     @abstractmethod
     def add_rect(self, rect: RectAnnotation, context: Any) -> None:
-        ''' Subclasses should implement this method to add a rectangle to the frame. '''
+        ''' Renders a rectangle on the frame. 
+        
+        Args:
+            rect: A rectangle annotation.
+            context: A backend-specific context object that was passed to the :meth:`render` method.
+        '''
 
     @abstractmethod
     def add_label(self, label: LabelAnnotation, context: Any) -> None:
-        ''' Subclasses should implement this method to add a label to the frame. '''
-
-
+        ''' Renders a label on the frame. 
+        
+        Args:
+            label: A label annotation.
+            context: A backend-specific context object that was passed to the :meth:`render` method.
+        '''
 
 class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
-    ''' Annotation driver implementation for panoramasdk.media type images. '''
+    ''' Annotation driver implementation for Panorama media type images. You should pass an 
+    ``panoramasdk.media`` instance as the context argument of the 
+    :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. '''
 
     def add_rect(self, rect: RectAnnotation, context: 'panoramasdk.media') -> None:
         context.add_rect(rect.point1.x, rect.point1.y, rect.point2.x, rect.point2.y)
@@ -124,14 +157,16 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
 
 
 class OpenCVImageAnnotationDriver(AnnotationDriverBase):
-    ''' Annotation driver implementation for OpenCV images. '''
+    ''' Annotation driver implementation for OpenCV images. You should pass an :class:`numpy.ndarray`
+    instance as the context argument of the 
+    :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. '''
 
     DEFAULT_OPENCV_COLOR = (255, 255, 255)
     DEFAULT_OPENCV_LINEWIDTH = 1
     DEFAULT_OPENCV_FONT = cv2.FONT_HERSHEY_PLAIN
     DEFAULT_OPENCV_FONT_SCALE = 1.0
 
-    def add_rect(self, rect: RectAnnotation, context: 'np.array') -> None:
+    def add_rect(self, rect: RectAnnotation, context: np.ndarray) -> None:
         cv2.rectangle(
             context,
             rect.point1.in_image(context),
@@ -140,7 +175,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             self.DEFAULT_OPENCV_LINEWIDTH
         )
 
-    def add_label(self, label: LabelAnnotation, context: 'np.array') -> None:
+    def add_label(self, label: LabelAnnotation, context: np.ndarray) -> None:
         cv2.putText(
             context,
             label.text,
