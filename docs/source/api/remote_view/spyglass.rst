@@ -1,4 +1,6 @@
-SpyGlass
+.. _spyglass-api:
+
+spyglass
 --------
 
 .. automodule:: backpack.spyglass

@@ -1,6 +1,7 @@
-#########
-Timepiece
-#########
+.. _timepiece-api:
+
+timepiece
+---------
 
 .. automodule:: backpack.timepiece
    :members:

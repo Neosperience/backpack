@@ -1,3 +1,5 @@
+.. _annotation-api:
+
 Annotation
 ==========
 

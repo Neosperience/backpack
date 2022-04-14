@@ -7,11 +7,11 @@
 
 > Your hiking equipment for an enjoyable Panorama development experience
 
-Backpack is a toolset that makes development for AWS Panorama. AWS Panorama is is a machine learning appliance and software development kit that can be used to develop intelligent video analytics and computer vision applications, deployed on an edge device. For more information, refer to the [Panorama page](https://aws.amazon.com/panorama/) on the AWS website.
+Backpack is a toolset that makes development for AWS Panorama hopefully more enjoyable. AWS Panorama is a machine learning appliance and software development kit that can be used to develop intelligent video analytics and computer vision applications deployed on an edge device. For more information, refer to the [Panorama page](https://aws.amazon.com/panorama/) on the AWS website.
 
 Backpack provides the following modules:
  - *AutoIdentity* allows your application to learn more about itself and the host device. It gives access to the Panorama device id, application instance id, application name and description, and other similar information.
- - *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (pre-processing, model invocation, post-processing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
+ - *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
  - *SpyGlass* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSpyGlass* is an implementation of a SpyGlass pipeline that lets you send the processed video to AWS Kinesis Video Streams.
  - *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
 
@@ -44,11 +44,11 @@ To make this component work correctly, you should include the following inline p
             Resource: '*'
 ```
 
-The rest of this readme discusses the different components that can be found in Backpack.
+The rest of this readme discusses the different components in Backpack.
 
 ## AutoIdentity 📛
 
-When your application's code is running in a Panorama application, there is no official way to know details about which device is running your app, or which deployment version of your app is currently running. `AutoIdentity` queries these details directly calling AWS Panorama management services based on the UID of your Application that you typically can find in the `AppGraph_Uid` environment variable. When instantiating the `AutoIdentity` object, you should pass the AWS region name where your Panorama appliance is provisioned. You can pass the region name for example as an application parameter.
+When your application's code is running in a Panorama application, there is no official way to know which device is running your app or which deployment version of your app is currently running. `AutoIdentity` queries these details directly by calling AWS Panorama management services based on the UID of your Application that you typically can find in the `AppGraph_Uid` environment variable. When instantiating the `AutoIdentity` object, you should pass the AWS region name where you provisioned the Panorama appliance. You can pass the region name, for example, as an application parameter.
 
 To successfully use AutoIdentity, you should grant the execution of the following operations to the Panorama Application IAM Role:
 
@@ -57,7 +57,7 @@ To successfully use AutoIdentity, you should grant the execution of the followin
 Example usage:
 
 ```python
-from backpack.idcard import AutoIdentity
+from backpack.autoidentity import AutoIdentity
 
 auto_identity = AutoIdentity(device_region='us-east-1')
 print(auto_identity)
@@ -77,15 +77,15 @@ The code above prints details of the running application in the CloudWatch log s
 >
 ```
 
-You can access all these details as the properties of the `AutoIdentity` object, for example with `auto_identity.application_description`.
+You can access all these details as the properties of the `AutoIdentity` object, for example, with `auto_identity.application_description`.
 
 ## Timepiece ⌚
 
-Timepiece component includes classes that allow you to easily time profile your video processing pipeline. For detailed information, please check the API documentation.
+Timepiece component includes classes that allow you to quickly time profile the video processing pipeline. For detailed information, please check the API documentation.
 
 ### Ticker ⏲️
 
-`Ticker` allows you to calculate statistics of the time intervals between recurring events. You can use a ticker for example to get statistics about how much time your application spends to process frames.
+`Ticker` allows you to calculate statistics of the time intervals between recurring events. You can use a ticker, for example, to get statistics about how much time the application spends to process frames.
 
 Example usage:
 ```python
@@ -107,7 +107,7 @@ This code returns the time interval (in seconds) between the last five `tick()` 
 
 ### StopWatch ⏱️
 
-With `StopWatch`, you can measure the execution time of a code block, even repeatedly, and get statistics about the time spent on different invocations. You can use `StopWatch` for example to profile the inference time of your machine learning model, or your preprocessing or postprocessing functions. Stopwatches can be organized in a hierarchy, where the parent watch measures the summary of the time of child watches.
+With `StopWatch`, you can measure the execution time of a code block, even repeatedly, and get statistics about the time spent on different invocations. You can use `StopWatch`, for example, to profile the inference time of your machine learning model or your preprocessing or postprocessing functions. Stopwatches can be organized in a hierarchy, where the parent watch measures the summary of the time of child watches.
 
 Example usage:
 
@@ -150,9 +150,9 @@ You can access all interval data, as well as the statistical values using `StopW
 
 Schedules allow you to schedule the execution of a function at a later time. 
 
-It is important to note that `Schedule` instances do not intrinsically have an event loop or use kernel-based timing operations. Instead, you are expected to call regularly the `tick()` method of the `Schedule`, and the scheduled function will be executed when the next `tick()` is called after the scheduled time. When developing Panorama applications, you typically call the `tick()` function in the frame processing loop. 
+It is important to note that `Schedule` instances do not intrinsically have an event loop or use kernel-based timing operations. Instead, call regularly the `tick()` method of the `Schedule`, and the scheduled function will be executed when the next `tick()` is called after the scheduled time. When developing Panorama applications, you typically call the `tick()` function in the frame processing loop. 
 
-You can also specify a [python executor](https://docs.python.org/3/library/concurrent.futures.html) when creating `Schedule` objects. If an executor is specified, the scheduled function will be called asynchronously using that executor. This way the `tick()` function can immediately return and the scheduled function will be called in another thread.
+You can also specify a [python executor](https://docs.python.org/3/library/concurrent.futures.html) when creating `Schedule` objects. If an executor is specified, the scheduled function will be called asynchronously using that executor, the `tick()` method can immediately return, and the scheduled function will be executed in another thread.
 
 The following Schedules are available to you:
 
@@ -209,7 +209,7 @@ OrdinalSchedule was called at 2022-02-18 13:08:31.776985+00:00
 
 ### Tachometer 📈
 
-A `Tachometer` combines a `Ticker` and an `IntervalSchedule` to measure the time interval of a recurring event, and periodically report statistics about it. You can use it for example to report the frame processing time statistics to an external service. You can specify the reporting interval and a callback function that will be called with the timing statistics. In this case, the use of an *executor* is highly recommended, as your reporting callback can take a considerable amount of time to finish, and you might not want to hold up your processing loop synchronously meanwhile.
+A `Tachometer` combines a `Ticker` and an `IntervalSchedule` to measure the time interval of a recurring event and periodically report statistics about it. You can use it, for example, to report the frame processing time statistics to an external service. You can specify the reporting interval and a callback function that will be called with the timing statistics. You should consider using an *executor*, as your reporting callback can take a considerable amount of time to finish, and you might not want to hold up the processing loop synchronously meanwhile.
 
 Example usage:
 
@@ -258,7 +258,7 @@ The following example (a snippet from a Panorama Application implementation) sho
 ```python
 from concurrent.futures import ThreadPoolExecutor
 import boto3
-from backpack.idcard import AutoIdentity
+from backpack.autoidentity import AutoIdentity
 from backpack.cwtacho import CWTachometer
 
 # You might want to read these values from Panorama application parameters

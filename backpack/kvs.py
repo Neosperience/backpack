@@ -40,19 +40,19 @@ class KVSSpyGlass(SpyGlass):
 
     ''' Sends OpenCV frames to Kinesis Video Streams.
 
-    KVSSpyGlass can be used to create programatically a video stream and send
+    :class:`KVSSpyGlass` can be used to create programatically a video stream and send
     it to AWS Kinesis Video Streams service.
 
-    When initializing the KVSSpyGlass() instance, you should provide the AWS
+    When initializing the :class:`KVSSpyGlass` instance, you should provide the AWS
     credentials that will be used to stream the video in your AWS account.
-    The `CredentialsHandler` subclasses implement different ways of passing the
+    The :class:`KVSCredentialsHandler` subclasses implement different ways of passing the
     credentials to the underlying Kinesis Video Stream Producer. In most of the
-    cases, `FileCredentialsHandler` with the default arguments should work well,
+    cases, :class:`KVSFileCredentialsHandler` with the default arguments should work well,
     as long as your AWS user or the assume IAM Role have a policy to write put
     data in KVS.
 
     You can configure the frame width, height and fps auto-detection as described
-    in the SpyGlass class documentation.
+    in the :class:`~backpack.spyglass.SpyGlass` class documentation.
 
     Args:
         stream_region: The AWS region of the Kinesis Video Stream
@@ -121,7 +121,7 @@ class KVSCredentialsHandler(ABC):
     credentials, you will get static credentials. If the caller code assumed an IAM
     role, you will use dynamic credentials.
 
-    When using dynamic credentials, you are expected to call the `check_refresh`
+    When using dynamic credentials, you are expected to call the :meth:`check_refresh`
     method peridocally to control the expiration of the dynamic credentials. Ideally
     you would call this method each time when you want send a new frame to Kinesis
     Video Streams Producer. If the credentials are not expired, this method should add
@@ -242,7 +242,7 @@ class KVSCredentialsHandler(ABC):
         '''
 
     def plugin_config(self) -> str: # pylint: disable=no-self-use
-        ''' Returns a string that should be included in the kvssink GStreamer plugin config.'''
+        ''' Returns a string that should be included in the ``kvssink`` GStreamer plugin config.'''
         return ''
 
     def plugin_config_mask(self, plugin_config: str) -> str: # pylint: disable=no-self-use
@@ -251,7 +251,7 @@ class KVSCredentialsHandler(ABC):
 
 
 class KVSInlineCredentialsHandler(KVSCredentialsHandler):
-    ''' Provides AWS credentials inline in the kvssink plugin config.
+    ''' Provides AWS credentials inline in the ``kvssink`` plugin config.
 
     This credentials handler can be used only with static credentials as there is
     no way to refresh the credentials once they were passed to KVS Producer.

@@ -2,14 +2,14 @@ import logging
 import unittest
 from unittest.mock import patch, Mock
 
-from backpack.idcard import AutoIdentity
+from backpack.autoidentity import AutoIdentity
 
 import datetime
 
 os = Mock()
 
-@patch('backpack.idcard.boto3')
-@patch('backpack.idcard.os')
+@patch('backpack.autoidentity.boto3')
+@patch('backpack.autoidentity.os')
 class TestAutoIdentity(unittest.TestCase):
     
     APPLICATION_ID = 'dummy_app_id'

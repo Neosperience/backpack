@@ -1,5 +1,7 @@
-RTSPSpyGlass
-------------
+.. _rtsp-api:
+
+rtsp
+----
 
 .. automodule:: backpack.rtsp
    :members:
