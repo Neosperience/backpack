@@ -7,6 +7,8 @@
 
 > Your hiking equipment for an enjoyable Panorama development experience
 
+You can read also the [structered and extended version of this documentation](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/docs/index.html).
+
 Backpack is a toolset that makes development for AWS Panorama hopefully more enjoyable. AWS Panorama is a machine learning appliance and software development kit that can be used to develop intelligent video analytics and computer vision applications deployed on an edge device. For more information, refer to the [Panorama page](https://aws.amazon.com/panorama/) on the AWS website.
 
 Backpack provides the following modules:
