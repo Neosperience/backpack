@@ -1,4 +1,4 @@
-name: unit tests
+name: CI pipeline
 
 on:
   - push
@@ -120,6 +120,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        python -m pip install opencv-python boto3 PyGObject
         python -m pip install sphinx sphinx-rtd-theme m2r2
     - name: Generate documentation with Sphinx
       working-directory: ./docs
