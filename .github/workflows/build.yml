@@ -70,7 +70,7 @@ jobs:
         python-version: "3.7"
     - name: Install dependencies
       run: |
-        apt-get update -y && apt-get install -y libgirepository1.0-dev libgirepository1.0-dev libgtk2.0-dev
+        sudo apt-get update -y && sudo apt-get install -y libgirepository1.0-dev 
         python -m pip install --upgrade pip
         python -m pip install opencv-python boto3 PyGObject 
         python -m pip install sphinx sphinx-rtd-theme m2r2
