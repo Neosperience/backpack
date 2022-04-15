@@ -4,12 +4,16 @@ OpenCV images as video streams using the RTSP protocol.
 
 To use this class you MUST have the following dependencies correctly configured on your system:
 
- - GStreamer 1.0 installed with standard plugins pack, libav, tools and development libraries
- - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
- - gst-rtsp-server with development libraries (libgstrtspserver-1.0-dev)
+ - `GStreamer 1.0`_ installed with standard plugins pack, libav, tools and development libraries
+ - `OpenCV 4.2.0`_, compiled with GStreamer support and Python bindings
+ - `gst-rtsp-server`_ with development libraries (libgstrtspserver-1.0-dev)
 
-These dependencies can not be easily specified by a requirements.txt or a Conda environment.
-See the example Dockerfile on how to install these dependencies on your system.
+These dependencies can not be easily specified by a ``requirements.txt`` or a Conda environment.
+See the example ``Dockerfile`` on how to install these dependencies on your system.
+
+.. _`GStreamer 1.0`: https://gstreamer.freedesktop.org
+.. _`OpenCV 4.2.0`: https://opencv.org/opencv-4-2-0/
+.. _`gst-rtsp-server`: https://github.com/GStreamer/gst-rtsp-server
 '''
 
 from typing import Any, Optional, List

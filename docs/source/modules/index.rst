@@ -1,3 +1,5 @@
+.. _modules:
+
 Modules
 -------
 
@@ -12,7 +14,7 @@ Backpack provides the following modules:
    to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms 
    if your app stops processing frames.
  - :ref:`spyglass-readme` provides a framework to restream the processed video (annotated by 
-   your application) to media endpoints supported by *GStreamer*. Two implementation of the
+   your application) to media endpoints supported by `GStreamer`_. Two implementation of the
    abstract base class :class:`~backpack.spyglass.SpyGlass` is provided: 
 
      - :class:`~backpack.kvs.KVSSpyGlass` lets you send the processed video to `AWS Kinesis Video 
@@ -27,6 +29,7 @@ Backpack provides the following modules:
 .. _`AWS Kinesis Video Streams`: https://aws.amazon.com/kinesis/video-streams/
 .. _`VLC Media Player`: https://www.videolan.org
 .. _`panoramasdk.media`: https://github.com/awsdocs/aws-panorama-developer-guide/blob/main/resources/applicationsdk-reference.md#media
+.. _`GStreamer`: https://gstreamer.freedesktop.org
 
 .. toctree::
    :hidden:

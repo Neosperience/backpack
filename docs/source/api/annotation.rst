@@ -1,6 +1,6 @@
 .. _annotation-api:
 
-Annotation
+annotation
 ==========
 
 .. automodule:: backpack.annotation

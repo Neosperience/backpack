@@ -2,18 +2,29 @@
 that streams the output of the AWS Panorama application to AWS Kinesis Video Streams service.
 
 To use this class you MUST have the following dependencies correctly configured on your system:
- - GStreamer 1.0 installed with standard plugins pack, libav, tools and development libraries
- - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
- - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
- - Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
-   binaries of KVS Producer SDK GStreamer plugin is placed
- - Environment vatiable LD_LIBRARY_PATH including the open source third party dependencies
-   compiled by KVS Producer SDK
- - numpy
- - boto3
 
-These dependencies can not be easily specified by a requirements.txt or a Conda environment.
-See the example Dockerfile on how to install these dependencies on your system.
+ - `GStreamer 1.0`_ installed with standard plugins pack, libav, tools and development libraries
+ - `OpenCV 4.2.0`_, compiled with GStreamer support and Python bindings
+ - `Amazon Kinesis Video Streams (KVS) Producer SDK`_ compiled with `kvssink GStreamer plugin 
+   support`_
+ - Environment variable ``GST_PLUGIN_PATH`` configured to point to the directory where the compiled
+   binaries of KVS Producer SDK GStreamer plugin is placed
+ - Environment vatiable ``LD_LIBRARY_PATH`` including the open source third party dependencies
+   compiled by KVS Producer SDK
+ - `numpy`_
+ - `boto3`_
+
+These dependencies can not be easily specified by a ``requirements.txt`` or a Conda environment.
+See the example ``Dockerfile`` on how to install these dependencies on your system.
+
+.. _`GStreamer 1.0`: https://gstreamer.freedesktop.org
+.. _`OpenCV 4.2.0`: https://opencv.org/opencv-4-2-0/
+.. _`Amazon Kinesis Video Streams (KVS) Producer SDK`: 
+    https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-cpp.html
+.. _`kvssink GStreamer plugin support`: 
+    https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-cpp-gstreamer.html
+.. _`numpy`: https://numpy.org
+.. _`boto3`: https://boto3.amazonaws.com/v1/documentation/api/latest/index.html
 '''
 
 import re
@@ -48,8 +59,7 @@ class KVSSpyGlass(SpyGlass):
     The :class:`KVSCredentialsHandler` subclasses implement different ways of passing the
     credentials to the underlying Kinesis Video Stream Producer. In most of the
     cases, :class:`KVSFileCredentialsHandler` with the default arguments should work well,
-    as long as your AWS user or the assume IAM Role have a policy to write put
-    data in KVS.
+    as long as your AWS user or the assumed IAM Role have a policy to put data in KVS.
 
     You can configure the frame width, height and fps auto-detection as described
     in the :class:`~backpack.spyglass.SpyGlass` class documentation.

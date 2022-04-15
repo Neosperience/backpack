@@ -15,12 +15,21 @@ refer to the `Panorama page`_ on the AWS website.
 
 .. _`Panorama page`: https://aws.amazon.com/panorama/
 
-Contents
---------
+Getting started
+^^^^^^^^^^^^^^^
+
+The :ref:`installation` and the :ref:`permissions` section describes how to configure your Panorama
+application to work with Backpack. Some modules of Backpack needs third party libraries installed
+in the docker container of your application. The relevant sections of the documentation contain the
+`dockerfile` snippets that you will have to use.
+
+For an overview of what you can find in Backpack, refer to the :ref:`modules` section. If you need
+more details, you can find it in the low-level :ref:`api`.
 
 .. toctree::
    :maxdepth: 3
    
+   self
    install
    permissions
    modules/index
@@ -29,7 +38,7 @@ Contents
 
 
 Indices and tables
-==================
+^^^^^^^^^^^^^^^^^^
 
 * :ref:`genindex`
 * :ref:`modindex`

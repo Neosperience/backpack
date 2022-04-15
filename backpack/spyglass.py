@@ -1,6 +1,12 @@
-''' SpyGlass can be used to send OpenCV frames to a GStreamer pipeline, and
-annotation drivers unify the drawing API of different backends (for example,
-OpenCV or panoramasdk.media). '''
+''' :class:`SpyGlass` streams OpenCV frames to a `GStreamer`_ pipeline. 
+
+:class:`SpyGlass` itself is an abstract base class that you can not instantiate directly. Instead,
+use one of the subclasses derived from :class:`SpyGlass` that provide concrete implementation.
+For example, :class:`~backpack.kvs.KVSSpyGlass` sends frames to AWS Kinesis Video Streams service,
+and :class:`~backpack.rtsp.RTSPSpyGlass` streams your frames with a built-in RTSP server.
+
+.. _`GStreamer`: https://gstreamer.freedesktop.org
+'''
 
 import os
 import subprocess
