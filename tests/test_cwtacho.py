@@ -59,10 +59,11 @@ class TestCWTacho(unittest.TestCase):
         cb_called, cb_return_value = self._do_test_callback(backpack_mock_local_now)
         self.assertIs(cb_called, True, 'Stats callback reported to be called')
 
+        expected_ts = (self.start + datetime.timedelta(seconds=60)).astimezone(datetime.timezone.utc)
         expected_metrics = {
             'MetricName': 'test_metric', 
             'Dimensions': [{'Name': 'dim1', 'Value': 'val1'}, {'Name': 'dim2', 'Value': 'val2'}], 
-            'Timestamp': self.start + datetime.timedelta(seconds=60), 
+            'Timestamp': expected_ts, 
             'StatisticValues': {'SampleCount': 60, 'Sum': 60, 'Minimum': 1, 'Maximum': 1}, 
             'Unit': 'Seconds'
         }

@@ -71,7 +71,7 @@ class CWTachometer(Tachometer):
         metric_data = {
             'MetricName': self.metric_name,
             'Dimensions': self._cw_dimensions(),
-            'Timestamp': timestamp,
+            'Timestamp': timestamp.astimezone(datetime.timezone.utc),
             'StatisticValues': {
                 'SampleCount': ticker.len(),
                 'Sum': ticker.sum(),
