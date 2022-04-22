@@ -166,10 +166,12 @@ class SpyGlass(ABC):
         return True
 
     def _config_env(self, dotenv_path=None):
+        os.environ['GST_DEBUG_NO_COLOR'] = '1'
         dotenv_path = dotenv_path or find_dotenv()
         self.logger.info('Loading config variables from %s', dotenv_path)
         if not dotenv_path or not os.path.isfile(dotenv_path):
-            raise RuntimeError(f'dotenv configuration file was not found at path: {dotenv_path}')
+            self.logger.warning('dotenv configuration file was not found at path: %s', dotenv_path)
+            return
         cfg = dotenv_values(dotenv_path=dotenv_path)
         self.logger.info('Loaded env config structure: %s', cfg)
         if 'GST_PLUGIN_PATH' in cfg:
@@ -183,7 +185,6 @@ class SpyGlass(ABC):
         path = ':'.join(path_elems)
         path = path.replace('::', ':')
         os.environ['LD_LIBRARY_PATH'] = path
-        os.environ['GST_DEBUG_NO_COLOR'] = '1'
 
     def _check_env(self):
         def _check_var(var_name, warn=True):
