@@ -13,6 +13,7 @@ logging.basicConfig(level='CRITICAL')
 
 LD_LIBRARY_PATH = 'dummy_ld_library_path'
 GST_PLUGIN_PATH = 'dummy_gst_plugin_path'
+LD_PRELOAD = 'dummy_ld_preload'
 GST_DEBUG = 'dummy_gst_debug_level'
 GST_DEBUG_FILE = '/dummy_gst_debug_file_path'
 DUMMY_PLUGIN_NAME = 'dummy_plugin'
@@ -25,7 +26,8 @@ TEST_FPS = 15
 mock_dotenv.find_dotenv.return_value = '/dummy_dotenv_path'
 mock_dotenv.dotenv_values.return_value = {
     'LD_LIBRARY_PATH': LD_LIBRARY_PATH,
-    'GST_PLUGIN_PATH': GST_PLUGIN_PATH
+    'GST_PLUGIN_PATH': GST_PLUGIN_PATH,
+    'LD_PRELOAD': LD_PRELOAD
 }
 
 class PluginNotFoundError(RuntimeError):
@@ -76,9 +78,9 @@ class TestSpyGlass(unittest.TestCase):
         
     # ---------- Init tests ----------
 
-    def test_init_config(self, mock_os, mock_subprocess):
+    def test_init_config(self, mock_os, _):
         self._setup_os_mock(mock_os)
-        spyglass = DummySpyGlass(
+        DummySpyGlass(
             parent_logger=self.parent_logger, 
             gst_log_file=GST_DEBUG_FILE, 
             gst_log_level=GST_DEBUG
@@ -87,11 +89,12 @@ class TestSpyGlass(unittest.TestCase):
         mock_os.environ.__setitem__.assert_any_call('GST_PLUGIN_PATH', GST_PLUGIN_PATH)
         mock_os.environ.__setitem__.assert_any_call('GST_DEBUG', GST_DEBUG)
         mock_os.environ.__setitem__.assert_any_call('GST_DEBUG_FILE', GST_DEBUG_FILE)
+        mock_os.environ.__setitem__.assert_any_call('LD_PRELOAD', LD_PRELOAD)
 
     def test_init_no_dotenv(self, mock_os, mock_subprocess):
         mock_os.path.isfile.return_value = False
-        with self.assertRaises(RuntimeError):
-            spyglass = DummySpyGlass(parent_logger=self.parent_logger)
+        with self.assertLogs(self.logger, 'WARNING'):
+            DummySpyGlass(parent_logger=self.parent_logger)
 
     def test_init_add_ld_path(self, mock_os, mock_subprocess):
         EXISTING_ENVIRON_VALUE = 'fake_existing_value'
@@ -127,8 +130,8 @@ class TestSpyGlass(unittest.TestCase):
 
     def test_init_missing_env_var(self, mock_os, mock_subprocess):
         mock_os.environ.get.return_value = None
-        with self.assertLogs(self.logger, 'WARNING') as logs:
-            spyglass = DummySpyGlass(parent_logger=self.parent_logger)
+        with self.assertLogs(self.logger, 'WARNING'):
+            DummySpyGlass(parent_logger=self.parent_logger)
 
     # ---------- Runtime tests ----------
 

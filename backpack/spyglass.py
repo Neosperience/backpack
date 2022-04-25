@@ -185,6 +185,8 @@ class SpyGlass(ABC):
         path = ':'.join(path_elems)
         path = path.replace('::', ':')
         os.environ['LD_LIBRARY_PATH'] = path
+        if 'LD_PRELOAD' in cfg:
+            os.environ['LD_PRELOAD'] = cfg['LD_PRELOAD']
 
     def _check_env(self):
         def _check_var(var_name, warn=True):
