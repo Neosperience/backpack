@@ -69,6 +69,16 @@ class RectAnnotation(NamedTuple):
     point2: Point
     ''' The bottom-right corner of the rectangle '''
 
+    @property
+    def center(self) -> Point:
+        ''' The center of the rectangle. '''
+        return Point((self.point1.x + self.point2.x) / 2, (self.point1.y + self.point2.y) / 2)
+
+    @property
+    def size(self) -> Tuple[float, float]:
+        ''' The width and height of the rectangle. '''
+        return abs(self.point1.y - self.point2.y), abs(self.point1.x - self.point2.x)
+
 
 class TimestampAnnotation(LabelAnnotation):
     ''' A timestamp annotation to be rendered in an AnnotationDriver context.
