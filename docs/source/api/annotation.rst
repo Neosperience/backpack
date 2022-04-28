@@ -27,6 +27,10 @@ Annotation types
    :members:
    :show-inheritance:
 
+.. autoclass:: backpack.annotation.MarkerAnnotation
+   :members:
+   :show-inheritance:
+
 .. autoclass:: backpack.annotation.TimestampAnnotation
    :members:
    :show-inheritance:

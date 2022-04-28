@@ -4,6 +4,7 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
 from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union
+from enum import Enum
 import datetime
 import logging
 from abc import ABC, abstractmethod
@@ -66,6 +67,7 @@ class LabelAnnotation(NamedTuple):
     Args:
         point (Point): The origin of the label
         text (str): The text to be rendered
+        color (Color): The color of the text
     '''
     point: Point
     ''' The origin of the label. '''
@@ -74,8 +76,7 @@ class LabelAnnotation(NamedTuple):
     ''' The text to be rendered. '''
 
     color: Color = None
-    ''' The  color of the text. If `None`, the default drawing color will be used. '''
-
+    ''' The color of the text. If `None`, the default drawing color will be used. '''
 
 
 class RectAnnotation(NamedTuple):
@@ -84,6 +85,7 @@ class RectAnnotation(NamedTuple):
     Args:
         point1 (Point): The top-left corner of the rectangle
         point2 (Point): The bottom-right corner of the rectangle
+        color (Color): The line color of the rectangle
     '''
     point1: Point
     ''' The top-left corner of the rectangle '''
@@ -103,6 +105,39 @@ class RectAnnotation(NamedTuple):
     def size(self) -> Tuple[float, float]:
         ''' The width and height of the rectangle. '''
         return abs(self.point1.y - self.point2.y), abs(self.point1.x - self.point2.x)
+
+
+class MarkerAnnotation(NamedTuple):
+    ''' A marker annotation to be rendered in an AnnotationDriver context.
+    
+    Args:
+        point (Point): The coordinates of the maker
+        style (MarkerAnnotation.Style): The style of the marker
+        color (Color): The color of the maker
+    '''
+    class Style(Enum):
+        ''' Possible set of marker types. '''
+        CROSS = 1
+        ''' A crosshair marker shape. '''
+        TILTED_CROSS = 2
+        ''' A 45 degree tilted crosshair marker shape. '''
+        STAR = 3
+        ''' A star marker shape, combination of cross and tilted cross. '''
+        DIAMOND = 4
+        ''' A diamond marker shape. '''
+        SQUARE = 5
+        ''' A square marker shape. '''
+        TRIANGLE_UP = 6
+        ''' An upwards pointing triangle marker shape. '''
+        TRIANGLE_DOWN = 7
+        ''' A downwards pointing triangle marker shape. '''
+
+    point: Point
+    ''' The coordinates of the maker. '''
+    style: Style = Style.CROSS
+    ''' The style of the marker. '''
+    color: Color = None
+    ''' The color of the maker. '''
 
 
 class TimestampAnnotation(LabelAnnotation):
@@ -155,6 +190,8 @@ class AnnotationDriverBase(ABC):
                 self.add_label(anno, context)
             elif isinstance(anno, RectAnnotation):
                 self.add_rect(anno, context)
+            elif isinstance(anno, MarkerAnnotation):
+                self.add_marker(anno, context)
             else:
                 raise ValueError('Unknown annotation type')
         return context
@@ -177,6 +214,16 @@ class AnnotationDriverBase(ABC):
             context: A backend-specific context object that was passed to the :meth:`render` method.
         '''
 
+    @abstractmethod
+    def add_marker(self, marker: MarkerAnnotation, context: Any) -> None:
+        ''' Renders a marker on the frame. 
+        
+        Args:
+            marker: A marker annotation.
+            context: A backend-specific context object that was passed to the :meth:`render` method.
+        '''
+
+
 class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
     ''' Annotation driver implementation for Panorama media type images. 
     
@@ -186,12 +233,25 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
     :class:`PanoramaMediaAnnotationDriver` currently does not support colors.
     '''
 
+    MARKER_STYLE_TO_STR = {
+        MarkerAnnotation.Style.CROSS: '+',
+        MarkerAnnotation.Style.TILTED_CROSS: 'x',
+        MarkerAnnotation.Style.STAR: '*',
+        MarkerAnnotation.Style.DIAMOND: '<>',
+        MarkerAnnotation.Style.SQUARE: '||',
+        MarkerAnnotation.Style.TRIANGLE_UP: '/\\',
+        MarkerAnnotation.Style.TRIANGLE_DOWN: '\\/',
+    }
+
     def add_rect(self, rect: RectAnnotation, context: 'panoramasdk.media') -> None:
         context.add_rect(rect.point1.x, rect.point1.y, rect.point2.x, rect.point2.y)
 
     def add_label(self, label: LabelAnnotation, context: 'panoramasdk.media') -> None:
         context.add_label(label.text, label.point.x, label.point.y)
 
+    def add_marker(self, marker: MarkerAnnotation, context: 'panoramasdk.media') -> None:
+        marker_str = PanoramaMediaAnnotationDriver.MARKER_STYLE_TO_STR.get(marker.style, '.')
+        context.add_label(marker_str, marker.point.x, marker.point.y)
 
 
 class OpenCVImageAnnotationDriver(AnnotationDriverBase):
@@ -204,6 +264,16 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     DEFAULT_OPENCV_LINEWIDTH = 1
     DEFAULT_OPENCV_FONT = cv2.FONT_HERSHEY_PLAIN
     DEFAULT_OPENCV_FONT_SCALE = 1.0
+
+    MARKER_STYLE_TO_CV2 = {
+        MarkerAnnotation.Style.CROSS: cv2.MARKER_DIAMOND,
+        MarkerAnnotation.Style.TILTED_CROSS: cv2.MARKER_TILTED_CROSS,
+        MarkerAnnotation.Style.STAR: cv2.MARKER_STAR,
+        MarkerAnnotation.Style.DIAMOND: cv2.MARKER_DIAMOND,
+        MarkerAnnotation.Style.SQUARE: cv2.MARKER_SQUARE,
+        MarkerAnnotation.Style.TRIANGLE_UP: cv2.MARKER_TRIANGLE_UP,
+        MarkerAnnotation.Style.TRIANGLE_DOWN: cv2.MARKER_TRIANGLE_DOWN,
+    }
 
     def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
         color = rect.color or self.DEFAULT_OPENCV_COLOR
@@ -224,4 +294,16 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             self.DEFAULT_OPENCV_FONT,
             self.DEFAULT_OPENCV_FONT_SCALE,
             color
+        )
+
+    def add_marker(self, marker: MarkerAnnotation, context: 'numpy.ndarray') -> None:
+        markerType = OpenCVImageAnnotationDriver.MARKER_STYLE_TO_CV2.get(
+            marker.style, cv2.MARKER_DIAMOND
+        )
+        color = marker.color or self.DEFAULT_OPENCV_COLOR
+        cv2.drawMarker(
+            context,
+            marker.point.in_image(context),
+            color,
+            markerType
         )
