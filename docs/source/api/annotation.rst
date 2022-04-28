@@ -5,6 +5,17 @@ annotation
 
 .. automodule:: backpack.annotation
 
+Helper structures
+-----------------
+
+.. autoclass:: backpack.annotation.Point
+   :members:
+   :show-inheritance:
+
+.. autoclass:: backpack.annotation.Color
+   :members:
+   :show-inheritance:
+
 Annotation types
 ----------------
 
@@ -17,10 +28,6 @@ Annotation types
    :show-inheritance:
 
 .. autoclass:: backpack.annotation.TimestampAnnotation
-   :members:
-   :show-inheritance:
-
-.. autoclass:: backpack.annotation.Point
    :members:
    :show-inheritance:
 

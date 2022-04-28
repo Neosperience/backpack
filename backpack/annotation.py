@@ -42,6 +42,24 @@ class Point(NamedTuple):
         return self.scale(width=img.shape[1], height=img.shape[0])
 
 
+class Color(NamedTuple):
+    ''' A color in the red, blue, green space.
+    
+    The color coordinates are integers in the [0; 255] range.
+    
+    Args:
+        r (int): The red component of the color
+        g (int): The green component of the color
+        b (int): The blue component of the color
+    '''
+    r: int
+    ''' The red component of the color. '''
+    g: int
+    ''' The green component of the color. '''
+    b: int
+    ''' The blue component of the color. '''
+
+
 class LabelAnnotation(NamedTuple):
     ''' A label annotation to be rendered in an :class:`AnnotationDriver` context.
 
@@ -54,6 +72,10 @@ class LabelAnnotation(NamedTuple):
 
     text: str
     ''' The text to be rendered. '''
+
+    color: Color = None
+    ''' The  color of the text. If `None`, the default drawing color will be used. '''
+
 
 
 class RectAnnotation(NamedTuple):
@@ -68,6 +90,9 @@ class RectAnnotation(NamedTuple):
 
     point2: Point
     ''' The bottom-right corner of the rectangle '''
+
+    color: Color = None
+    ''' The line color of the rectangle. If `None`, the default drawing color will be used. '''
 
     @property
     def center(self) -> Point:
@@ -153,9 +178,13 @@ class AnnotationDriverBase(ABC):
         '''
 
 class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
-    ''' Annotation driver implementation for Panorama media type images. You should pass an 
-    ``panoramasdk.media`` instance as the context argument of the 
-    :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. '''
+    ''' Annotation driver implementation for Panorama media type images. 
+    
+    You should pass an ``panoramasdk.media`` instance as the context argument of the 
+    :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. 
+    
+    :class:`PanoramaMediaAnnotationDriver` currently does not support colors.
+    '''
 
     def add_rect(self, rect: RectAnnotation, context: 'panoramasdk.media') -> None:
         context.add_rect(rect.point1.x, rect.point1.y, rect.point2.x, rect.point2.y)
@@ -166,30 +195,33 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
 
 
 class OpenCVImageAnnotationDriver(AnnotationDriverBase):
-    ''' Annotation driver implementation for OpenCV images. You should pass an :class:`numpy.ndarray`
-    instance as the context argument of the 
+    ''' Annotation driver implementation for OpenCV images. 
+    
+    You should pass an :class:`numpy.ndarray` instance as the context argument of the 
     :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. '''
 
-    DEFAULT_OPENCV_COLOR = (255, 255, 255)
+    DEFAULT_OPENCV_COLOR = Color(255, 255, 255)
     DEFAULT_OPENCV_LINEWIDTH = 1
     DEFAULT_OPENCV_FONT = cv2.FONT_HERSHEY_PLAIN
     DEFAULT_OPENCV_FONT_SCALE = 1.0
 
     def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
+        color = rect.color or self.DEFAULT_OPENCV_COLOR
         cv2.rectangle(
             context,
             rect.point1.in_image(context),
             rect.point2.in_image(context),
-            self.DEFAULT_OPENCV_COLOR,
+            color,
             self.DEFAULT_OPENCV_LINEWIDTH
         )
 
     def add_label(self, label: LabelAnnotation, context: 'numpy.ndarray') -> None:
+        color = label.color or self.DEFAULT_OPENCV_COLOR
         cv2.putText(
             context,
             label.text,
             label.point.in_image(context),
             self.DEFAULT_OPENCV_FONT,
             self.DEFAULT_OPENCV_FONT_SCALE,
-            self.DEFAULT_OPENCV_COLOR
+            color
         )
