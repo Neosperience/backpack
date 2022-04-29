@@ -107,6 +107,27 @@ class RectAnnotation(NamedTuple):
         return abs(self.point1.y - self.point2.y), abs(self.point1.x - self.point2.x)
 
 
+class LineAnnotation(NamedTuple):
+    ''' A line annotation to be rendered in an AnnotationDriver context.
+
+    Args:
+        point1 (Point): The first end of the line
+        point2 (Point): The second end of the line
+        color (Color): The color of the line
+    '''
+    point1: Point
+    ''' The first end of the line '''
+
+    point2: Point
+    ''' The second end of the line '''
+
+    color: Color = None
+    ''' The color of the line. If `None`, the default drawing color will be used. '''
+
+    thickness: int = 1
+    ''' The thickness of the line. '''
+
+
 class MarkerAnnotation(NamedTuple):
     ''' A marker annotation to be rendered in an AnnotationDriver context.
     
@@ -192,6 +213,8 @@ class AnnotationDriverBase(ABC):
                 self.add_rect(anno, context)
             elif isinstance(anno, MarkerAnnotation):
                 self.add_marker(anno, context)
+            elif isinstance(anno, LineAnnotation):
+                self.add_line(anno, context)
             else:
                 raise ValueError('Unknown annotation type')
         return context
@@ -220,6 +243,15 @@ class AnnotationDriverBase(ABC):
         
         Args:
             marker: A marker annotation.
+            context: A backend-specific context object that was passed to the :meth:`render` method.
+        '''
+
+    @abstractmethod
+    def add_line(self, label: LineAnnotation, context: Any) -> None:
+        ''' Renders a line on the frame. 
+        
+        Args:
+            line: A line annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
         '''
 
@@ -252,6 +284,9 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
     def add_marker(self, marker: MarkerAnnotation, context: 'panoramasdk.media') -> None:
         marker_str = PanoramaMediaAnnotationDriver.MARKER_STYLE_TO_STR.get(marker.style, '.')
         context.add_label(marker_str, marker.point.x, marker.point.y)
+    
+    def add_line(self, label: LineAnnotation, context: Any) -> None:
+        print('WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented')
 
 
 class OpenCVImageAnnotationDriver(AnnotationDriverBase):
@@ -306,4 +341,14 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             marker.point.in_image(context),
             color,
             markerType
+        )
+
+    def add_line(self, line: LineAnnotation, context: Any) -> None:
+        color = line.color or self.DEFAULT_OPENCV_COLOR
+        cv2.line(
+            context,
+            line.point1.in_image(context),
+            line.point2.in_image(context),
+            color,
+            line.thickness
         )
