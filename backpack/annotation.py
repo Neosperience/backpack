@@ -311,7 +311,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     }
 
     def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
-        return tuple(reversed(color)) or self.DEFAULT_OPENCV_COLOR
+        return tuple(reversed(color)) if color is not None else self.DEFAULT_OPENCV_COLOR
 
     def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
         cv2.rectangle(
