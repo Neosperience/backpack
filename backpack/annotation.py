@@ -310,45 +310,44 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         MarkerAnnotation.Style.TRIANGLE_DOWN: cv2.MARKER_TRIANGLE_DOWN,
     }
 
+    def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
+        return tuple(reversed(color)) or self.DEFAULT_OPENCV_COLOR
+
     def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
-        color = rect.color or self.DEFAULT_OPENCV_COLOR
         cv2.rectangle(
             context,
             rect.point1.in_image(context),
             rect.point2.in_image(context),
-            color,
+            self._color_to_cv2(rect.color),
             self.DEFAULT_OPENCV_LINEWIDTH
         )
 
     def add_label(self, label: LabelAnnotation, context: 'numpy.ndarray') -> None:
-        color = label.color or self.DEFAULT_OPENCV_COLOR
         cv2.putText(
             context,
             label.text,
             label.point.in_image(context),
             self.DEFAULT_OPENCV_FONT,
             self.DEFAULT_OPENCV_FONT_SCALE,
-            color
+            self._color_to_cv2(label.color)
         )
 
     def add_marker(self, marker: MarkerAnnotation, context: 'numpy.ndarray') -> None:
         markerType = OpenCVImageAnnotationDriver.MARKER_STYLE_TO_CV2.get(
             marker.style, cv2.MARKER_DIAMOND
         )
-        color = marker.color or self.DEFAULT_OPENCV_COLOR
         cv2.drawMarker(
             context,
             marker.point.in_image(context),
-            color,
+            self._color_to_cv2(marker.color),
             markerType
         )
 
     def add_line(self, line: LineAnnotation, context: Any) -> None:
-        color = line.color or self.DEFAULT_OPENCV_COLOR
         cv2.line(
             context,
             line.point1.in_image(context),
             line.point2.in_image(context),
-            color,
+            self._color_to_cv2(line.color),
             line.thickness
         )
