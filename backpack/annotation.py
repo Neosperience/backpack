@@ -315,14 +315,19 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         MarkerAnnotation.Style.TRIANGLE_DOWN: cv2.MARKER_TRIANGLE_DOWN,
     }
 
+    @staticmethod
+    def scale(point: Point, context: 'numpy.ndarray') -> Point:
+        ''' Scales a point instance to an image context '''
+        return Point(point.x * context.shape[0], point.y * context.shape[1])
+
     def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
         return tuple(reversed(color)) if color is not None else self.DEFAULT_OPENCV_COLOR
 
     def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
         cv2.rectangle(
             context,
-            rect.point1.in_image(context),
-            rect.point2.in_image(context),
+            OpenCVImageAnnotationDriver.scale(rect.point1, context),
+            OpenCVImageAnnotationDriver.scale(rect.point2, context),
             self._color_to_cv2(rect.color),
             self.DEFAULT_OPENCV_LINEWIDTH
         )
@@ -331,7 +336,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         cv2.putText(
             context,
             label.text,
-            label.point.in_image(context),
+            OpenCVImageAnnotationDriver.scale(label.point, context),
             self.DEFAULT_OPENCV_FONT,
             self.DEFAULT_OPENCV_FONT_SCALE,
             self._color_to_cv2(label.color)
@@ -343,7 +348,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         )
         cv2.drawMarker(
             context,
-            marker.point.in_image(context),
+            OpenCVImageAnnotationDriver.scale(marker.point, context),
             self._color_to_cv2(marker.color),
             markerType
         )
@@ -351,8 +356,8 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     def add_line(self, line: LineAnnotation, context: Any) -> None:
         cv2.line(
             context,
-            line.point1.in_image(context),
-            line.point2.in_image(context),
+            OpenCVImageAnnotationDriver.scale(line.point1, context),
+            OpenCVImageAnnotationDriver.scale(line.point2, context),
             self._color_to_cv2(line.color),
             line.thickness
         )
