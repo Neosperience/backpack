@@ -101,6 +101,7 @@ class RectAnnotation(NamedTuple):
         ''' The center of the rectangle. '''
         return Point((self.point1.x + self.point2.x) / 2, (self.point1.y + self.point2.y) / 2)
 
+    @property
     def base(self) -> Point:
         ''' Returns the center of the base of the rectangle. '''
         return Point((self.point1.x + self.point2.x) / 2, self.point2.y)
