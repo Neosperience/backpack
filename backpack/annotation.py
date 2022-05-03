@@ -4,11 +4,13 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
 from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union
+import collections.abc
 from enum import Enum
 import datetime
 import logging
 from abc import ABC, abstractmethod
 import cv2
+import numpy as np
 
 from .timepiece import local_now
 
@@ -24,23 +26,6 @@ class Point(NamedTuple):
 
     y: float
     ''' The y coordinate of the point '''
-
-    def scale(self, width: float, height: float) -> Tuple[int, int]:
-        ''' Scales this point to image coordinates.
-
-        :param width: The width of the target image
-        :param height: The height of the target image
-        :returns: The integer (pixel) coordinates of the point, scaled to the image dimensions.
-        '''
-        return (int(self.x * width), int(self.y * height))
-
-    def in_image(self, img: 'numpy.ndarray') -> Tuple[int, int]:
-        ''' Scales this point in an OpenCV image.
-
-        :param img: The OpenCV image of ``(height, width, channels)`` shape
-        :returns: The integer (pixel) coordinates of the point, scaled to the image dimensions.
-        '''
-        return self.scale(width=img.shape[1], height=img.shape[0])
 
 
 class Color(NamedTuple):
@@ -224,6 +209,26 @@ class AnnotationDriverBase(ABC):
                 raise ValueError('Unknown annotation type')
         return context
 
+    @staticmethod
+    def to_point(point: Any) -> Tuple[float, float]:
+        ''' Aims to convert different point representations to a `(x, y)` tuple. 
+        
+        Args:
+            point: an object with attributes `x` and `y`, or an iterable with length of 2
+
+        Returns:
+            A tuple of float containing the x and y coordinates of the point.
+        
+        Raises:
+            ValueError: if the conversation was not successful
+        '''
+        if hasattr(point, 'x') and hasattr(point, 'y'):
+            return (float(point.x), float(point.y))
+        elif isinstance(point, (collections.abc.Sequence, np.ndarray)) and len(point) >= 2:
+            return (float(point[0]), float(point[1]))
+        else:
+            raise ValueError('Could not convert %s to a point.' % point)
+
     @abstractmethod
     def add_rect(self, rect: RectAnnotation, context: Any) -> None:
         ''' Renders a rectangle on the frame. 
@@ -281,14 +286,18 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
     }
 
     def add_rect(self, rect: RectAnnotation, context: 'panoramasdk.media') -> None:
-        context.add_rect(rect.point1.x, rect.point1.y, rect.point2.x, rect.point2.y)
+        x1, y1 = AnnotationDriverBase.to_point(rect.point1)
+        x2, y2 = AnnotationDriverBase.to_point(rect.point2)
+        context.add_rect(x1, y1, x2, y2)
 
     def add_label(self, label: LabelAnnotation, context: 'panoramasdk.media') -> None:
-        context.add_label(label.text, label.point.x, label.point.y)
+        x, y = AnnotationDriverBase.to_point(label.point)
+        context.add_label(label.text, x, y)
 
     def add_marker(self, marker: MarkerAnnotation, context: 'panoramasdk.media') -> None:
         marker_str = PanoramaMediaAnnotationDriver.MARKER_STYLE_TO_STR.get(marker.style, '.')
-        context.add_label(marker_str, marker.point.x, marker.point.y)
+        x, y = AnnotationDriverBase.to_point(marker.point)
+        context.add_label(marker_str, x, y)
     
     def add_line(self, label: LineAnnotation, context: Any) -> None:
         print('WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented')
@@ -316,9 +325,10 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     }
 
     @staticmethod
-    def scale(point: Point, context: 'numpy.ndarray') -> Point:
-        ''' Scales a point instance to an image context '''
-        return Point(point.x * context.shape[0], point.y * context.shape[1])
+    def scale(point: Any, context: 'numpy.ndarray') -> Tuple[float, float]:
+        ''' Converts and scales a point instance to an image context '''
+        x, y = AnnotationDriverBase.to_point(point)
+        return (x * context.shape[0], y * context.shape[1])
 
     def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
         return tuple(reversed(color)) if color is not None else self.DEFAULT_OPENCV_COLOR

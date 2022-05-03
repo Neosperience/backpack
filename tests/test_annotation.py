@@ -1,35 +1,25 @@
+from unicodedata import name
 import unittest
 from unittest.mock import patch, Mock
+import numpy as np
+
+from collections import namedtuple
 
 import datetime
 
 mock_cv2 = Mock()
 with patch.dict('sys.modules', cv2=mock_cv2):
     from backpack.annotation import (
-        Point, TimestampAnnotation, LabelAnnotation, RectAnnotation,
+        TimestampAnnotation, LabelAnnotation, RectAnnotation,
+        AnnotationDriverBase,
         PanoramaMediaAnnotationDriver, OpenCVImageAnnotationDriver
     )
 
+Point = namedtuple('Point', ('x', 'y'))
+
+TEST_POINT = (0.3, 0.4)
 TEST_RECT = RectAnnotation(Point(0.1, 0.2), Point(0.8, 0.9))
 TEST_LABEL = LabelAnnotation(Point(0.3, 0.4), 'Hello World')
-
-class TestPoint(unittest.TestCase):
-    
-    def setUp(self):
-        self.point = Point(0.3, 0.7)
-    
-    def test_scale(self):
-        scaled_x, scaled_y = self.point.scale(100, 100)
-        self.assertEqual(scaled_x, 30)
-        self.assertEqual(scaled_y, 70)
-
-    def test_in_image(self):
-        img = Mock()
-        img.shape = [100, 100, 3]
-        scaled_x, scaled_y = self.point.in_image(img)
-        self.assertEqual(scaled_x, 30)
-        self.assertEqual(scaled_y, 70)
-
 
 class TestTimestampAnnotation(unittest.TestCase):
     
@@ -39,6 +29,17 @@ class TestTimestampAnnotation(unittest.TestCase):
         ts_anno = TimestampAnnotation(timestamp=now, point=origin)
         self.assertEqual(ts_anno.text, '2022-02-22 22:22:22')
         self.assertEqual(ts_anno.point, origin)
+
+
+class TestAnnotationDriverBase(unittest.TestCase):
+
+    def test_to_point(self):
+        tp = AnnotationDriverBase.to_point
+        x, y = TEST_POINT
+        self.assertEquals(TEST_POINT, tp((x, y)), msg='from tuple')
+        self.assertEquals(TEST_POINT, tp([x, y]), msg='from list')
+        self.assertEquals(TEST_POINT, tp(np.array([x, y])), msg='from numpy array')
+        self.assertEquals(TEST_POINT, tp(Point(x, y)), msg='from named tuple')
 
 
 class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
@@ -71,14 +72,19 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         mock_cv2.reset_mock()
         self.driver = OpenCVImageAnnotationDriver()
 
+    def test_scale(self):
+        img = Mock()
+        img.shape = [100, 100, 3]
+        self.assertAlmostEqual((30, 40), OpenCVImageAnnotationDriver.scale(TEST_POINT, img))
+
     def test_rect(self):
         img = Mock()
         img.shape = [100, 100, 3] 
         self.driver.render(annotations=[TEST_RECT], context=img)
         mock_cv2.rectangle.assert_called_once_with(
             img,
-            TEST_RECT.point1.in_image(img),
-            TEST_RECT.point2.in_image(img),
+            OpenCVImageAnnotationDriver.scale(TEST_RECT.point1, img),
+            OpenCVImageAnnotationDriver.scale(TEST_RECT.point2, img),
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR,
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_LINEWIDTH
         )
@@ -89,8 +95,8 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         self.driver.render(annotations=[TEST_LABEL], context=img)
         mock_cv2.putText.assert_called_once_with(
             img, 
-            TEST_LABEL.text, 
-            TEST_LABEL.point.in_image(img),
+            TEST_LABEL.text,
+            OpenCVImageAnnotationDriver.scale(TEST_LABEL.point, img),
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT,
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT_SCALE,
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR
