@@ -49,11 +49,33 @@ class Color(NamedTuple):
 class LabelAnnotation(NamedTuple):
     ''' A label annotation to be rendered in an :class:`AnnotationDriver` context.
 
+    The :attr:`point` refers to the position of the anchor point.
+
     Args:
         point (Point): The origin of the label
         text (str): The text to be rendered
         color (Color): The color of the text
     '''
+    class HorizontalAnchor(Enum):
+        ''' Horizontal anchor point location. '''
+        LEFT = 1,
+        ''' Left anchor point '''
+        CENTER = 2,
+        ''' Center anchor point '''
+        RIGHT = 3
+        ''' Right anchor point '''
+
+    class VerticalAnchor(Enum):
+        ''' Vertical anchor point location. '''
+        TOP = 1
+        ''' Top anchor point '''
+        CENTER = 2
+        ''' Center anchor point '''
+        BASELINE = 3
+        ''' Text baseline anchor point ''' 
+        BOTTOM = 4
+        ''' Bottom anchor point '''
+
     point: Point
     ''' The origin of the label. '''
 
@@ -62,6 +84,12 @@ class LabelAnnotation(NamedTuple):
 
     color: Color = None
     ''' The color of the text. If `None`, the default drawing color will be used. '''
+
+    horizontal_anchor: HorizontalAnchor = HorizontalAnchor.LEFT
+    ''' Horizontal anchor point location '''
+
+    vertical_anchor: VerticalAnchor = VerticalAnchor.BOTTOM
+    ''' Vertical anchor point location '''
 
 
 class RectAnnotation(NamedTuple):
@@ -309,10 +337,14 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     You should pass an :class:`numpy.ndarray` instance as the context argument of the 
     :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. '''
 
-    DEFAULT_OPENCV_COLOR = Color(255, 255, 255)
-    DEFAULT_OPENCV_LINEWIDTH = 1
-    DEFAULT_OPENCV_FONT = cv2.FONT_HERSHEY_PLAIN
-    DEFAULT_OPENCV_FONT_SCALE = 1.0
+    DEFAULT_COLOR = Color(255, 255, 255)
+    DEFAULT_LINEWIDTH = 1
+    DEFAULT_FONT = cv2.FONT_HERSHEY_PLAIN
+
+    IMG_HEIGHT_FOR_UNIT_FONT_SCALE = 400
+    ''' The height of the image where 1.0 font_scale will be used. '''
+
+    DEFAULT_TEXT_PADDING = (2, 2)
 
     MARKER_STYLE_TO_CV2 = {
         MarkerAnnotation.Style.CROSS: cv2.MARKER_DIAMOND,
@@ -331,7 +363,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         return (int(x * context.shape[1]), int(y * context.shape[0]))
 
     def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
-        return tuple(reversed(color)) if color is not None else self.DEFAULT_OPENCV_COLOR
+        return tuple(reversed(color)) if color is not None else self.DEFAULT_COLOR
 
     def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
         cv2.rectangle(
@@ -339,17 +371,61 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             OpenCVImageAnnotationDriver.scale(rect.point1, context),
             OpenCVImageAnnotationDriver.scale(rect.point2, context),
             self._color_to_cv2(rect.color),
-            self.DEFAULT_OPENCV_LINEWIDTH
+            self.DEFAULT_LINEWIDTH
         )
 
+    @staticmethod
+    def _get_anchor_shift(
+        horizontal_anchor: LabelAnnotation.HorizontalAnchor, 
+        vertical_anchor: LabelAnnotation.VerticalAnchor, 
+        size_x: int, 
+        size_y: int, 
+        baseline: int
+    ) -> Tuple[int, int]:
+        ''' Gets the shift of the text position based on anchor point location and size of the 
+        text. '''
+        padding_x, padding_y = OpenCVImageAnnotationDriver.DEFAULT_TEXT_PADDING
+        shift_x, shift_y = (padding_x, -padding_y)
+        if horizontal_anchor == LabelAnnotation.HorizontalAnchor.CENTER:
+            shift_x = -size_x / 2
+        elif horizontal_anchor == LabelAnnotation.HorizontalAnchor.RIGHT:
+            shift_x = -(size_x + padding_x)
+        if vertical_anchor == LabelAnnotation.VerticalAnchor.CENTER:
+            shift_y = size_y / 2
+        elif vertical_anchor == LabelAnnotation.VerticalAnchor.TOP:
+            shift_y = size_y * 1.2 + padding_x
+        elif vertical_anchor == LabelAnnotation.VerticalAnchor.BASELINE:
+            shift_y = baseline
+        return (int(shift_x), int(shift_y))
+
     def add_label(self, label: LabelAnnotation, context: 'numpy.ndarray') -> None:
+        ctx_height = context.shape[0]
+        scale = ctx_height / self.IMG_HEIGHT_FOR_UNIT_FONT_SCALE
+        thickness = int(scale)
+        font = self.DEFAULT_FONT
+        shift_x, shift_y = (0, 0)
+        if (label.horizontal_anchor != LabelAnnotation.HorizontalAnchor.LEFT or
+            label.vertical_anchor != LabelAnnotation.VerticalAnchor.BOTTOM):
+            (size_x, size_y), baseline = cv2.getTextSize(
+                text=label.text, fontFace=font, fontScale=scale, thickness=thickness
+            )
+            shift_x, shift_y = OpenCVImageAnnotationDriver._get_anchor_shift(
+                label.horizontal_anchor,
+                label.vertical_anchor,
+                size_x, size_y, baseline
+            )
+
+        x, y = OpenCVImageAnnotationDriver.scale(label.point, context)
+        x += shift_x
+        y += shift_y
         cv2.putText(
-            context,
-            label.text,
-            OpenCVImageAnnotationDriver.scale(label.point, context),
-            self.DEFAULT_OPENCV_FONT,
-            self.DEFAULT_OPENCV_FONT_SCALE,
-            self._color_to_cv2(label.color)
+            img=context,
+            text=label.text,
+            org=(x, y),
+            fontFace=font,
+            fontScale=scale,
+            color=self._color_to_cv2(label.color),
+            thickness=thickness
         )
 
     def add_marker(self, marker: MarkerAnnotation, context: 'numpy.ndarray') -> None:
