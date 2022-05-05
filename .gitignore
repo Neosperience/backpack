@@ -51,3 +51,6 @@ docs/_build/
 
 # Jupyter
 .ipynb_checkpoints
+
+# Visual Studio Code
+.vscode/

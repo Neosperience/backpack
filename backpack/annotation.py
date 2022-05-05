@@ -328,7 +328,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     def scale(point: Any, context: 'numpy.ndarray') -> Tuple[float, float]:
         ''' Converts and scales a point instance to an image context '''
         x, y = AnnotationDriverBase.to_point(point)
-        return (int(x * context.shape[0]), int(y * context.shape[1]))
+        return (int(x * context.shape[1]), int(y * context.shape[0]))
 
     def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
         return tuple(reversed(color)) if color is not None else self.DEFAULT_OPENCV_COLOR

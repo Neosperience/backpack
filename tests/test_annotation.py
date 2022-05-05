@@ -79,12 +79,12 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
 
     def test_rect(self):
         img = Mock()
-        img.shape = [100, 100, 3] 
+        img.shape = [200, 100, 3] 
         self.driver.render(annotations=[TEST_RECT], context=img)
         mock_cv2.rectangle.assert_called_once_with(
             img,
-            OpenCVImageAnnotationDriver.scale(TEST_RECT.point1, img),
-            OpenCVImageAnnotationDriver.scale(TEST_RECT.point2, img),
+            (int(TEST_RECT.point1[0] * 100), int(TEST_RECT.point1[1] * 200)),
+            (int(TEST_RECT.point2[0] * 100), int(TEST_RECT.point2[1] * 200)),
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR,
             OpenCVImageAnnotationDriver.DEFAULT_OPENCV_LINEWIDTH
         )
