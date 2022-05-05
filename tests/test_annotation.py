@@ -74,8 +74,11 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
 
     def test_scale(self):
         img = Mock()
-        img.shape = [100, 100, 3]
-        self.assertAlmostEqual((30, 40), OpenCVImageAnnotationDriver.scale(TEST_POINT, img))
+        img.shape = [200, 100, 3]
+        self.assertEqual(
+            (int(TEST_POINT[0] * 100), int(TEST_POINT[1] * 200)), 
+            OpenCVImageAnnotationDriver.scale(TEST_POINT, img)
+        )
 
     def test_rect(self):
         img = Mock()
