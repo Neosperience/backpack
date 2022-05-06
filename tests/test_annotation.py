@@ -1,5 +1,5 @@
-from unicodedata import name
 import unittest
+import unittest.mock
 from unittest.mock import patch, Mock
 import numpy as np
 
@@ -88,8 +88,8 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
             img,
             (int(TEST_RECT.point1[0] * 100), int(TEST_RECT.point1[1] * 200)),
             (int(TEST_RECT.point2[0] * 100), int(TEST_RECT.point2[1] * 200)),
-            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR,
-            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_LINEWIDTH
+            OpenCVImageAnnotationDriver.DEFAULT_COLOR,
+            OpenCVImageAnnotationDriver.DEFAULT_LINEWIDTH
         )
 
     def test_label(self):
@@ -97,12 +97,13 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         img.shape = [100, 100, 3] 
         self.driver.render(annotations=[TEST_LABEL], context=img)
         mock_cv2.putText.assert_called_once_with(
-            img, 
-            TEST_LABEL.text,
-            OpenCVImageAnnotationDriver.scale(TEST_LABEL.point, img),
-            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT,
-            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_FONT_SCALE,
-            OpenCVImageAnnotationDriver.DEFAULT_OPENCV_COLOR
+            img=img, 
+            text=TEST_LABEL.text,
+            org=OpenCVImageAnnotationDriver.scale(TEST_LABEL.point, img),
+            fontFace=OpenCVImageAnnotationDriver.DEFAULT_FONT,
+            fontScale=unittest.mock.ANY,
+            color=OpenCVImageAnnotationDriver.DEFAULT_COLOR,
+            thickness=unittest.mock.ANY
         )
 
     def test_invalid(self):
