@@ -13,20 +13,7 @@ import cv2
 import numpy as np
 
 from .timepiece import local_now
-
-class Point(NamedTuple):
-    ''' A point with both coordinates normalized to the [0; 1) range.
-
-    Args:
-        x (float): The x coordinate of the point
-        y (float): The y coordinate of the point
-    '''
-    x: float
-    ''' The x coordinate of the point '''
-
-    y: float
-    ''' The y coordinate of the point '''
-
+from .geometry import Point, Line
 
 class Color(NamedTuple):
     ''' A color in the red, blue, green space.
@@ -129,15 +116,11 @@ class LineAnnotation(NamedTuple):
     ''' A line annotation to be rendered in an AnnotationDriver context.
 
     Args:
-        point1 (Point): The first end of the line
-        point2 (Point): The second end of the line
+        line (Line): The line segment to be drawn
         color (Color): The color of the line
     '''
-    point1: Point
-    ''' The first end of the line '''
-
-    point2: Point
-    ''' The second end of the line '''
+    line: Line
+    ''' The line segment to be drawn '''
 
     color: Color = None
     ''' The color of the line. If `None`, the default drawing color will be used. '''
@@ -182,10 +165,11 @@ class MarkerAnnotation(NamedTuple):
 class TimestampAnnotation(LabelAnnotation):
     ''' A timestamp annotation to be rendered in an AnnotationDriver context.
 
-    :param timestamp: The timestamp to be rendered. If not specified, the current local time
-        will be used.
-    :param point: The origin of the timestamp. If not specified, the timestamp will be places
-        on the top-left corner of the image.
+    Args:
+        timestamp: The timestamp to be rendered. If not specified, the current local time
+            will be used.
+        point: The origin of the timestamp. If not specified, the timestamp will be places
+            on the top-left corner of the image.
     '''
     def __new__(cls, timestamp: Optional[datetime.datetime]=None, point: Point=Point(0.02, 0.04)):
         timestamp = timestamp or local_now()
@@ -401,7 +385,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     def add_label(self, label: LabelAnnotation, context: 'numpy.ndarray') -> None:
         ctx_height = context.shape[0]
         scale = ctx_height / self.IMG_HEIGHT_FOR_UNIT_FONT_SCALE
-        thickness = int(scale)
+        thickness = max(int(scale), 1)
         font = self.DEFAULT_FONT
         shift_x, shift_y = (0, 0)
         if (label.horizontal_anchor != LabelAnnotation.HorizontalAnchor.LEFT or
