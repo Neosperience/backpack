@@ -423,11 +423,11 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             markerType
         )
 
-    def add_line(self, line: LineAnnotation, context: Any) -> None:
+    def add_line(self, line_anno: LineAnnotation, context: Any) -> None:
         cv2.line(
             context,
-            OpenCVImageAnnotationDriver.scale(line.point1, context),
-            OpenCVImageAnnotationDriver.scale(line.point2, context),
-            self._color_to_cv2(line.color),
-            line.thickness
+            OpenCVImageAnnotationDriver.scale(line_anno.line.pt1, context),
+            OpenCVImageAnnotationDriver.scale(line_anno.line.pt2, context),
+            self._color_to_cv2(line_anno.color),
+            line_anno.thickness
         )

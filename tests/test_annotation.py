@@ -10,16 +10,18 @@ import datetime
 mock_cv2 = Mock()
 with patch.dict('sys.modules', cv2=mock_cv2):
     from backpack.annotation import (
-        TimestampAnnotation, LabelAnnotation, RectAnnotation,
+        TimestampAnnotation, LabelAnnotation, LineAnnotation, RectAnnotation,
         AnnotationDriverBase,
         PanoramaMediaAnnotationDriver, OpenCVImageAnnotationDriver
     )
 
 Point = namedtuple('Point', ('x', 'y'))
+Line = namedtuple('Line', ('pt1', 'pt2'))
 
 TEST_POINT = (0.3, 0.4)
 TEST_RECT = RectAnnotation(Point(0.1, 0.2), Point(0.8, 0.9))
 TEST_LABEL = LabelAnnotation(Point(0.3, 0.4), 'Hello World')
+TEST_LINE = LineAnnotation(Line(Point(0.1, 0.2), Point(0.3, 0.4)))
 
 class TestTimestampAnnotation(unittest.TestCase):
     
@@ -60,7 +62,7 @@ class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
         context.add_label.assert_called_once_with(
             TEST_LABEL.text, TEST_LABEL.point.x, TEST_LABEL.point.y
         )
-
+    
     def test_invalid(self):
         with self.assertRaises(ValueError):
             self.driver.render(annotations=['foobar'], context=Mock())
@@ -94,7 +96,7 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
 
     def test_label(self):
         img = Mock()
-        img.shape = [100, 100, 3] 
+        img.shape = [200, 100, 3]
         self.driver.render(annotations=[TEST_LABEL], context=img)
         mock_cv2.putText.assert_called_once_with(
             img=img, 
@@ -104,6 +106,18 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
             fontScale=unittest.mock.ANY,
             color=OpenCVImageAnnotationDriver.DEFAULT_COLOR,
             thickness=unittest.mock.ANY
+        )
+
+    def test_line(self):
+        img = Mock()
+        img.shape = [200, 100, 3]
+        self.driver.render(annotations=[TEST_LINE], context=img)
+        mock_cv2.line.assert_called_once_with(
+            img,
+            OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt1, img),
+            OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt2, img),
+            OpenCVImageAnnotationDriver.DEFAULT_COLOR,
+            TEST_LINE.thickness
         )
 
     def test_invalid(self):
