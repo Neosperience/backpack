@@ -78,7 +78,7 @@ class TestRectangle(unittest.TestCase):
         self.assertEqual(self.rect.center, Point(2, 1))
     
     def test_base(self) -> None:
-        self.assertEqual(self.rect.base, Point(2, 0))
+        self.assertEqual(self.rect.base, Point(2, 2))
 
     def test_size(self) -> None:
         self.assertEqual(self.rect.size, (4, 2))

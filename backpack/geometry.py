@@ -136,7 +136,7 @@ class Rectangle:
     @property
     def base(self) -> Point:
         ''' Returns the center of the base of the rectangle. '''
-        return Point((self.pt_min.x + self.pt_max.x) / 2, self.pt_min.y)
+        return Point((self.pt_min.x + self.pt_max.x) / 2, self.pt_max.y)
 
     @property
     def size(self) -> Tuple[float, float]:
