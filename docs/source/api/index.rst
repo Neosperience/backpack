@@ -19,6 +19,8 @@ profiling your Panorama application, and remote view the output of your model.
 
  - :ref:`annotation-api` makes it possible to draw annotations on different backends with an unified
    API
+ - :ref:`geometry-api` contains 2D geometry primitives and implementation of some geometric 
+   algorithms
 
 .. toctree::
     :hidden:

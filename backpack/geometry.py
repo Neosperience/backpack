@@ -1,4 +1,4 @@
-''' 2D geometry primitives and basic functions. '''
+''' 2D geometry primitives and implementation of some geometric algorithms. '''
 
 from typing import List, Sequence, Tuple
 import collections.abc
