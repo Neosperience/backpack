@@ -29,4 +29,5 @@ profiling your Panorama application, and remote view the output of your model.
     kvs
     rtsp
     annotation
+    geometry
 

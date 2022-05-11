@@ -78,7 +78,7 @@ class Line:
             other: The other line segment
             
         Returns:
-            `True` if the two segments intersect eachother.
+            `True` if the two segments intersect each other.
         '''
         ccw = Point.counterclockwise
         return (
@@ -150,7 +150,7 @@ class PolyLine:
     
     Args:
         points: the list of the points of the polyline
-        closed: flags wether the polyline is closed
+        closed: flags if the polyline is closed
     '''
 
     points : Sequence[Point] = dataclasses.field(repr=False)
@@ -193,7 +193,7 @@ class PolyLine:
         This implementation uses the `ray casting algorithm`_.
 
         .. _`ray casting algorithm`: 
-        https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
+           https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
 
         Args:
             point: The point

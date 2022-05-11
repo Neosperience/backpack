@@ -25,6 +25,8 @@ Backpack provides the following modules:
 
  - :ref:`annotation-readme` is a unified API for drawing on different backends like the core 
    `panoramasdk.media`_ class or OpenCV images.
+ - :ref:`geometry-readme` is a collection of classes representing 2D geometric primitives like 
+   points, lines, polylines, and some useful geometric algorithms.
 
 .. _`AWS Kinesis Video Streams`: https://aws.amazon.com/kinesis/video-streams/
 .. _`VLC Media Player`: https://www.videolan.org
@@ -38,3 +40,4 @@ Backpack provides the following modules:
    timepiece
    spyglass
    annotation
+   geometry
