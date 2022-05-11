@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 
 from .timepiece import local_now
-from .geometry import Point, Line
+from .geometry import Point, Rectangle, Line
 
 class Color(NamedTuple):
     ''' A color in the red, blue, green space.
@@ -83,41 +83,22 @@ class RectAnnotation(NamedTuple):
     ''' A rectangle annotation to be rendered in an AnnotationDriver context.
 
     Args:
-        point1 (Point): The top-left corner of the rectangle
-        point2 (Point): The bottom-right corner of the rectangle
-        color (Color): The line color of the rectangle
+        rect: The rectangle to be rendered in the AnnotationDriver context.
+        color: The line color of the rectangle.
     '''
-    point1: Point
-    ''' The top-left corner of the rectangle '''
-
-    point2: Point
-    ''' The bottom-right corner of the rectangle '''
+    rect: Rectangle
+    ''' The rectangle to be rendered in the AnnotationDriver context '''
 
     color: Color = None
     ''' The line color of the rectangle. If `None`, the default drawing color will be used. '''
-
-    @property
-    def center(self) -> Point:
-        ''' The center of the rectangle. '''
-        return Point((self.point1.x + self.point2.x) / 2, (self.point1.y + self.point2.y) / 2)
-
-    @property
-    def base(self) -> Point:
-        ''' Returns the center of the base of the rectangle. '''
-        return Point((self.point1.x + self.point2.x) / 2, self.point2.y)
-
-    @property
-    def size(self) -> Tuple[float, float]:
-        ''' The width and height of the rectangle. '''
-        return abs(self.point1.y - self.point2.y), abs(self.point1.x - self.point2.x)
 
 
 class LineAnnotation(NamedTuple):
     ''' A line annotation to be rendered in an AnnotationDriver context.
 
     Args:
-        line (Line): The line segment to be drawn
-        color (Color): The color of the line
+        line: The line segment to be drawn
+        color: The color of the line
     '''
     line: Line
     ''' The line segment to be drawn '''

@@ -38,10 +38,10 @@ class TestAnnotationDriverBase(unittest.TestCase):
     def test_to_point(self):
         tp = AnnotationDriverBase.to_point
         x, y = TEST_POINT
-        self.assertEquals(TEST_POINT, tp((x, y)), msg='from tuple')
-        self.assertEquals(TEST_POINT, tp([x, y]), msg='from list')
-        self.assertEquals(TEST_POINT, tp(np.array([x, y])), msg='from numpy array')
-        self.assertEquals(TEST_POINT, tp(Point(x, y)), msg='from named tuple')
+        self.assertEqual(TEST_POINT, tp((x, y)), msg='from tuple')
+        self.assertEqual(TEST_POINT, tp([x, y]), msg='from list')
+        self.assertEqual(TEST_POINT, tp(np.array([x, y])), msg='from numpy array')
+        self.assertEqual(TEST_POINT, tp(Point(x, y)), msg='from named tuple')
 
 
 class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
