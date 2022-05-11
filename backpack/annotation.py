@@ -278,10 +278,10 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
         MarkerAnnotation.Style.TRIANGLE_DOWN: '\\/',
     }
 
-    def add_rect(self, rect: RectAnnotation, context: 'panoramasdk.media') -> None:
-        x1, y1 = AnnotationDriverBase.to_point(rect.point1)
-        x2, y2 = AnnotationDriverBase.to_point(rect.point2)
-        context.add_rect(x1, y1, x2, y2)
+    def add_rect(self, rect_anno: RectAnnotation, context: 'panoramasdk.media') -> None:
+        x1, y1 = rect_anno.rect.pt_min
+        x2, y2 = rect_anno.rect.pt_max
+        context.add_rect(float(x1), float(y1), float(x2), float(y2))
 
     def add_label(self, label: LabelAnnotation, context: 'panoramasdk.media') -> None:
         x, y = AnnotationDriverBase.to_point(label.point)
@@ -322,7 +322,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     }
 
     @staticmethod
-    def scale(point: Any, context: 'numpy.ndarray') -> Tuple[float, float]:
+    def scale(point: Any, context: np.ndarray) -> Tuple[float, float]:
         ''' Converts and scales a point instance to an image context '''
         x, y = AnnotationDriverBase.to_point(point)
         return (int(x * context.shape[1]), int(y * context.shape[0]))
@@ -330,12 +330,12 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
     def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
         return tuple(reversed(color)) if color is not None else self.DEFAULT_COLOR
 
-    def add_rect(self, rect: RectAnnotation, context: 'numpy.ndarray') -> None:
+    def add_rect(self, rect_anno: RectAnnotation, context: np.ndarray) -> None:
         cv2.rectangle(
             context,
-            OpenCVImageAnnotationDriver.scale(rect.point1, context),
-            OpenCVImageAnnotationDriver.scale(rect.point2, context),
-            self._color_to_cv2(rect.color),
+            OpenCVImageAnnotationDriver.scale(rect_anno.rect.pt_min, context),
+            OpenCVImageAnnotationDriver.scale(rect_anno.rect.pt_max, context),
+            self._color_to_cv2(rect_anno.color),
             self.DEFAULT_LINEWIDTH
         )
 
@@ -363,7 +363,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             shift_y = baseline
         return (int(shift_x), int(shift_y))
 
-    def add_label(self, label: LabelAnnotation, context: 'numpy.ndarray') -> None:
+    def add_label(self, label: LabelAnnotation, context: np.ndarray) -> None:
         ctx_height = context.shape[0]
         scale = ctx_height / self.IMG_HEIGHT_FOR_UNIT_FONT_SCALE
         thickness = max(int(scale), 1)
@@ -393,7 +393,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             thickness=thickness
         )
 
-    def add_marker(self, marker: MarkerAnnotation, context: 'numpy.ndarray') -> None:
+    def add_marker(self, marker: MarkerAnnotation, context: np.ndarray) -> None:
         markerType = OpenCVImageAnnotationDriver.MARKER_STYLE_TO_CV2.get(
             marker.style, cv2.MARKER_DIAMOND
         )

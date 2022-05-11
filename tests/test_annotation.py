@@ -17,9 +17,10 @@ with patch.dict('sys.modules', cv2=mock_cv2):
 
 Point = namedtuple('Point', ('x', 'y'))
 Line = namedtuple('Line', ('pt1', 'pt2'))
+Rectangle = namedtuple('Rectangle', ('pt_min', 'pt_max'))
 
 TEST_POINT = (0.3, 0.4)
-TEST_RECT = RectAnnotation(Point(0.1, 0.2), Point(0.8, 0.9))
+TEST_RECT = RectAnnotation(Rectangle(Point(0.1, 0.2), Point(0.8, 0.9)))
 TEST_LABEL = LabelAnnotation(Point(0.3, 0.4), 'Hello World')
 TEST_LINE = LineAnnotation(Line(Point(0.1, 0.2), Point(0.3, 0.4)))
 
@@ -53,7 +54,8 @@ class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
         context = Mock()
         self.driver.render(annotations=[TEST_RECT], context=context)
         context.add_rect.assert_called_once_with(
-            TEST_RECT.point1.x, TEST_RECT.point1.y, TEST_RECT.point2.x, TEST_RECT.point2.y
+            TEST_RECT.rect.pt_min.x, TEST_RECT.rect.pt_min.y, 
+            TEST_RECT.rect.pt_max.x, TEST_RECT.rect.pt_max.y
         )
 
     def test_label(self):
@@ -88,8 +90,8 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         self.driver.render(annotations=[TEST_RECT], context=img)
         mock_cv2.rectangle.assert_called_once_with(
             img,
-            (int(TEST_RECT.point1[0] * 100), int(TEST_RECT.point1[1] * 200)),
-            (int(TEST_RECT.point2[0] * 100), int(TEST_RECT.point2[1] * 200)),
+            (int(TEST_RECT.rect.pt_min.x * 100), int(TEST_RECT.rect.pt_min.y * 200)),
+            (int(TEST_RECT.rect.pt_max.x * 100), int(TEST_RECT.rect.pt_max.y * 200)),
             OpenCVImageAnnotationDriver.DEFAULT_COLOR,
             OpenCVImageAnnotationDriver.DEFAULT_LINEWIDTH
         )
