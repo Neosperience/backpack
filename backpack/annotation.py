@@ -465,9 +465,11 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         )
 
     def add_polyline(self, polyline_anno: PolyLineAnnotation, context: Any) -> None:
+        pts = [OpenCVImageAnnotationDriver.scale(pt, context) for pt in polyline_anno.polyline.points]
+        pts = [np.array(pts, dtype=np.int32)]
         cv2.polylines(
             context,
-            polyline_anno.polyline.points,
+            pts,
             polyline_anno.polyline.closed,
             self._color_to_cv2(polyline_anno.color),
             polyline_anno.thickness
