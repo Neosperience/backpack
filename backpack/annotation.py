@@ -3,7 +3,7 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 :mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images 
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
-from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union
+from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Sequence
 import collections.abc
 from enum import Enum
 import datetime
@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 
 from .timepiece import local_now
-from .geometry import Point, Rectangle, Line
+from .geometry import Point, Rectangle, Line, PolyLine
 
 class Color(NamedTuple):
     ''' A color in the red, blue, green space.
@@ -163,6 +163,23 @@ class MarkerAnnotation(NamedTuple):
     ''' The color of the maker. '''
 
 
+class PolyLineAnnotation(NamedTuple):
+    ''' A PolyLine annotation to be rendered in an AnnotationDriver context. 
+    
+    Args:
+        polyline(PolyLine): The PolyLine instance
+        thickness(int): Line thickness
+        color(Color): Line color
+    '''
+
+    polyline : PolyLine 
+    ''' The PolyLine instance. '''
+    thickness : int = 1
+    ''' Line thickness. '''
+    color : Color = None
+    ''' Line color. '''
+
+
 class TimestampAnnotation(LabelAnnotation):
     ''' A timestamp annotation to be rendered in an AnnotationDriver context.
 
@@ -218,6 +235,8 @@ class AnnotationDriverBase(ABC):
                 self.add_marker(anno, context)
             elif isinstance(anno, LineAnnotation):
                 self.add_line(anno, context)
+            elif isinstance(anno, PolyLineAnnotation):
+                self.add_polyline(anno, context)
             else:
                 raise ValueError('Unknown annotation type')
         return context
@@ -277,6 +296,15 @@ class AnnotationDriverBase(ABC):
             line: A line annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
         '''
+    
+    @abstractmethod
+    def add_polyline(self, polyline: PolyLineAnnotation, context: Any) -> None:
+        ''' Renders a polyline. 
+
+        Args:
+            line: A polyline annotation.
+            context: A backend-specific context object that was passed to the :meth:`render` method.
+        '''
 
 
 class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
@@ -313,6 +341,9 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
         context.add_label(marker_str, x, y)
     
     def add_line(self, label: LineAnnotation, context: Any) -> None:
+        print('WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented')
+
+    def add_polyline(self, polyline: PolyLineAnnotation, context: Any) -> None:
         print('WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented')
 
 
@@ -431,4 +462,13 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             OpenCVImageAnnotationDriver.scale(line_anno.line.pt2, context),
             self._color_to_cv2(line_anno.color),
             line_anno.thickness
+        )
+
+    def add_polyline(self, polyline_anno: PolyLineAnnotation, context: Any) -> None:
+        cv2.polylines(
+            context,
+            polyline_anno.polyline.points,
+            polyline_anno.polyline.closed,
+            self._color_to_cv2(polyline_anno.color),
+            polyline_anno.thickness
         )
