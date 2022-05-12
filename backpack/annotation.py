@@ -32,6 +32,26 @@ class Color(NamedTuple):
     b: int
     ''' The blue component of the color. '''
 
+    @staticmethod
+    def from_hex(value: Union[str, int]) -> 'Color':
+        ''' Creates a color object from its hexadeciman representation. 
+        
+        Args:
+            value: integer or HTML color format string
+
+        Returns:
+            a new color object
+        '''
+        if isinstance(value, str):
+            value = value.lstrip('#')
+            r, g, b = tuple(int(value[i:i+2], 16) for i in (0, 2, 4))
+            return Color(r, g, b)
+        elif isinstance(value, int):
+            r, g, b = tuple((value & (0xff << (i * 8))) >> (i * 8) for i in (2, 1, 0))
+            return Color(r, g, b)
+        else:
+            raise ValueError('value argument must be str or int')
+
 
 class LabelAnnotation(NamedTuple):
     ''' A label annotation to be rendered in an :class:`AnnotationDriver` context.

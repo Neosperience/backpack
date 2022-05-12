@@ -12,7 +12,8 @@ with patch.dict('sys.modules', cv2=mock_cv2):
     from backpack.annotation import (
         TimestampAnnotation, LabelAnnotation, LineAnnotation, RectAnnotation,
         AnnotationDriverBase,
-        PanoramaMediaAnnotationDriver, OpenCVImageAnnotationDriver
+        PanoramaMediaAnnotationDriver, OpenCVImageAnnotationDriver,
+        Color
     )
 
 Point = namedtuple('Point', ('x', 'y'))
@@ -23,6 +24,15 @@ TEST_POINT = (0.3, 0.4)
 TEST_RECT = RectAnnotation(Rectangle(Point(0.1, 0.2), Point(0.8, 0.9)))
 TEST_LABEL = LabelAnnotation(Point(0.3, 0.4), 'Hello World')
 TEST_LINE = LineAnnotation(Line(Point(0.1, 0.2), Point(0.3, 0.4)))
+
+class TestColor(unittest.TestCase):
+
+    def test_from_hex(self):
+        hex_int = 0x5777A5
+        hex_str = '#5777A5'
+        expected_color = Color(87, 119, 165)
+        self.assertEqual(Color.from_hex(hex_int), expected_color)
+        self.assertEqual(Color.from_hex(hex_str), expected_color)
 
 class TestTimestampAnnotation(unittest.TestCase):
     
