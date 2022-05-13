@@ -5,7 +5,8 @@ import collections.abc
 import dataclasses
 from dataclasses import dataclass
 import math
-import itertools
+from itertools import islice, cycle, groupby
+from . import lazy_property
 
 class PointMeta(type):
     @classmethod
@@ -28,7 +29,7 @@ class Point(metaclass=PointMeta):
     ''' The y coordinate of the point '''
 
     @staticmethod
-    def counterclockwise(pt1: 'Point', pt2: 'Point', pt3: 'Point') -> bool:
+    def ccw(pt1: 'Point', pt2: 'Point', pt3: 'Point') -> bool:
         ''' Determines if the three points form a counterclockwise angle. If two points are 
         equal, or the three points are collinear, this method returns `True`.
         
@@ -42,9 +43,6 @@ class Point(metaclass=PointMeta):
         '''
         d21, d31 = pt2 - pt1, pt3 - pt1
         return d21.x * d31.y >= d31.x * d21.y
-
-    ccw = counterclockwise
-    ''' Alias for :meth:`counterclockwise` method. '''
     
     def distance(self, other: 'Point') -> float:
         ''' Calculates the distance between this and an other point. 
@@ -166,17 +164,17 @@ class Rectangle:
             pt.x <= self.pt_max.x and pt.y <= self.pt_max.y
         )
 
-    @property
+    @lazy_property
     def center(self) -> Point:
         ''' The center of the rectangle. '''
         return Point((self.pt_min.x + self.pt_max.x) / 2, (self.pt_min.y + self.pt_max.y) / 2)
 
-    @property
+    @lazy_property
     def base(self) -> Point:
         ''' Returns the center of the base of the rectangle. '''
         return Point((self.pt_min.x + self.pt_max.x) / 2, self.pt_max.y)
 
-    @property
+    @lazy_property
     def size(self) -> Tuple[float, float]:
         ''' The width and height of the rectangle. '''
         return self.pt_max.x - self.pt_min.x, self.pt_max.y - self.pt_min.y
@@ -184,24 +182,19 @@ class Rectangle:
 
 @dataclass(frozen=True)
 class PolyLine:
-    ''' A PolyLine is a connected series of line segments. 
+    ''' A :class:`PolyLine` is a connected series of line segments. 
     
     Args:
         points: the list of the points of the polyline
-        closed: flags if the polyline is closed
+        closed: `True` if the :class:`PolyLine` is closed
+
     '''
 
-    points : Sequence[Point] = dataclasses.field(repr=False)
-    ''' The list of the points of the polyline '''
+    points : Sequence[Point]
+    ''' The list of the points of the :class:`PolyLine` '''
 
     closed : bool = True
-    ''' `True` if the polyline is closed. '''
-
-    lines: List[Line] = dataclasses.field(init=False)
-    ''' The line segments of this PolyLine '''
-
-    boundingbox: Rectangle = dataclasses.field(init=False)
-    ''' The bounding box of this PolyLine '''
+    ''' `True` if the :class:`PolyLine` is closed. '''
 
     def __post_init__(self):
         if not isinstance(self.points, collections.abc.Sequence):
@@ -209,24 +202,63 @@ class PolyLine:
         if len(self.points) < 2:
             raise ValueError('PolyLine should contain at least two points.')
         for pt in self.points:
-            if not hasattr(pt, 'x') or not hasattr(pt, 'y'):
+            if not isinstance(pt, Point):
                 raise ValueError('The elements of PolyLine points argument must be Point objects.')
 
-        # Compute lines
+    @lazy_property
+    def lines(self) -> List[Line]:
+        ''' The line segments of this :class:`PolyLine` '''
         lines = [Line(start, end) for start, end in zip(self.points, self.points[1:])]
         if self.closed:
             lines.append(Line(self.points[-1], self.points[0]))
-        object.__setattr__(self, 'lines', lines)
+        return lines
 
-        # Compute bounding box
+    @lazy_property
+    def boundingbox(self) -> Rectangle:
+        ''' The bounding box of this :class:`PolyLine` '''
         minx = min(pt.x for pt in self.points)
         miny = min(pt.y for pt in self.points)
         maxx = max(pt.x for pt in self.points)
         maxy = max(pt.y for pt in self.points)
-        object.__setattr__(self, 'boundingbox', Rectangle(Point(minx, miny), Point(maxx, maxy)))
+        return Rectangle(Point(minx, miny), Point(maxx, maxy))
+
+    @lazy_property
+    def self_intersects(self) -> bool:
+        ''' Determines if this :class:`PolyLine` self-intersects. '''
+        return any(
+            l1.intersects(l2) 
+                for idx, l1 in enumerate(self.lines) for l2 in self.lines[idx + 2:]
+        )
+
+    @lazy_property
+    def is_convex(self) -> bool:
+        ''' Determines if the polygon formed from this closed :class:`PolyLine` is convex. 
+        
+        The result of this method is undefined for complex (self-intersecting) polygons.
+
+        Returns:
+            `True` if the polygon is convex, False otherwise.
+        '''
+        if not self.closed:
+            raise ValueError('PolyLine.is_convex works only for closed polylines.')
+
+        if len(self.points) < 4:
+            return True
+        
+        # Iterate over consequitive point triplets
+        it0 = self.points
+        it1 = islice(cycle(self.points), 1, None)
+        it2 = islice(cycle(self.points), 2, None)
+
+        # Check if all angles are ccw, see 
+        # https://docs.python.org/3/library/itertools.html#itertools-recipes
+        group = groupby(
+            Point.ccw(pt0, pt1, pt2) for pt0, pt1, pt2 in zip(it0, it1, it2)
+        )
+        return next(group, True) and not next(group, False)
 
     def has_inside(self, point: Point) -> bool:
-        ''' Determines if a point is inside this closed `PolyLine`. 
+        ''' Determines if a point is inside this closed :class:`PolyLine`. 
         
         This implementation uses the `ray casting algorithm`_.
 
@@ -237,7 +269,7 @@ class PolyLine:
             point: The point
 
         Returns:
-            `True` if the point is inside this closed `PolyLine`. 
+            `True` if the point is inside this closed :class:`PolyLine`. 
         '''
         if not self.closed:
             raise ValueError('PolyLine.has_inside works only for closed polylines.')
@@ -246,33 +278,3 @@ class PolyLine:
         ray = Line(Point(self.boundingbox.pt_min.x - 0.01, self.boundingbox.pt_min.y), point)
         n_ints = sum(1 if ray.intersects(line) else 0 for line in self.lines)
         return True if n_ints % 2 == 1 else False
-
-    def self_intersects(self) -> bool:
-        ''' Determines this PolyLine self-intersects. '''
-        return any(
-            l1.intersects(l2) 
-                for idx, l1 in enumerate(self.lines) for l2 in self.lines[idx + 2:]
-        )
-
-    def is_convex(self) -> bool:
-        ''' Determines if the polygon formed from this closed PolyLine is convex. 
-        
-        The result of this method is undefined for complex (self-intersecting) polygons.
-        '''
-        if not self.closed:
-            raise ValueError('PolyLine.is_convex works only for closed polylines.')
-
-        if len(self.points) < 4:
-            return True
-        
-        # Iterate over consequitive point triplets
-        it0 = self.points
-        it1 = itertools.islice(itertools.cycle(self.points), 1, None)
-        it2 = itertools.islice(itertools.cycle(self.points), 2, None)
-
-        # Check if all angles are ccw, see 
-        # https://docs.python.org/3/library/itertools.html#itertools-recipes
-        group = itertools.groupby(
-            Point.ccw(pt0, pt1, pt2) for pt0, pt1, pt2 in zip(it0, it1, it2)
-        )
-        return next(group, True) and not next(group, False)

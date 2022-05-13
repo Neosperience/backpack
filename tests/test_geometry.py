@@ -4,15 +4,15 @@ from backpack.geometry import Point, Line, Rectangle, PolyLine
 
 class TestPoint(unittest.TestCase):
 
-    def test_counterclockwise(self):
+    def test_ccw(self):
         pt1 = Point(0, 0)
         pt2 = Point(1, 0)
         pt3 = Point(1, 1)
-        self.assertTrue(Point.counterclockwise(pt1, pt2, pt3))
-        self.assertFalse(Point.counterclockwise(pt3, pt2, pt1))
+        self.assertTrue(Point.ccw(pt1, pt2, pt3))
+        self.assertFalse(Point.ccw(pt3, pt2, pt1))
         pt4 = Point(2, 0)
-        self.assertTrue(Point.counterclockwise(pt1, pt2, pt4), msg='Collinear points')
-        self.assertTrue(Point.counterclockwise(pt1, pt1, pt2), msg='Same points')
+        self.assertTrue(Point.ccw(pt1, pt2, pt4), msg='Collinear points')
+        self.assertTrue(Point.ccw(pt1, pt1, pt2), msg='Same points')
 
     def test_distance(self):
         pt1 = Point(0, 3)
@@ -144,9 +144,9 @@ class TestPolyLine(unittest.TestCase):
 
     def test_self_intersects(self) -> None:
         square = PolyLine([Point(0, 0), Point(1, 0), Point(1, 1), Point(0, 1)], closed=True)
-        self.assertFalse(square.self_intersects())
+        self.assertFalse(square.self_intersects)
         cross = PolyLine([Point(0, 0), Point(1, 0), Point(0, 1), Point(1, 1)], closed=True)
-        self.assertTrue(cross.self_intersects())
+        self.assertTrue(cross.self_intersects)
 
     def test_is_convex(self) -> None:
 
@@ -160,15 +160,15 @@ class TestPolyLine(unittest.TestCase):
 
         with self.subTest('triangle is convex'):
             triangle = PolyLine([Point(0, 0), Point(1, 0), Point(0, 1)], closed=True)
-            self.assertTrue(triangle.is_convex())
+            self.assertTrue(triangle.is_convex)
 
         with self.subTest('square is convex'):
             square = PolyLine([Point(0, 0), Point(1, 0), Point(1, 1), Point(0, 1)], closed=True)
-            self.assertTrue(square.is_convex())
+            self.assertTrue(square.is_convex)
 
         with self.subTest('concave shape'):
             concave = PolyLine(
                 [Point(0, 0), Point(2, 0), Point(2, 2), Point(1, 1), Point(0, 2)], 
                 closed=True
             )
-            self.assertFalse(concave.is_convex())
+            self.assertFalse(concave.is_convex)
