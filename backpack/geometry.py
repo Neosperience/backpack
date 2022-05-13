@@ -42,6 +42,9 @@ class Point(metaclass=PointMeta):
         '''
         d21, d31 = pt2 - pt1, pt3 - pt1
         return d21.x * d31.y >= d31.x * d21.y
+
+    ccw = counterclockwise
+    ''' Alias for :meth:`counterclockwise` method. '''
     
     def distance(self, other: 'Point') -> float:
         ''' Calculates the distance between this and an other point. 
@@ -115,10 +118,10 @@ class Line:
         Returns:
             `True` if the two segments intersect each other.
         '''
-        ccw = Point.counterclockwise
         return (
-            ccw(self.pt1, other.pt1, other.pt2) != ccw(self.pt2, other.pt1, other.pt2) and 
-            ccw(self.pt1, self.pt2, other.pt1) != ccw(self.pt1, self.pt2, other.pt2)
+            Point.ccw(self.pt1, other.pt1, other.pt2) != Point.ccw(self.pt2, other.pt1, other.pt2) 
+            and 
+            Point.ccw(self.pt1, self.pt2, other.pt1) != Point.ccw(self.pt1, self.pt2, other.pt2)
         )
 
 
@@ -262,17 +265,14 @@ class PolyLine:
         if len(self.points) < 4:
             return True
         
+        # Iterate over consequitive point triplets
         it0 = self.points
         it1 = itertools.islice(itertools.cycle(self.points), 1, None)
         it2 = itertools.islice(itertools.cycle(self.points), 2, None)
 
-        sign = None
-        for pt0, pt1, pt2 in zip(it0, it1, it2):
-            d1 = pt1 - pt0
-            d2 = pt2 - pt1
-            xprod = d1.x * d2.y - d1.y * d2.x
-            if sign is None:
-                sign = xprod > 0
-            elif sign != (xprod > 0):
-                return False
-        return True
+        # Check if all angles are ccw, see 
+        # https://docs.python.org/3/library/itertools.html#itertools-recipes
+        group = itertools.groupby(
+            Point.ccw(pt0, pt1, pt2) for pt0, pt1, pt2 in zip(it0, it1, it2)
+        )
+        return next(group, True) and not next(group, False)
