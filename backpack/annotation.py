@@ -449,28 +449,28 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             marker.style, cv2.MARKER_DIAMOND
         )
         cv2.drawMarker(
-            context,
-            OpenCVImageAnnotationDriver.scale(marker.point, context),
-            self._color_to_cv2(marker.color),
-            markerType
+            img=context,
+            position=OpenCVImageAnnotationDriver.scale(marker.point, context),
+            color=self._color_to_cv2(marker.color),
+            markerType=markerType
         )
 
     def add_line(self, line_anno: LineAnnotation, context: Any) -> None:
         cv2.line(
-            context,
-            OpenCVImageAnnotationDriver.scale(line_anno.line.pt1, context),
-            OpenCVImageAnnotationDriver.scale(line_anno.line.pt2, context),
-            self._color_to_cv2(line_anno.color),
-            line_anno.thickness
+            img=context,
+            pt1=OpenCVImageAnnotationDriver.scale(line_anno.line.pt1, context),
+            pt2=OpenCVImageAnnotationDriver.scale(line_anno.line.pt2, context),
+            color=self._color_to_cv2(line_anno.color),
+            thickness=line_anno.thickness
         )
 
     def add_polyline(self, polyline_anno: PolyLineAnnotation, context: Any) -> None:
         pts = [OpenCVImageAnnotationDriver.scale(pt, context) for pt in polyline_anno.polyline.points]
         pts = [np.array(pts, dtype=np.int32)]
         cv2.polylines(
-            context,
-            pts,
-            polyline_anno.polyline.closed,
-            self._color_to_cv2(polyline_anno.color),
-            polyline_anno.thickness
+            img=context,
+            pts=pts,
+            isClosed=polyline_anno.polyline.closed,
+            color=self._color_to_cv2(polyline_anno.color),
+            thickness=polyline_anno.thickness
         )

@@ -5,6 +5,7 @@ import collections.abc
 import dataclasses
 from dataclasses import dataclass
 import math
+import itertools
 
 class PointMeta(type):
     @classmethod
@@ -28,7 +29,8 @@ class Point(metaclass=PointMeta):
 
     @staticmethod
     def counterclockwise(pt1: 'Point', pt2: 'Point', pt3: 'Point') -> bool:
-        ''' Determines if the three points form a counterclockwise angle.
+        ''' Determines if the three points form a counterclockwise angle. If two points are 
+        equal, or the three points are collinear, this method returns `True`.
         
         Args:
             pt1: The first point
@@ -38,7 +40,8 @@ class Point(metaclass=PointMeta):
         Returns:
             `True` if the points form a counterclockwise angle 
         '''
-        return (pt2.x - pt1.x) * (pt3.y - pt1.y) > (pt3.x - pt1.x) * (pt2.y - pt1.y)
+        d21, d31 = pt2 - pt1, pt3 - pt1
+        return d21.x * d31.y >= d31.x * d21.y
     
     def distance(self, other: 'Point') -> float:
         ''' Calculates the distance between this and an other point. 
@@ -49,8 +52,40 @@ class Point(metaclass=PointMeta):
         Returns:
             The distance between this and an other point. 
         '''
-        dx, dy = self.x - other.x, self.y - other.y
-        return math.sqrt(dx * dx + dy * dy)
+        d = self - other
+        return math.sqrt(d.x * d.x + d.y * d.y)
+
+    @classmethod
+    def _check_arg(cls, arg, method_name):
+        if not isinstance(arg, cls):
+            raise TypeError(
+                f"unsupported operand type(s) for {method_name}: "
+                f"'{cls.__name__}' and '{type(arg).__name__}'"
+            )
+
+    def __add__(self, other: 'Point') -> 'Point':
+        ''' Adds two points as if they were vectors.
+        
+        Arg:
+            other: the other point
+
+        Returns: 
+            A new point, the sum of the two points as if they were vectors.
+        '''
+        Point._check_arg(other, '+')
+        return Point(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other: 'Point') -> 'Point':
+        ''' Subtracts two points as if they were vectors.
+        
+        Arg:
+            other: the other point
+
+        Returns: 
+            A new point, the difference of the two points as if they were vectors.
+        '''
+        Point._check_arg(other, '-')
+        return Point(self.x - other.x, self.y - other.y)
 
 
 @dataclass(frozen=True)
@@ -114,7 +149,7 @@ class Rectangle:
         object.__setattr__(self, 'pt_min', Point(min(pt1.x, pt2.x), min(pt1.y, pt2.y)))
         object.__setattr__(self, 'pt_max', Point(max(pt1.x, pt2.x), max(pt1.y, pt2.y)))
 
-    def hasinside(self, pt: Point) -> bool:
+    def has_inside(self, pt: Point) -> bool:
         ''' Determines if a point is inside this rectangle.
 
         Args:
@@ -159,7 +194,7 @@ class PolyLine:
     closed : bool = True
     ''' `True` if the polyline is closed. '''
 
-    lines: List[Point] = dataclasses.field(init=False)
+    lines: List[Line] = dataclasses.field(init=False)
     ''' The line segments of this PolyLine '''
 
     boundingbox: Rectangle = dataclasses.field(init=False)
@@ -187,7 +222,7 @@ class PolyLine:
         maxy = max(pt.y for pt in self.points)
         object.__setattr__(self, 'boundingbox', Rectangle(Point(minx, miny), Point(maxx, maxy)))
 
-    def hasinside(self, point: Point) -> bool:
+    def has_inside(self, point: Point) -> bool:
         ''' Determines if a point is inside this closed `PolyLine`. 
         
         This implementation uses the `ray casting algorithm`_.
@@ -202,9 +237,42 @@ class PolyLine:
             `True` if the point is inside this closed `PolyLine`. 
         '''
         if not self.closed:
-            raise ValueError('PolyLine.hasinside works only for closed polylines.')
-        if not self.boundingbox.hasinside(point):
+            raise ValueError('PolyLine.has_inside works only for closed polylines.')
+        if not self.boundingbox.has_inside(point):
             return False
         ray = Line(Point(self.boundingbox.pt_min.x - 0.01, self.boundingbox.pt_min.y), point)
         n_ints = sum(1 if ray.intersects(line) else 0 for line in self.lines)
         return True if n_ints % 2 == 1 else False
+
+    def self_intersects(self) -> bool:
+        ''' Determines this PolyLine self-intersects. '''
+        return any(
+            l1.intersects(l2) 
+                for idx, l1 in enumerate(self.lines) for l2 in self.lines[idx + 2:]
+        )
+
+    def is_convex(self) -> bool:
+        ''' Determines if the polygon formed from this closed PolyLine is convex. 
+        
+        The result of this method is undefined for complex (self-intersecting) polygons.
+        '''
+        if not self.closed:
+            raise ValueError('PolyLine.is_convex works only for closed polylines.')
+
+        if len(self.points) < 4:
+            return True
+        
+        it0 = self.points
+        it1 = itertools.islice(itertools.cycle(self.points), 1, None)
+        it2 = itertools.islice(itertools.cycle(self.points), 2, None)
+
+        sign = None
+        for pt0, pt1, pt2 in zip(it0, it1, it2):
+            d1 = pt1 - pt0
+            d2 = pt2 - pt1
+            xprod = d1.x * d2.y - d1.y * d2.x
+            if sign is None:
+                sign = xprod > 0
+            elif sign != (xprod > 0):
+                return False
+        return True

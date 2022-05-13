@@ -125,11 +125,11 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         img.shape = [200, 100, 3]
         self.driver.render(annotations=[TEST_LINE], context=img)
         mock_cv2.line.assert_called_once_with(
-            img,
-            OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt1, img),
-            OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt2, img),
-            OpenCVImageAnnotationDriver.DEFAULT_COLOR,
-            TEST_LINE.thickness
+            img=img,
+            pt1=OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt1, img),
+            pt2=OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt2, img),
+            color=OpenCVImageAnnotationDriver.DEFAULT_COLOR,
+            thickness=TEST_LINE.thickness
         )
 
     def test_invalid(self):
