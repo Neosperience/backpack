@@ -3,7 +3,7 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 :mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images 
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
-from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Sequence
+from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Callable
 import collections.abc
 from enum import Enum
 import datetime
@@ -31,6 +31,8 @@ class Color(NamedTuple):
     ''' The green component of the color. '''
     b: int
     ''' The blue component of the color. '''
+    alpha: float = 1.0
+    ''' The alpha component of transparency. ''' 
 
     @staticmethod
     def from_hex(value: Union[str, int]) -> 'Color':
@@ -170,6 +172,7 @@ class PolyLineAnnotation(NamedTuple):
         polyline(PolyLine): The PolyLine instance
         thickness(int): Line thickness
         color(Color): Line color
+        fill_color(Color): Fill color
     '''
 
     polyline : PolyLine 
@@ -178,6 +181,8 @@ class PolyLineAnnotation(NamedTuple):
     ''' Line thickness. '''
     color : Color = None
     ''' Line color. '''
+    fill_color : Color = None
+    ''' Fill color. '''
 
 
 class TimestampAnnotation(LabelAnnotation):
@@ -372,23 +377,51 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         MarkerAnnotation.Style.TRIANGLE_DOWN: cv2.MARKER_TRIANGLE_DOWN,
     }
 
+    def draw_transparent(self, 
+        alpha: float, 
+        context: np.ndarray, 
+        drawer: Callable[[np.ndarray], None]
+    ) -> None:
+        ''' Semi-transparent drawing.
+        
+        Args:
+            alpha: The transparency factor. Set 0 for opaque drawing, 1 for complete transparency.
+            context: The drawing context.
+            drawer: A callable that will draw an opaque drawing on the passed-in context. This
+                method will make this drawing semi-transparent and render it on the context.
+        '''
+        if alpha == 1.0:
+            drawer(context)
+            return context
+        elif alpha == 0.0:
+            return context
+        overlay = context.copy()
+        drawer(overlay)
+        result = cv2.addWeighted(overlay, alpha, context, 1 - alpha, 0)
+        np.copyto(context, result)
+
     @staticmethod
     def scale(point: Any, context: np.ndarray) -> Tuple[float, float]:
         ''' Converts and scales a point instance to an image context '''
         x, y = AnnotationDriverBase.to_point(point)
         return (int(x * context.shape[1]), int(y * context.shape[0]))
 
-    def _color_to_cv2(self, color: Color) -> Tuple[int, int, int]:
-        return tuple(reversed(color)) if color is not None else self.DEFAULT_COLOR
+    @staticmethod
+    def _color_to_cv2(color: Color) -> Tuple[int, int, int]:
+        return (color.b, color.g, color.r)
 
-    def add_rect(self, rect_anno: RectAnnotation, context: np.ndarray) -> None:
-        cv2.rectangle(
-            context,
-            OpenCVImageAnnotationDriver.scale(rect_anno.rect.pt_min, context),
-            OpenCVImageAnnotationDriver.scale(rect_anno.rect.pt_max, context),
-            self._color_to_cv2(rect_anno.color),
-            self.DEFAULT_LINEWIDTH
-        )
+    def add_rect(self, anno: RectAnnotation, context: np.ndarray) -> None:
+        color = anno.color or OpenCVImageAnnotationDriver.DEFAULT_COLOR
+        drawer = lambda context: \
+            cv2.rectangle(
+                img=context,
+                pt1=OpenCVImageAnnotationDriver.scale(anno.rect.pt_min, context),
+                pt2=OpenCVImageAnnotationDriver.scale(anno.rect.pt_max, context),
+                color=OpenCVImageAnnotationDriver._color_to_cv2(color),
+                thickness=OpenCVImageAnnotationDriver.DEFAULT_LINEWIDTH
+            )
+        self.draw_transparent(color.alpha, context, drawer)
+        
 
     @staticmethod
     def _get_anchor_shift(
@@ -414,63 +447,84 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
             shift_y = baseline
         return (int(shift_x), int(shift_y))
 
-    def add_label(self, label: LabelAnnotation, context: np.ndarray) -> None:
+    def add_label(self, anno: LabelAnnotation, context: np.ndarray) -> None:
         ctx_height = context.shape[0]
-        scale = ctx_height / self.IMG_HEIGHT_FOR_UNIT_FONT_SCALE
+        scale = ctx_height / OpenCVImageAnnotationDriver.IMG_HEIGHT_FOR_UNIT_FONT_SCALE
         thickness = max(int(scale), 1)
-        font = self.DEFAULT_FONT
-        shift_x, shift_y = (0, 0)
-        if (label.horizontal_anchor != LabelAnnotation.HorizontalAnchor.LEFT or
-            label.vertical_anchor != LabelAnnotation.VerticalAnchor.BOTTOM):
+        font = OpenCVImageAnnotationDriver.DEFAULT_FONT
+        x, y = OpenCVImageAnnotationDriver.scale(anno.point, context)
+        color = anno.color or OpenCVImageAnnotationDriver.DEFAULT_COLOR
+        if (anno.horizontal_anchor != LabelAnnotation.HorizontalAnchor.LEFT or
+            anno.vertical_anchor != LabelAnnotation.VerticalAnchor.BOTTOM):
             (size_x, size_y), baseline = cv2.getTextSize(
-                text=label.text, fontFace=font, fontScale=scale, thickness=thickness
+                text=anno.text, fontFace=font, fontScale=scale, thickness=thickness
             )
             shift_x, shift_y = OpenCVImageAnnotationDriver._get_anchor_shift(
-                label.horizontal_anchor,
-                label.vertical_anchor,
+                anno.horizontal_anchor,
+                anno.vertical_anchor,
                 size_x, size_y, baseline
+            )        
+            x += shift_x
+            y += shift_y
+
+        drawer = lambda context: \
+            cv2.putText(
+                img=context,
+                text=anno.text,
+                org=(x, y),
+                fontFace=font,
+                fontScale=scale,
+                color=OpenCVImageAnnotationDriver._color_to_cv2(color),
+                thickness=thickness
             )
+        self.draw_transparent(color.alpha, context, drawer)
 
-        x, y = OpenCVImageAnnotationDriver.scale(label.point, context)
-        x += shift_x
-        y += shift_y
-        cv2.putText(
-            img=context,
-            text=label.text,
-            org=(x, y),
-            fontFace=font,
-            fontScale=scale,
-            color=self._color_to_cv2(label.color),
-            thickness=thickness
-        )
-
-    def add_marker(self, marker: MarkerAnnotation, context: np.ndarray) -> None:
+    def add_marker(self, anno: MarkerAnnotation, context: np.ndarray) -> None:
         markerType = OpenCVImageAnnotationDriver.MARKER_STYLE_TO_CV2.get(
-            marker.style, cv2.MARKER_DIAMOND
+            anno.style, cv2.MARKER_DIAMOND
         )
-        cv2.drawMarker(
-            img=context,
-            position=OpenCVImageAnnotationDriver.scale(marker.point, context),
-            color=self._color_to_cv2(marker.color),
-            markerType=markerType
-        )
+        color = anno.color or OpenCVImageAnnotationDriver.DEFAULT_COLOR
+        drawer = lambda context: \
+            cv2.drawMarker(
+                img=context,
+                position=OpenCVImageAnnotationDriver.scale(anno.point, context),
+                color=OpenCVImageAnnotationDriver._color_to_cv2(color),
+                markerType=markerType
+            )
+        self.draw_transparent(color.alpha, context, drawer)
 
-    def add_line(self, line_anno: LineAnnotation, context: Any) -> None:
-        cv2.line(
-            img=context,
-            pt1=OpenCVImageAnnotationDriver.scale(line_anno.line.pt1, context),
-            pt2=OpenCVImageAnnotationDriver.scale(line_anno.line.pt2, context),
-            color=self._color_to_cv2(line_anno.color),
-            thickness=line_anno.thickness
-        )
+    def add_line(self, anno: LineAnnotation, context: Any) -> None:
+        color = anno.color or OpenCVImageAnnotationDriver.DEFAULT_COLOR
+        drawer = lambda context: \
+            cv2.line(
+                img=context,
+                pt1=OpenCVImageAnnotationDriver.scale(anno.line.pt1, context),
+                pt2=OpenCVImageAnnotationDriver.scale(anno.line.pt2, context),
+                color=OpenCVImageAnnotationDriver._color_to_cv2(color),
+                thickness=anno.thickness
+            )
+        self.draw_transparent(color.alpha, context, drawer)
 
-    def add_polyline(self, polyline_anno: PolyLineAnnotation, context: Any) -> None:
-        pts = [OpenCVImageAnnotationDriver.scale(pt, context) for pt in polyline_anno.polyline.points]
+    def add_polyline(self, anno: PolyLineAnnotation, context: Any) -> None:
+        pts = [OpenCVImageAnnotationDriver.scale(pt, context) for pt in anno.polyline.points]
         pts = [np.array(pts, dtype=np.int32)]
-        cv2.polylines(
-            img=context,
-            pts=pts,
-            isClosed=polyline_anno.polyline.closed,
-            color=self._color_to_cv2(polyline_anno.color),
-            thickness=polyline_anno.thickness
-        )
+        if anno.fill_color is not None:
+            fill_color = OpenCVImageAnnotationDriver._color_to_cv2(anno.fill_color)
+            if anno.polyline.is_convex():
+                drawer = lambda context: \
+                    cv2.fillConvexPoly(img=context, points=pts[0], color=fill_color)
+            else:
+                drawer = lambda context: \
+                    cv2.fillPoly(img=context, pts=pts, color=fill_color)
+            self.draw_transparent(anno.fill_color.alpha, context, drawer)
+
+        color = anno.color or OpenCVImageAnnotationDriver.DEFAULT_COLOR
+        drawer = lambda context: \
+            cv2.polylines(
+                img=context,
+                pts=pts,
+                isClosed=anno.polyline.closed,
+                color=OpenCVImageAnnotationDriver._color_to_cv2(color),
+                thickness=anno.thickness
+            )
+        self.draw_transparent(color.alpha, context, drawer)

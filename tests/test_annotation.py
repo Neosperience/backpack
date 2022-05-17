@@ -21,9 +21,12 @@ Line = namedtuple('Line', ('pt1', 'pt2'))
 Rectangle = namedtuple('Rectangle', ('pt_min', 'pt_max'))
 
 TEST_POINT = (0.3, 0.4)
-TEST_RECT = RectAnnotation(Rectangle(Point(0.1, 0.2), Point(0.8, 0.9)))
-TEST_LABEL = LabelAnnotation(Point(0.3, 0.4), 'Hello World')
-TEST_LINE = LineAnnotation(Line(Point(0.1, 0.2), Point(0.3, 0.4)))
+TEST_COLOR = Color(50, 100, 150)
+EXPECTED_COLOR = (150, 100, 50)
+TEST_RECT = RectAnnotation(Rectangle(Point(0.1, 0.2), Point(0.8, 0.9)), color=TEST_COLOR)
+TEST_LABEL = LabelAnnotation(Point(0.3, 0.4), 'Hello World', color=TEST_COLOR)
+TEST_LINE = LineAnnotation(Line(Point(0.1, 0.2), Point(0.3, 0.4)), color=TEST_COLOR)
+
 
 class TestColor(unittest.TestCase):
 
@@ -99,11 +102,11 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         img.shape = [200, 100, 3] 
         self.driver.render(annotations=[TEST_RECT], context=img)
         mock_cv2.rectangle.assert_called_once_with(
-            img,
-            (int(TEST_RECT.rect.pt_min.x * 100), int(TEST_RECT.rect.pt_min.y * 200)),
-            (int(TEST_RECT.rect.pt_max.x * 100), int(TEST_RECT.rect.pt_max.y * 200)),
-            OpenCVImageAnnotationDriver.DEFAULT_COLOR,
-            OpenCVImageAnnotationDriver.DEFAULT_LINEWIDTH
+            img=img,
+            pt1=(int(TEST_RECT.rect.pt_min.x * 100), int(TEST_RECT.rect.pt_min.y * 200)),
+            pt2=(int(TEST_RECT.rect.pt_max.x * 100), int(TEST_RECT.rect.pt_max.y * 200)),
+            color=EXPECTED_COLOR,
+            thickness=OpenCVImageAnnotationDriver.DEFAULT_LINEWIDTH
         )
 
     def test_label(self):
@@ -116,7 +119,7 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
             org=OpenCVImageAnnotationDriver.scale(TEST_LABEL.point, img),
             fontFace=OpenCVImageAnnotationDriver.DEFAULT_FONT,
             fontScale=unittest.mock.ANY,
-            color=OpenCVImageAnnotationDriver.DEFAULT_COLOR,
+            color=EXPECTED_COLOR,
             thickness=unittest.mock.ANY
         )
 
@@ -128,7 +131,7 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
             img=img,
             pt1=OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt1, img),
             pt2=OpenCVImageAnnotationDriver.scale(TEST_LINE.line.pt2, img),
-            color=OpenCVImageAnnotationDriver.DEFAULT_COLOR,
+            color=EXPECTED_COLOR,
             thickness=TEST_LINE.thickness
         )
 
