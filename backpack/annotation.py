@@ -510,7 +510,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         pts = [np.array(pts, dtype=np.int32)]
         if anno.fill_color is not None:
             fill_color = OpenCVImageAnnotationDriver._color_to_cv2(anno.fill_color)
-            if anno.polyline.is_convex():
+            if anno.polyline.is_convex:
                 drawer = lambda context: \
                     cv2.fillConvexPoly(img=context, points=pts[0], color=fill_color)
             else:

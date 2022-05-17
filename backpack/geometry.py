@@ -232,16 +232,13 @@ class PolyLine:
 
     @lazy_property
     def is_convex(self) -> bool:
-        ''' Determines if the polygon formed from this closed :class:`PolyLine` is convex. 
+        ''' Determines if the polygon formed from this :class:`PolyLine` is convex. 
         
         The result of this method is undefined for complex (self-intersecting) polygons.
 
         Returns:
             `True` if the polygon is convex, False otherwise.
         '''
-        if not self.closed:
-            raise ValueError('PolyLine.is_convex works only for closed polylines.')
-
         if len(self.points) < 4:
             return True
         

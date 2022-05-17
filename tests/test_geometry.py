@@ -150,14 +150,6 @@ class TestPolyLine(unittest.TestCase):
 
     def test_is_convex(self) -> None:
 
-        with self.subTest('open polygon raises'):
-            with self.assertRaises(ValueError) as ctx:
-                PolyLine([Point(0, 0), Point(1, 0), Point(0, 1)], closed=False).is_convex()
-            self.assertEqual(
-                str(ctx.exception), 
-                'PolyLine.is_convex works only for closed polylines.'
-            )
-
         with self.subTest('triangle is convex'):
             triangle = PolyLine([Point(0, 0), Point(1, 0), Point(0, 1)], closed=True)
             self.assertTrue(triangle.is_convex)
