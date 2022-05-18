@@ -9,6 +9,10 @@ from itertools import islice, cycle, groupby
 from numbers import Number
 from . import lazy_property
 
+def _issequence(value):
+    ''' Returns True if value is a sequence but not a string. '''
+    return isinstance(value, collections.abc.Sequence) and not isinstance(value, str)
+
 class PointMeta(type):
     @classmethod
     def __instancecheck__(cls, instance):
@@ -65,32 +69,6 @@ class Point(metaclass=PointMeta):
                 f"'{cls.__name__}' and '{type(arg).__name__}'"
             )
 
-    @classmethod
-    def from_value(cls, value):
-        ''' Converts a tuple of length of 2 or a dictionary containing 'x' and 'y' keys to a
-        Point instance.
-        
-        Args:
-            value: the value to be converted
-        
-        Return: The new Point instance
-        
-        Raises: ValueError if the conversion was not successful.
-        '''
-        if isinstance(value, Point):
-            return value
-        elif isinstance(value, collections.abc.Mapping) and 'x' in value and 'y' in value:
-            return cls(x=value['x'], y=value['y'])
-        elif (
-            isinstance(value, collections.abc.Sequence) and 
-            len(value) == 2 and 
-            isinstance(value[0], Number) and 
-            isinstance(value[1], Number)
-        ):
-            return cls(x=value[0], y=value[1])
-        else:
-            raise ValueError(f'Could not convert {value} to Point.')
-
     def __add__(self, other: 'Point') -> 'Point':
         ''' Adds two points as if they were vectors.
         
@@ -114,6 +92,37 @@ class Point(metaclass=PointMeta):
         '''
         Point._check_arg(other, '-')
         return Point(self.x - other.x, self.y - other.y)
+
+    @classmethod
+    def from_value(cls, value):
+        ''' Deserializes a Point from different formats.
+        
+        Supported formats:
+
+         - sequence containing exactly two numbers
+         - dictionary containing numbers under 'x' and 'y' keys
+         - Point instance (returns the same instance)
+        
+        Args:
+            value: the value to be converted
+        
+        Return: The new Point instance
+        
+        Raises: ValueError if the conversion was not successful.
+        '''
+        if isinstance(value, Point):
+            return value
+        elif isinstance(value, collections.abc.Mapping) and 'x' in value and 'y' in value:
+            return cls(x=value['x'], y=value['y'])
+        elif (
+            _issequence(value) and
+            len(value) == 2 and 
+            isinstance(value[0], Number) and 
+            isinstance(value[1], Number)
+        ):
+            return cls(x=value[0], y=value[1])
+        else:
+            raise ValueError(f'Could not convert {value} to Point.')
 
 
 @dataclass(frozen=True)
@@ -151,18 +160,24 @@ class Line:
 
     @classmethod
     def from_value(cls, value):
-        ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4)) to a Line.
+        ''' Deserializes a Line from different formats.
+
+        Supported formats:
+
+         - sequence containing exactly two values that can be deserialized with Point.from_value
+         - dictionary containing such Point values under 'pt1' and 'pt2' keys
+         - Line instance (returns the same instance)
         
         Args:
-            tpl: the tuple
+            value: the value to be converted
 
-        Returns: the line instance
+        Returns: the Line instance
 
-        Raises: ValueError if the tuple could not be converted to a Line.
+        Raises: ValueError if the value could not be converted to a Line.
         ''' 
         if isinstance(value, Line):
             return value
-        elif isinstance(value, collections.abc.Sequence) and len(value) == 2:    
+        elif _issequence(value) and len(value) == 2:
             return cls(pt1=Point.from_value(value[0]), pt2=Point.from_value(value[1]))
         elif isinstance(value, collections.abc.Mapping) and 'pt1' in value and 'pt2' in value:
             return cls(pt1=Point.from_value(value['pt1']), pt2=Point.from_value(value['pt2']))
@@ -227,6 +242,26 @@ class Rectangle:
         ''' The width and height of the rectangle. '''
         return self.pt_max.x - self.pt_min.x, self.pt_max.y - self.pt_min.y
 
+    @classmethod
+    def from_value(cls, value):
+        ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4)) to a Rectangle.
+        
+        Args:
+            value: the tuple
+
+        Returns: the Rectangle instance
+
+        Raises: ValueError if the tuple could not be converted to a Rectangle.
+        ''' 
+        if isinstance(value, Rectangle):
+            return value
+        elif _issequence(value) and len(value) == 2:
+            return cls(pt1=Point.from_value(value[0]), pt2=Point.from_value(value[1]))
+        elif isinstance(value, collections.abc.Mapping) and 'pt1' in value and 'pt2' in value:
+            return cls(pt1=Point.from_value(value['pt1']), pt2=Point.from_value(value['pt2']))
+        else:
+            raise ValueError(f'Could not convert {value} to Rectangle.')
+
 
 @dataclass(frozen=True)
 class PolyLine:
@@ -235,7 +270,6 @@ class PolyLine:
     Args:
         points: the list of the points of the polyline
         closed: `True` if the :class:`PolyLine` is closed
-
     '''
 
     points : Sequence[Point]
@@ -323,3 +357,25 @@ class PolyLine:
         ray = Line(Point(self.boundingbox.pt_min.x - 0.01, self.boundingbox.pt_min.y), point)
         n_ints = sum(1 if ray.intersects(line) else 0 for line in self.lines)
         return True if n_ints % 2 == 1 else False
+
+    @classmethod
+    def from_value(cls, value, closed=True):
+        ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4), ...) to a PolyLine.
+        
+        Args:
+            value: the tuple
+            closed: flags if the newly created PolyLine should be closed or not.
+
+        Returns: the PolyLine instance
+
+        Raises: ValueError if the tuple could not be converted to a PolyLine.
+        ''' 
+        if isinstance(value, PolyLine):
+            return value
+        elif _issequence(value):
+            return cls(points=[Point.from_value(pt) for pt in value], closed=closed)
+        elif isinstance(value, collections.abc.Mapping) and 'points' in value:
+            closed = bool(value.get('closed', closed))
+            return cls(points=[Point.from_value(pt) for pt in value['points']], closed=closed)
+        else:
+            raise ValueError(f'Could not convert {value} to PolyLine')

@@ -41,6 +41,18 @@ class TestPoint(unittest.TestCase):
         pt2 = Point(2, 3)
         self.assertEqual(pt1 - pt2, Point(2, 4))
 
+    def test_from_value(self):
+        pt1 = Point(4, 7)
+        with self.subTest('identity'):
+            self.assertEqual(pt1, Point.from_value(pt1))
+        with self.subTest('dictionary'):
+            self.assertEqual(pt1, Point.from_value({'x': 4, 'y': 7}))
+        with self.subTest('sequence'):
+            self.assertEqual(pt1, Point.from_value([4, 7]))
+        with self.subTest('invalid'):
+            with self.assertRaises(ValueError):
+                Point.from_value('foo')
+
 
 class TestLine(unittest.TestCase):
 
@@ -59,6 +71,21 @@ class TestLine(unittest.TestCase):
         l3 = Line(Point(-1, 2), Point(1, 2))
         self.assertFalse(l3.intersects(l1))
         self.assertFalse(l3.intersects(l2))
+
+    def test_from_value(self):
+        line = Line(Point(1, 2), Point(3, 4))
+        with self.subTest('identity'):
+            self.assertEqual(line, Line.from_value(line))
+        with self.subTest('dictionary'):
+            self.assertEqual(line, Line.from_value(
+                {'pt1': {'x': 1, 'y': 2}, 'pt2': {'x': 3, 'y': 4}}
+            ))
+        with self.subTest('sequence'):
+            self.assertEqual(line, Line.from_value([[1, 2], [3, 4]]))
+        with self.subTest('invalid'):
+            with self.assertRaises(ValueError):
+                Line.from_value('foo')
+
 
 
 class TestRectangle(unittest.TestCase):
@@ -97,6 +124,21 @@ class TestRectangle(unittest.TestCase):
 
     def test_size(self) -> None:
         self.assertEqual(self.rect.size, (4, 2))
+
+    def test_from_value(self):
+        rect = Rectangle(Point(1, 2), Point(3, 4))
+        with self.subTest('identity'):
+            self.assertEqual(rect, Rectangle.from_value(rect))
+        with self.subTest('dictionary'):
+            self.assertEqual(rect, Rectangle.from_value(
+                {'pt1': {'x': 1, 'y': 2}, 'pt2': {'x': 3, 'y': 4}}
+            ))
+        with self.subTest('sequence'):
+            self.assertEqual(rect, Rectangle.from_value([[1, 2], [3, 4]]))
+        with self.subTest('invalid'):
+            with self.assertRaises(ValueError):
+                Rectangle.from_value('foo')
+
 
 
 class TestPolyLine(unittest.TestCase):
@@ -164,3 +206,21 @@ class TestPolyLine(unittest.TestCase):
                 closed=True
             )
             self.assertFalse(concave.is_convex)
+
+    # pt1, pt2, pt3, pt4 = Point(-4, 0), Point(0, 4), Point(4, 0), Point(0, -4)
+    def test_from_value(self):
+        with self.subTest('identity'):
+            self.assertEqual(self.poly_open, PolyLine.from_value(self.poly_open))
+        with self.subTest('dictionary'):
+            self.assertEqual(self.poly_open, PolyLine.from_value(
+                {'points': [{'x': -4, 'y': 0}, {'x': 0, 'y': 4}, 
+                            {'x': 4, 'y': 0}, {'x': 0, 'y': -4}],
+                 'closed': False }
+            ))
+        with self.subTest('sequence'):
+            self.assertEqual(self.poly_open, PolyLine.from_value(
+                [[-4, 0], [0, 4], [4, 0], [0, -4]], closed=False)
+            )
+        with self.subTest('invalid'):
+            with self.assertRaises(ValueError):
+                PolyLine.from_value('foo')
