@@ -3,7 +3,7 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 :mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images 
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
-from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Callable
+from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Callable, Sequence, Mapping
 import collections.abc
 from enum import Enum
 import datetime
@@ -34,25 +34,59 @@ class Color(NamedTuple):
     alpha: float = 1.0
     ''' The alpha component of transparency. ''' 
 
-    @staticmethod
-    def from_hex(value: Union[str, int]) -> 'Color':
+    @classmethod
+    def from_hex(cls, value: Union[str, int]) -> 'Color':
         ''' Creates a color object from its hexadeciman representation. 
         
         Args:
-            value: integer or HTML color format string
+            value: integer or HTML color string
 
         Returns:
             a new color object
         '''
         if isinstance(value, str):
             value = value.lstrip('#')
-            r, g, b = tuple(int(value[i:i+2], 16) for i in (0, 2, 4))
-            return Color(r, g, b)
+            rgb = tuple(int(value[i:i+2], 16) for i in (0, 2, 4))
+            return cls(*rgb)
         elif isinstance(value, int):
-            r, g, b = tuple((value & (0xff << (i * 8))) >> (i * 8) for i in (2, 1, 0))
-            return Color(r, g, b)
+            rgb = tuple((value & (0xff << (i * 8))) >> (i * 8) for i in (2, 1, 0))
+            return cls(*rgb)
         else:
-            raise ValueError('value argument must be str or int')
+            raise ValueError('Value argument must be str or int')
+
+    @classmethod
+    def from_value(cls, value: Union[str, int, Sequence, Mapping, 'Color']):
+        ''' Converts an integer (interpreted as 3 bytes hex value), a HTML color string, a 
+        sequence of 3 or 4 integers, or a dictionary containing 'r', 'g', 'b' and optionally
+        'alpha' keys to a Color object. 
+        
+        Args:
+            value: The value to be converted.
+
+        Returns:
+            The new Color object.
+
+        Raises:
+            ValueError if the conversion was not successful.
+        '''
+        if isinstance(value, Color):
+            return value
+        if isinstance(value, (str, int)):
+            return cls.from_hex(value)
+        elif (
+            isinstance(value, collections.abc.Sequence) and 
+            (len(value) == 3 or len(value == 4)) and
+            all(isinstance(e, int) for e in value)
+        ):
+            return cls(*value)
+        elif (
+            isinstance(value, collections.abc.Mapping) and 
+            'r' in value and 'g' in value and 'b' in value
+        ):
+            alpha = value.get('a', value.get('alpha'))
+            return cls(r=value['r'], g=value['g'], b=value['b'], alpha=alpha)
+        else:
+            raise ValueError(f'Could not convert {value} to a Color')
 
 
 class LabelAnnotation(NamedTuple):
@@ -200,6 +234,28 @@ class TimestampAnnotation(LabelAnnotation):
         return LabelAnnotation.__new__(cls, point=point, text=time_str)
 
 
+class BoundingBoxAnnotation(NamedTuple):
+    ''' A bounding box annotation with a rectangle, and optional upper and lower labels. 
+    
+    Args:
+        rectangle: The rectangle of the bounding box.
+        top_label: The optional top label.
+        bottom_label: The optional bottom label.
+        color: The color of the bounding box and the labels.
+    '''
+
+    rectangle: Rectangle
+    ''' The rectangle of the bounding box. '''
+
+    top_label: Optional[str] = None
+    ''' The optional top label. '''
+
+    bottom_label: Optional[str] = None
+    ''' The optional bottom label. '''
+
+    color: Optional[Color] = None
+    ''' The color of the bounding box and the labels. '''
+
 
 class AnnotationDriverBase(ABC):
     ''' Base class for annotating drawing drivers.
@@ -242,8 +298,10 @@ class AnnotationDriverBase(ABC):
                 self.add_line(anno, context)
             elif isinstance(anno, PolyLineAnnotation):
                 self.add_polyline(anno, context)
+            elif isinstance(anno, BoundingBoxAnnotation):
+                self.add_bounding_box(anno, context)
             else:
-                raise ValueError('Unknown annotation type')
+                raise ValueError(f'Unknown annotation type: {type(anno)}')
         return context
 
     @staticmethod
@@ -307,9 +365,40 @@ class AnnotationDriverBase(ABC):
         ''' Renders a polyline. 
 
         Args:
-            line: A polyline annotation.
+            polyline: A polyline annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
         '''
+
+    def add_bounding_box(self, bounding_box: BoundingBoxAnnotation, context: Any) -> None:
+        ''' Renders a bounding box.
+        
+        Args:
+            bounding_box: A bounding box annotation.
+            context: A backend-specific context object that was passed to the :meth:`render` method.
+        '''
+        rect = bounding_box.rectangle
+        annos = [RectAnnotation(rect=rect, color=bounding_box.color)]
+        if bounding_box.top_label:
+            annos.append(
+                LabelAnnotation(
+                    point=rect.pt_min, 
+                    text=bounding_box.top_label,
+                    color=bounding_box.color,
+                    horizontal_anchor=LabelAnnotation.HorizontalAnchor.LEFT,
+                    vertical_anchor=LabelAnnotation.VerticalAnchor.BOTTOM
+                )
+            )
+        if bounding_box.bottom_label:
+            annos.append(
+                LabelAnnotation(
+                    point=Point(rect.pt_min.x, rect.pt_max.y),
+                    text=bounding_box.bottom_label,
+                    color=bounding_box.color,
+                    horizontal_anchor=LabelAnnotation.HorizontalAnchor.LEFT,
+                    vertical_anchor=LabelAnnotation.VerticalAnchor.TOP
+                )
+            )
+        self.render(annos, context)
 
 
 class PanoramaMediaAnnotationDriver(AnnotationDriverBase):

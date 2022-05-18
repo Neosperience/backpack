@@ -6,6 +6,7 @@ import dataclasses
 from dataclasses import dataclass
 import math
 from itertools import islice, cycle, groupby
+from numbers import Number
 from . import lazy_property
 
 class PointMeta(type):
@@ -64,6 +65,32 @@ class Point(metaclass=PointMeta):
                 f"'{cls.__name__}' and '{type(arg).__name__}'"
             )
 
+    @classmethod
+    def from_value(cls, value):
+        ''' Converts a tuple of length of 2 or a dictionary containing 'x' and 'y' keys to a
+        Point instance.
+        
+        Args:
+            value: the value to be converted
+        
+        Return: The new Point instance
+        
+        Raises: ValueError if the conversion was not successful.
+        '''
+        if isinstance(value, Point):
+            return value
+        elif isinstance(value, collections.abc.Mapping) and 'x' in value and 'y' in value:
+            return cls(x=value['x'], y=value['y'])
+        elif (
+            isinstance(value, collections.abc.Sequence) and 
+            len(value) == 2 and 
+            isinstance(value[0], Number) and 
+            isinstance(value[1], Number)
+        ):
+            return cls(x=value[0], y=value[1])
+        else:
+            raise ValueError(f'Could not convert {value} to Point.')
+
     def __add__(self, other: 'Point') -> 'Point':
         ''' Adds two points as if they were vectors.
         
@@ -121,6 +148,27 @@ class Line:
             and 
             Point.ccw(self.pt1, self.pt2, other.pt1) != Point.ccw(self.pt1, self.pt2, other.pt2)
         )
+
+    @classmethod
+    def from_value(cls, value):
+        ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4)) to a Line.
+        
+        Args:
+            tpl: the tuple
+
+        Returns: the line instance
+
+        Raises: ValueError if the tuple could not be converted to a Line.
+        ''' 
+        if isinstance(value, Line):
+            return value
+        elif isinstance(value, collections.abc.Sequence) and len(value) == 2:    
+            return cls(pt1=Point.from_value(value[0]), pt2=Point.from_value(value[1]))
+        elif isinstance(value, collections.abc.Mapping) and 'pt1' in value and 'pt2' in value:
+            return cls(pt1=Point.from_value(value['pt1']), pt2=Point.from_value(value['pt2']))
+        else:
+            raise ValueError(f'Could not convert {value} to Line.')
+
 
 
 @dataclass(frozen=True)
