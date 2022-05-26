@@ -242,17 +242,13 @@ class TestStopWatchContext(unittest.TestCase):
     def test_repr(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         root = self._do_complex()
-        expected_repr = '''\
-<StopWatch name=root intervals=[40.0000] min=40.0000 mean=40.0000 max=40.0000 children=[
-    <StopWatch name=task1 intervals=[25.0000] min=25.0000 mean=25.0000 max=25.0000 children=[
-        <StopWatch name=subtask1_1 intervals=[3.0000, 5.0000] min=3.0000 mean=4.0000 max=5.0000>,
-        <StopWatch name=subtask1_2 intervals=[7.0000] min=7.0000 mean=7.0000 max=7.0000>,
-        <StopWatch name=subtask1_3 intervals=[9.0000] min=9.0000 mean=9.0000 max=9.0000>
-    ]>,
-    <StopWatch name=task2 intervals=[1.0000, 2.0000, 3.0000, 4.0000, 5.0000] min=1.0000 mean=3.0000 max=5.0000>
-]>'''
-        self.assertEqual(repr(root), expected_repr)
-
+        res = repr(root)
+        self.assertIn('StopWatch name=root intervals=[40.0000] min=40.0000 mean=40.0000 max=40.0000 children', res)
+        self.assertIn('StopWatch name=task1 intervals=[25.0000] min=25.0000 mean=25.0000 max=25.0000', res)
+        self.assertIn('StopWatch name=subtask1_1 intervals=[3.0000, 5.0000] min=3.0000 mean=4.0000 max=5.0000', res)
+        self.assertIn('StopWatch name=subtask1_2 intervals=[7.0000] min=7.0000 mean=7.0000 max=7.0000', res)
+        self.assertIn('StopWatch name=subtask1_3 intervals=[9.0000] min=9.0000 mean=9.0000 max=9.0000', res)
+        self.assertIn('StopWatch name=task2 intervals=[1.0000, 2.0000, 3.0000, 4.0000, 5.0000] min=1.0000 mean=3.0000 max=5.0000', res)
 
 @patch('backpack.timepiece.local_now')
 class TestAtSchedule(unittest.TestCase):
