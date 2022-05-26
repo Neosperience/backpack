@@ -93,6 +93,17 @@ class Point(metaclass=PointMeta):
         Point._check_arg(other, '-')
         return Point(self.x - other.x, self.y - other.y)
 
+    def __getitem__(self, key: int) -> float:
+        ''' Returns the first or the second coordinate of this Point.'''
+        if not isinstance(key, int):
+            raise TypeError('Point indices must be integers.')
+        if key == 0:
+            return self.x
+        elif key == 1:
+            return self.y
+        else:
+            raise IndexError(str(key))
+
     @classmethod
     def from_value(cls, value):
         ''' Deserializes a Point from different formats.
@@ -184,6 +195,23 @@ class Line:
         else:
             raise ValueError(f'Could not convert {value} to Line.')
 
+    def __getitem__(self, key: int) -> Point:
+        ''' Returns the first or the second point of this Line.
+        
+        Args:
+            key: the index passed to the bracket operator, must be 0 or 1.
+        
+        Returns:
+            The first or the second point of this Line.
+        '''
+        if not isinstance(key, int):
+            raise TypeError('Line indices must be integers.')
+        if key == 0:
+            return self.pt1
+        elif key == 1:
+            return self.pt2
+        else:
+            raise IndexError(str(key))
 
 
 @dataclass(frozen=True)
@@ -261,6 +289,24 @@ class Rectangle:
             return cls(pt1=Point.from_value(value['pt1']), pt2=Point.from_value(value['pt2']))
         else:
             raise ValueError(f'Could not convert {value} to Rectangle.')
+
+    def __getitem__(self, key: int) -> float:
+        ''' Returns the first or the second point of this Rectangle.
+
+        Args:
+            key: the index passed to the bracket operator, must be 0 or 1.
+        
+        Returns:
+            The first or the second point of this Rectangle.
+        '''
+        if not isinstance(key, int):
+            raise TypeError('Point.__getitem__ accepts only integer keys.')
+        if key == 0:
+            return self.pt_min
+        elif key == 1:
+            return self.pt_max
+        else:
+            raise IndexError(str(key))
 
 
 @dataclass(frozen=True)
@@ -379,3 +425,16 @@ class PolyLine:
             return cls(points=[Point.from_value(pt) for pt in value['points']], closed=closed)
         else:
             raise ValueError(f'Could not convert {value} to PolyLine')
+
+    def __getitem__(self, key: int) -> Point:
+        ''' Returns a single point of this PolyLine.
+
+        Args:
+            key: the index passed to the bracket operator.
+        
+        Returns:
+            A single point of this PolyLine.
+        '''
+        if not isinstance(key, int):
+            raise TypeError('PolyLine indices must be integers.')
+        return self.points[key]

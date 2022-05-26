@@ -207,7 +207,6 @@ class TestPolyLine(unittest.TestCase):
             )
             self.assertFalse(concave.is_convex)
 
-    # pt1, pt2, pt3, pt4 = Point(-4, 0), Point(0, 4), Point(4, 0), Point(0, -4)
     def test_from_value(self):
         with self.subTest('identity'):
             self.assertEqual(self.poly_open, PolyLine.from_value(self.poly_open))

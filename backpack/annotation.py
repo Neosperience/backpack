@@ -24,6 +24,7 @@ class Color(NamedTuple):
         r (int): The red component of the color
         g (int): The green component of the color
         b (int): The blue component of the color
+        alpha (float): The alpha channel of transparency, ranged from `0` to `1`
     '''
     r: int
     ''' The red component of the color. '''
@@ -75,16 +76,19 @@ class Color(NamedTuple):
             return cls.from_hex(value)
         elif (
             isinstance(value, collections.abc.Sequence) and 
-            (len(value) == 3 or len(value == 4)) and
-            all(isinstance(e, int) for e in value)
+            (len(value) == 3 or len(value) == 4) and
+            all(isinstance(e, int if idx < 3 else float) for idx, e in enumerate(value))
         ):
             return cls(*value)
         elif (
             isinstance(value, collections.abc.Mapping) and 
             'r' in value and 'g' in value and 'b' in value
         ):
+            params = {k: v for k, v in value.items() if k in ('r', 'g', 'b')}
             alpha = value.get('a', value.get('alpha'))
-            return cls(r=value['r'], g=value['g'], b=value['b'], alpha=alpha)
+            if alpha is not None:
+                params['alpha'] = alpha
+            return cls(**params)
         else:
             raise ValueError(f'Could not convert {value} to a Color')
 
@@ -304,26 +308,6 @@ class AnnotationDriverBase(ABC):
                 raise ValueError(f'Unknown annotation type: {type(anno)}')
         return context
 
-    @staticmethod
-    def to_point(point: Any) -> Tuple[float, float]:
-        ''' Aims to convert different point representations to a `(x, y)` tuple. 
-        
-        Args:
-            point: an object with attributes `x` and `y`, or an iterable with length of 2
-
-        Returns:
-            A tuple of float containing the x and y coordinates of the point.
-        
-        Raises:
-            ValueError: if the conversation was not successful
-        '''
-        if hasattr(point, 'x') and hasattr(point, 'y'):
-            return (float(point.x), float(point.y))
-        elif isinstance(point, (collections.abc.Sequence, np.ndarray)) and len(point) >= 2:
-            return (float(point[0]), float(point[1]))
-        else:
-            raise ValueError('Could not convert %s to a point.' % point)
-
     @abstractmethod
     def add_rect(self, rect: RectAnnotation, context: Any) -> None:
         ''' Renders a rectangle on the frame. 
@@ -426,19 +410,23 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
         context.add_rect(float(x1), float(y1), float(x2), float(y2))
 
     def add_label(self, label: LabelAnnotation, context: 'panoramasdk.media') -> None:
-        x, y = AnnotationDriverBase.to_point(label.point)
+        x, y = label.point
         context.add_label(label.text, x, y)
 
     def add_marker(self, marker: MarkerAnnotation, context: 'panoramasdk.media') -> None:
         marker_str = PanoramaMediaAnnotationDriver.MARKER_STYLE_TO_STR.get(marker.style, '.')
-        x, y = AnnotationDriverBase.to_point(marker.point)
+        x, y = marker.point
         context.add_label(marker_str, x, y)
     
     def add_line(self, label: LineAnnotation, context: Any) -> None:
-        print('WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented')
+        print( # pragma: no cover 
+            'WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented'
+        )
 
     def add_polyline(self, polyline: PolyLineAnnotation, context: Any) -> None:
-        print('WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented')
+        print( # pragma: no cover 
+            'WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented'
+        )
 
 
 class OpenCVImageAnnotationDriver(AnnotationDriverBase):
@@ -481,18 +469,18 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         '''
         if alpha == 1.0:
             drawer(context)
-            return context
         elif alpha == 0.0:
-            return context
-        overlay = context.copy()
-        drawer(overlay)
-        result = cv2.addWeighted(overlay, alpha, context, 1 - alpha, 0)
-        np.copyto(context, result)
+            return
+        else:
+            overlay = context.copy()
+            drawer(overlay)
+            result = cv2.addWeighted(overlay, alpha, context, 1 - alpha, 0)
+            np.copyto(context, result)
 
     @staticmethod
     def scale(point: Any, context: np.ndarray) -> Tuple[float, float]:
         ''' Converts and scales a point instance to an image context '''
-        x, y = AnnotationDriverBase.to_point(point)
+        x, y = Point.from_value(point)
         return (int(x * context.shape[1]), int(y * context.shape[0]))
 
     @staticmethod
@@ -531,7 +519,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         if vertical_anchor == LabelAnnotation.VerticalAnchor.CENTER:
             shift_y = size_y / 2
         elif vertical_anchor == LabelAnnotation.VerticalAnchor.TOP:
-            shift_y = size_y * 1.2 + padding_x
+            shift_y = size_y + padding_y
         elif vertical_anchor == LabelAnnotation.VerticalAnchor.BASELINE:
             shift_y = baseline
         return (int(shift_x), int(shift_y))
