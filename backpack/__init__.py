@@ -3,10 +3,10 @@
 import functools
 
 def lazy_property(func):
-    ''' Caches the return value of a function, and turns it into a property. 
-    
+    ''' Caches the return value of a function, and turns it into a property.
+
     Intended to be used as a function decorator::
-    
+
         >>> class Foo:
         >>>     @lazy_property
         >>>     def bar(self):

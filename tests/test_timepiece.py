@@ -17,12 +17,12 @@ TEST_INTERVALS_CNT = 20
 
 
 class TestGlobal(unittest.TestCase):
-    
+
     def test_local_now(self):
         now = local_now()
         self.assertTrue(now.tzinfo)
         self.assertEqual(now.tzinfo.__class__.__name__, 'tzlocal')
-        
+
     def test_local_dt(self):
         local = local_dt(datetime.datetime.now())
         self.assertTrue(local.tzinfo)
@@ -36,12 +36,12 @@ class TestGlobal(unittest.TestCase):
 
 @patch('backpack.timepiece.time')
 class TestTicker(unittest.TestCase):
-    
+
     def setUp(self):
         self.current_time = 0
         self.ticker = None
         self.test_intervals = None
-        
+
     def _setup_mocks(self, backpack_mock_time):
         def _mock_time_sleep(secs):
             self.current_time += secs
@@ -49,12 +49,12 @@ class TestTicker(unittest.TestCase):
             return self.current_time
         backpack_mock_time.perf_counter.side_effect = _mock_time_perf_counter
         time.sleep.side_effect = _mock_time_sleep
-    
+
     def _expected_intervals(self, max_intervals_cnt=None, test_intervals_cnt=None):
         max_intervals_cnt = max_intervals_cnt or MAX_INTERVALS_CNT
         test_intervals_cnt = test_intervals_cnt or TEST_INTERVALS_CNT
         return self.test_intervals[-min(max_intervals_cnt, test_intervals_cnt):]
-    
+
     def _do_test(self, max_intervals_cnt=None, test_intervals_cnt=None):
         max_intervals_cnt = max_intervals_cnt or MAX_INTERVALS_CNT
         test_intervals_cnt = test_intervals_cnt or TEST_INTERVALS_CNT
@@ -69,7 +69,7 @@ class TestTicker(unittest.TestCase):
     def test_perf_counter_called(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test()
-        self.assertEqual(backpack_mock_time.perf_counter.call_count, len(self.test_intervals) + 1, 
+        self.assertEqual(backpack_mock_time.perf_counter.call_count, len(self.test_intervals) + 1,
                          'time.perf_counter called incorrect number of times')
 
     def _do_test_intervals_length(self, max_intervals_cnt, test_intervals_cnt):
@@ -77,7 +77,7 @@ class TestTicker(unittest.TestCase):
         expected_intervals = self._expected_intervals(max_intervals_cnt, test_intervals_cnt)
         self.assertEqual(len(self.ticker.intervals), len(expected_intervals),
                         'incorrect number of intervals saved')
-    
+
     def test_short_intervals_length(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test_intervals_length(20, 10)
@@ -85,13 +85,13 @@ class TestTicker(unittest.TestCase):
     def test_long_intervals_length(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test_intervals_length(10, 20)
-    
+
     def test_last_intervals_kept(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test()
         res = all(a == b for a, b in zip(self.ticker.intervals, self._expected_intervals()))
         self.assertTrue(res, 'the last intervals are not kept')
-        
+
     def test_min(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test()
@@ -115,7 +115,7 @@ class TestTicker(unittest.TestCase):
         self._do_test()
         self.assertEqual(self.ticker.len(), len(self._expected_intervals()),
                         'ticker.len() returned incorrect value')
-        
+
     def test_mean_freq(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self._do_test()
@@ -155,7 +155,7 @@ class TestTicker(unittest.TestCase):
 
 
 class TestStopWatchBase(unittest.TestCase):
-    
+
     def setUp(self):
         self.current_time = 0
         self.stopwatch = StopWatch(name='testwatch', max_intervals=MAX_INTERVALS_CNT)
@@ -165,7 +165,7 @@ class TestStopWatchBase(unittest.TestCase):
     def _setup_mocks(self, backpack_mock_time):
         backpack_mock_time.perf_counter.side_effect = self._mock_time_perf_counter
         time.sleep.side_effect = self._mock_time_sleep
-    
+
     def test_new_child_no_interval(self):
         self.assertEqual(self.childwatch.intervals.maxlen, self.stopwatch.intervals.maxlen)
 
@@ -238,17 +238,17 @@ class TestStopWatchContext(unittest.TestCase):
         self.assertEqual(root.child('task2').min(), 1)
         self.assertEqual(root.child('task2').max(), 5)
         self.assertEqual(root.child('task2').mean(), 3)
-        
+
     def test_repr(self, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         root = self._do_complex()
         expected_repr = '''\
 <StopWatch name=root intervals=[40.0000] min=40.0000 mean=40.0000 max=40.0000 children=[
     <StopWatch name=task1 intervals=[25.0000] min=25.0000 mean=25.0000 max=25.0000 children=[
-        <StopWatch name=subtask1_1 intervals=[3.0000, 5.0000] min=3.0000 mean=4.0000 max=5.0000>, 
-        <StopWatch name=subtask1_2 intervals=[7.0000] min=7.0000 mean=7.0000 max=7.0000>, 
+        <StopWatch name=subtask1_1 intervals=[3.0000, 5.0000] min=3.0000 mean=4.0000 max=5.0000>,
+        <StopWatch name=subtask1_2 intervals=[7.0000] min=7.0000 mean=7.0000 max=7.0000>,
         <StopWatch name=subtask1_3 intervals=[9.0000] min=9.0000 mean=9.0000 max=9.0000>
-    ]>, 
+    ]>,
     <StopWatch name=task2 intervals=[1.0000, 2.0000, 3.0000, 4.0000, 5.0000] min=1.0000 mean=3.0000 max=5.0000>
 ]>'''
         self.assertEqual(repr(root), expected_repr)
@@ -256,7 +256,7 @@ class TestStopWatchContext(unittest.TestCase):
 
 @patch('backpack.timepiece.local_now')
 class TestAtSchedule(unittest.TestCase):
-    
+
     def setUp(self):
         self.fire = datetime.datetime(2022, 2, 22, 22, 22, 22)
         self.before_fire = self.fire - datetime.timedelta(seconds=1)
@@ -265,10 +265,10 @@ class TestAtSchedule(unittest.TestCase):
         self.cbargs = (1, 2, 3)
         self.cbkwargs = {'foo': 'bar'}
         self.at_schedule = AtSchedule(
-            at=self.fire, 
+            at=self.fire,
             callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
         )
-    
+
     def test_no_fire_before(self, backpack_mock_local_now):
         backpack_mock_local_now.return_value = self.before_fire
         fired, _ = self.at_schedule.tick()
@@ -393,7 +393,7 @@ class TestOrdinalSchedule(unittest.TestCase):
 
     def test_zero_ordinal(self):
         zero_ordinal_schedule = OrdinalSchedule(
-            ordinal=0, 
+            ordinal=0,
             callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
         )
         zero_ordinal_schedule.tick()
@@ -405,7 +405,7 @@ class TestOrdinalSchedule(unittest.TestCase):
     def test_negative_ordinal(self):
         with self.assertRaises(ValueError):
             zero_ordinal_schedule = OrdinalSchedule(
-                ordinal=-1, 
+                ordinal=-1,
                 callback=Callback(cb=self.callback, cbargs=self.cbargs, cbkwargs=self.cbkwargs)
             )
 
@@ -437,7 +437,7 @@ class TestAlarmClock(unittest.TestCase):
 @patch('backpack.timepiece.time')
 @patch('backpack.timepiece.local_now')
 class TestTachometer(unittest.TestCase):
-    
+
     def setUp(self):
         self.stats_callback = Mock(side_effect=self._stats_callback)
         self.stats_interval = datetime.timedelta(seconds=60)
@@ -447,7 +447,7 @@ class TestTachometer(unittest.TestCase):
         )
         self.start = datetime.datetime(2022, 2, 22, 22, 22, 0)
         self.current_perf_time = 0
-        
+
     def _stats_callback(self, timestamp, ticker):
         self.stats_callback_timestamp = timestamp
         self.stats_callback_ticker = ticker
@@ -460,7 +460,7 @@ class TestTachometer(unittest.TestCase):
             return self.current_perf_time
         backpack_mock_time.perf_counter.side_effect = _mock_time_perf_counter
         time.sleep.side_effect = _mock_time_sleep
-    
+
     def test_init(self, backpack_mock_local_now, backpack_mock_time):
         self.assertIsInstance(self.tachometer.ticker, Ticker)
         min_interval_len = Tachometer.EXPECTED_MAX_FPS * self.stats_interval.total_seconds()
@@ -482,8 +482,8 @@ class TestTachometer(unittest.TestCase):
         self.assertIs(cb_fired[0], True, 'Stats callback was not reported to be called')
         self.stats_callback.assert_called()
         args, _ = self.stats_callback.call_args
-        self.assertEqual(args[0], self.start + datetime.timedelta(seconds=60), 
+        self.assertEqual(args[0], self.start + datetime.timedelta(seconds=60),
                          'Stats callback was called with incorrect timestamp')
         self.assertIsInstance(args[1], Ticker, 'Stats callback was not called Ticker instance')
-        self.assertEqual(len(self.stats_callback_ticker_intervals), 60, 
+        self.assertEqual(len(self.stats_callback_ticker_intervals), 60,
                          'Stast callback Ticker has incorrect number of intervals')

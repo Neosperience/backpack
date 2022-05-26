@@ -1,11 +1,11 @@
-''' :class:`~backpack.kvs.KVSSpyGlass` is a :class:`~backpack.spyglass.SpyGlass` implementation 
+''' :class:`~backpack.kvs.KVSSpyGlass` is a :class:`~backpack.spyglass.SpyGlass` implementation
 that streams the output of the AWS Panorama application to AWS Kinesis Video Streams service.
 
 To use this class you MUST have the following dependencies correctly configured on your system:
 
  - `GStreamer 1.0`_ installed with standard plugins pack, libav, tools and development libraries
  - `OpenCV 4.2.0`_, compiled with GStreamer support and Python bindings
- - `Amazon Kinesis Video Streams (KVS) Producer SDK`_ compiled with `kvssink GStreamer plugin 
+ - `Amazon Kinesis Video Streams (KVS) Producer SDK`_ compiled with `kvssink GStreamer plugin
    support`_
  - Environment variable ``GST_PLUGIN_PATH`` configured to point to the directory where the compiled
    binaries of KVS Producer SDK GStreamer plugin is placed
@@ -19,9 +19,9 @@ See the example ``Dockerfile`` on how to install these dependencies on your syst
 
 .. _`GStreamer 1.0`: https://gstreamer.freedesktop.org
 .. _`OpenCV 4.2.0`: https://opencv.org/opencv-4-2-0/
-.. _`Amazon Kinesis Video Streams (KVS) Producer SDK`: 
+.. _`Amazon Kinesis Video Streams (KVS) Producer SDK`:
     https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-cpp.html
-.. _`kvssink GStreamer plugin support`: 
+.. _`kvssink GStreamer plugin support`:
     https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk-cpp-gstreamer.html
 .. _`numpy`: https://numpy.org
 .. _`boto3`: https://boto3.amazonaws.com/v1/documentation/api/latest/index.html
@@ -119,7 +119,7 @@ class KVSSpyGlass(SpyGlass):
 
 class KVSCredentialsHandler(ABC):
     ''' Abstract base class for credential providers.
-    
+
     Credential providers provide AWS credentials to Kinesis Video Stream Producer library.
 
     If no static credentials are provided in the init method, the Credentials
@@ -287,8 +287,8 @@ class KVSInlineCredentialsHandler(KVSCredentialsHandler):
         ])
 
     def plugin_config_mask(self, plugin_config: str) -> str:
-        ''' Masks credentials for printing in logs. 
-        
+        ''' Masks credentials for printing in logs.
+
         Args:
             plugin_config: The original plugin config string.
         '''
@@ -354,8 +354,8 @@ class KVSFileCredentialsHandler(KVSCredentialsHandler):
     new tokens in the file. '''
 
     def __init__(
-        self, credentials_path: str='/tmp/credentials.txt', 
-        *args: List[Any], 
+        self, credentials_path: str='/tmp/credentials.txt',
+        *args: List[Any],
         **kwargs: Dict[str, Any]
     ):
         self.credentials_path = credentials_path

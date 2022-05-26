@@ -22,7 +22,7 @@ TEST_COLOR2 = Color(25, 75, 125)
 TEST_RECT = Rectangle(Point(0.1, 0.2), Point(0.8, 0.9))
 TEST_LINE = Line(Point(0.1, 0.2), Point(0.3, 0.4))
 TEST_POLYLINE = PolyLine(
-        [Point(0, 0), Point(2, 0), Point(2, 2), Point(1, 1), Point(0, 2)], 
+        [Point(0, 0), Point(2, 0), Point(2, 2), Point(1, 1), Point(0, 2)],
         closed=True
     )
 
@@ -62,7 +62,7 @@ class TestColor(unittest.TestCase):
             self.assertEqual(Color.from_value({'r': 87, 'g': 119, 'b': 165}), self.expected_color)
         with self.subTest('mapping with transparency'):
             self.assertEqual(
-                Color.from_value({'r': 87, 'g': 119, 'b': 165, 'alpha': 0.3}), 
+                Color.from_value({'r': 87, 'g': 119, 'b': 165, 'alpha': 0.3}),
                 self.expected_color_alpha
             )
         with self.subTest('invalid'):
@@ -75,7 +75,7 @@ class TestColor(unittest.TestCase):
 
 
 class TestTimestampAnnotation(unittest.TestCase):
-    
+
     def test_timestamp_annotation(self):
         now = datetime.datetime(2022, 2, 22, 22, 22, 22)
         origin = Point(0.3, 0.7)
@@ -138,7 +138,7 @@ class TestAnnotationDriverBase(unittest.TestCase):
         ])
 
 class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
-    
+
     def setUp(self):
         self.driver = PanoramaMediaAnnotationDriver()
 
@@ -146,7 +146,7 @@ class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
         context = Mock()
         self.driver.render(annotations=[TEST_RECT_ANNO], context=context)
         context.add_rect.assert_called_once_with(
-            TEST_RECT_ANNO.rect.pt_min.x, TEST_RECT_ANNO.rect.pt_min.y, 
+            TEST_RECT_ANNO.rect.pt_min.x, TEST_RECT_ANNO.rect.pt_min.y,
             TEST_RECT_ANNO.rect.pt_max.x, TEST_RECT_ANNO.rect.pt_max.y
         )
 
@@ -163,7 +163,7 @@ class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
         context.add_label.assert_called_once_with(
             '*', TEST_POINT.x, TEST_POINT.y
         )
-    
+
     def test_invalid(self):
         with self.assertRaises(ValueError):
             self.driver.render(annotations=['foobar'], context=Mock())
@@ -172,7 +172,7 @@ class TestPanoramaMediaAnnotationDriver(unittest.TestCase):
 class TestOpenCVImageAnnotationDriver(unittest.TestCase):
 
     EXPECTED_CV2_COLOR = (150, 100, 50)
-    
+
     def setUp(self):
         mock_cv2.reset_mock()
         mock_np.reset_mock()
@@ -182,13 +182,13 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         img = Mock()
         img.shape = [200, 100, 3]
         self.assertEqual(
-            (int(TEST_POINT.x * 100), int(TEST_POINT.y * 200)), 
+            (int(TEST_POINT.x * 100), int(TEST_POINT.y * 200)),
             OpenCVImageAnnotationDriver.scale(TEST_POINT, img)
         )
 
     def test_rect(self):
         img = Mock()
-        img.shape = [200, 100, 3] 
+        img.shape = [200, 100, 3]
         self.driver.render(annotations=[TEST_RECT_ANNO], context=img)
         mock_cv2.rectangle.assert_called_once_with(
             img=img,
@@ -199,16 +199,16 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         )
 
     def do_test_label_anchor(
-        self, 
-        horizontal_anchor=None, 
-        vertical_anchor=None, 
-        shift_x=lambda *_: 0, 
+        self,
+        horizontal_anchor=None,
+        vertical_anchor=None,
+        shift_x=lambda *_: 0,
         shift_y=lambda *_: 0
     ):
         with self.subTest(horizontal_anchor=horizontal_anchor, vertical_anchor=vertical_anchor):
             mock_cv2.reset_mock()
             img = Mock()
-            img.shape = [200, 100, 3] 
+            img.shape = [200, 100, 3]
             text_size_x, text_size_y = (120, 15)
             baseline = 3
             mock_cv2.getTextSize.return_value = ((text_size_x, text_size_y), baseline)
@@ -225,7 +225,7 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
             x, y = OpenCVImageAnnotationDriver.scale(lbl.point, img)
             self.driver.render(annotations=[lbl], context=img)
             mock_cv2.putText.assert_called_once_with(
-                img=img, 
+                img=img,
                 text=lbl.text,
                 org=ANY,
                 fontFace=OpenCVImageAnnotationDriver.DEFAULT_FONT,
@@ -236,13 +236,13 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
             self.assertEqual(mock_cv2.putText.call_count, 1)
             called_org = mock_cv2.putText.call_args[1]['org']
             self.assertAlmostEqual(
-                called_org[0], 
-                x + shift_x(text_size_x, baseline), 
+                called_org[0],
+                x + shift_x(text_size_x, baseline),
                 delta=OpenCVImageAnnotationDriver.DEFAULT_TEXT_PADDING[0]
             )
             self.assertAlmostEqual(
-                called_org[1], 
-                y + shift_y(text_size_y, baseline), 
+                called_org[1],
+                y + shift_y(text_size_y, baseline),
                 delta=OpenCVImageAnnotationDriver.DEFAULT_TEXT_PADDING[1]
             )
 
@@ -252,7 +252,7 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
         with self.subTest('default anchor'):
             self.driver.render(annotations=[TEST_LABEL_ANNO], context=img)
             mock_cv2.putText.assert_called_once_with(
-                img=img, 
+                img=img,
                 text=TEST_LABEL_ANNO.text,
                 org=OpenCVImageAnnotationDriver.scale(TEST_LABEL_ANNO.point, img),
                 fontFace=OpenCVImageAnnotationDriver.DEFAULT_FONT,

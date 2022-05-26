@@ -1,4 +1,4 @@
-''' :class:`SpyGlass` streams OpenCV frames to a `GStreamer`_ pipeline. 
+''' :class:`SpyGlass` streams OpenCV frames to a `GStreamer`_ pipeline.
 
 :class:`SpyGlass` itself is an abstract base class that you can not instantiate directly. Instead,
 use one of the subclasses derived from :class:`SpyGlass` that provide concrete implementation.
@@ -63,7 +63,7 @@ class SpyGlass(ABC):
         dotenv_path: The path of the .env configuration file. If left to None,
             SpyGlass will use the default search mechanism of the python-dotenv library
             to search for the .env file (searching in the current and parent folders).
-    
+
     Attributes:
         video_width (int): The width of the frames in the video stream.
         video_height (int): The height of the frames in the video stream.
@@ -82,14 +82,14 @@ class SpyGlass(ABC):
     FPS_METER_WARMUP_FRAMES = 100
 
     class State(Enum):
-        ''' States of the :class:`SpyGlass`. 
-        
+        ''' States of the :class:`SpyGlass`.
+
         Attributes:
             STOPPED: The :class:`SpyGlass` instance is stopped.
             START_WARMUP: The :class:`SpyGlass` instance is about to start the warmup period.
-            WARMUP: The :class:`SpyGlass` instance is measuring frame rate and frame size during 
+            WARMUP: The :class:`SpyGlass` instance is measuring frame rate and frame size during
                 the warmup period.
-            STREAMING: The :class:`SpyGlass` instance is streaming. The 
+            STREAMING: The :class:`SpyGlass` instance is streaming. The
                 :meth:`~backpack.spyglass.SpyGlass.put` method should be called regularly.
             ERROR: The :class:`SpyGlass` instance is encountered an error.
         '''
@@ -308,7 +308,7 @@ class SpyGlass(ABC):
 
         Args:
             frame: A numpy array of ``(height, width, 3)`` shape and of :class:`numpy.uint8` type.
-        
+
         Returns:
             ``True`` if the frame was effectively put on the downstream pipeline.
         '''

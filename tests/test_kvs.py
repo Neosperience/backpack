@@ -15,11 +15,11 @@ mock_frozen = mock_credentials.get_frozen_credentials()
 with patch.dict('sys.modules', cv2=mock_cv2, boto3=mock_boto3, dotenv=mock_dotenv, os=mock_os):
     import backpack.kvs
     from backpack.kvs import (
-        KVSCredentialsHandler, KVSInlineCredentialsHandler, 
+        KVSCredentialsHandler, KVSInlineCredentialsHandler,
         KVSEnvironmentCredentialsHandler, KVSFileCredentialsHandler,
         KVSSpyGlass
     )
-    
+
 from backpack.timepiece import local_dt
 
 # Mock constants
@@ -63,7 +63,7 @@ mock_os.path.isfile.return_value = True
 
 @patch('backpack.kvs.local_now', return_value=TEST_LOCAL_NOW)
 class TestInlineCredentialsHandler(unittest.TestCase):
-    
+
     def _create_ch(self):
         return KVSInlineCredentialsHandler(
             aws_access_key_id=TEST_AWS_ACCESS_KEY_ID,
@@ -74,7 +74,7 @@ class TestInlineCredentialsHandler(unittest.TestCase):
         TEMPLATE = 'access-key="{}" secret-key="{}"'
         ch = self._create_ch()
         self.assertEqual(
-            ch.plugin_config(), 
+            ch.plugin_config(),
             TEMPLATE.format(TEST_AWS_ACCESS_KEY_ID, TEST_AWS_SECRET_KEY)
         )
 
@@ -134,9 +134,9 @@ class TestEnvironmentCredentialsHandler(unittest.TestCase):
 
 @patch('backpack.kvs.local_now', return_value=TEST_LOCAL_NOW)
 class TestFileCredentialsHandler(unittest.TestCase):
-    
+
     TEST_CREDENTIALS_PATH = '/tmp/test_credentials.txt'
-    
+
     def setUp(self):
         self.parent_logger = logging.getLogger()
         mock_credentials._protected_refresh.reset_mock()
@@ -156,7 +156,7 @@ class TestFileCredentialsHandler(unittest.TestCase):
         ch = self._create_ch()
         TEMPLATE = 'credential-path="{}"'
         self.assertEqual(
-            ch.plugin_config(), 
+            ch.plugin_config(),
             TEMPLATE.format(self.TEST_CREDENTIALS_PATH)
         )
 
@@ -180,15 +180,15 @@ class TestFileCredentialsHandler(unittest.TestCase):
             self.TEST_CREDENTIALS_PATH, 'w', encoding='utf-8'
         )
         expected_file_expiry = (
-            TEST_EXPIRY_TIME - 
-            KVSCredentialsHandler.REFRESH_BEFORE_EXPIRATION + 
+            TEST_EXPIRY_TIME -
+            KVSCredentialsHandler.REFRESH_BEFORE_EXPIRATION +
             KVSFileCredentialsHandler.FILE_REFRESH_GRACE_PERIOD
         )
         mock_open().write.assert_any_call(
             FILE_TEMPLATE.format(
-                TEST_AWS_ACCESS_KEY_ID, 
-                expected_file_expiry.strftime(TIME_FORMAT), 
-                TEST_AWS_SECRET_KEY, 
+                TEST_AWS_ACCESS_KEY_ID,
+                expected_file_expiry.strftime(TIME_FORMAT),
+                TEST_AWS_SECRET_KEY,
                 TEST_TOKEN
             )
         )
@@ -209,7 +209,7 @@ class TestFileCredentialsHandler(unittest.TestCase):
             mock_timepiece_local_now.return_value = expiry_time
             ch.check_refresh()
             mock_credentials._protected_refresh.assert_called()
-  
+
     @patch('backpack.timepiece.local_now')
     @patch('backpack.kvs._is_refreshable', return_value=True)
     def test_update_in_past(self, mock_is_refreshable, mock_timepiece_local_now, *args):
@@ -225,14 +225,14 @@ class TestFileCredentialsHandler(unittest.TestCase):
 @patch('subprocess.check_output')
 @patch('backpack.spyglass.os')
 class TestKVSSpyGlass(unittest.TestCase):
-    
+
     STREAM_NAME = 'test_stream'
     STREAM_REGION = 'test-west-1'
-    
+
     def setUp(self):
         self.frame = Mock()
         self.frame.shape = [TEST_FRAME_HEIGHT, TEST_FRAME_WIDTH, 3]
-    
+
     def _create_spyglass(self):
         ch = KVSInlineCredentialsHandler(
             aws_access_key_id=TEST_AWS_ACCESS_KEY_ID,
@@ -283,4 +283,4 @@ class TestKVSSpyGlass(unittest.TestCase):
     def test_no_plugin(self, *args):
         with self.assertRaises(RuntimeError):
             spyglass = self._create_spyglass()
-        
+

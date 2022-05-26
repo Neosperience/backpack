@@ -35,28 +35,28 @@ class Point(metaclass=PointMeta):
 
     @staticmethod
     def ccw(pt1: 'Point', pt2: 'Point', pt3: 'Point') -> bool:
-        ''' Determines if the three points form a counterclockwise angle. If two points are 
+        ''' Determines if the three points form a counterclockwise angle. If two points are
         equal, or the three points are collinear, this method returns `True`.
-        
+
         Args:
             pt1: The first point
             pt2: The second point
             pt3: The third point
 
         Returns:
-            `True` if the points form a counterclockwise angle 
+            `True` if the points form a counterclockwise angle
         '''
         d21, d31 = pt2 - pt1, pt3 - pt1
         return d21.x * d31.y >= d31.x * d21.y
-    
+
     def distance(self, other: 'Point') -> float:
-        ''' Calculates the distance between this and an other point. 
-        
+        ''' Calculates the distance between this and an other point.
+
         Args:
             other: The other point
-            
+
         Returns:
-            The distance between this and an other point. 
+            The distance between this and an other point.
         '''
         d = self - other
         return math.sqrt(d.x * d.x + d.y * d.y)
@@ -71,11 +71,11 @@ class Point(metaclass=PointMeta):
 
     def __add__(self, other: 'Point') -> 'Point':
         ''' Adds two points as if they were vectors.
-        
+
         Arg:
             other: the other point
 
-        Returns: 
+        Returns:
             A new point, the sum of the two points as if they were vectors.
         '''
         Point._check_arg(other, '+')
@@ -83,11 +83,11 @@ class Point(metaclass=PointMeta):
 
     def __sub__(self, other: 'Point') -> 'Point':
         ''' Subtracts two points as if they were vectors.
-        
+
         Arg:
             other: the other point
 
-        Returns: 
+        Returns:
             A new point, the difference of the two points as if they were vectors.
         '''
         Point._check_arg(other, '-')
@@ -107,18 +107,18 @@ class Point(metaclass=PointMeta):
     @classmethod
     def from_value(cls, value):
         ''' Deserializes a Point from different formats.
-        
+
         Supported formats:
 
          - sequence containing exactly two numbers
          - dictionary containing numbers under 'x' and 'y' keys
          - Point instance (returns the same instance)
-        
+
         Args:
             value: the value to be converted
-        
+
         Return: The new Point instance
-        
+
         Raises: ValueError if the conversion was not successful.
         '''
         if isinstance(value, Point):
@@ -127,8 +127,8 @@ class Point(metaclass=PointMeta):
             return cls(x=value['x'], y=value['y'])
         elif (
             _issequence(value) and
-            len(value) == 2 and 
-            isinstance(value[0], Number) and 
+            len(value) == 2 and
+            isinstance(value[0], Number) and
             isinstance(value[1], Number)
         ):
             return cls(x=value[0], y=value[1])
@@ -138,7 +138,7 @@ class Point(metaclass=PointMeta):
 
 @dataclass(frozen=True)
 class Line:
-    ''' A line segment. 
+    ''' A line segment.
 
     Args:
         pt1 (float): The first point of the line segment
@@ -156,16 +156,16 @@ class Line:
 
     def intersects(self, other: 'Line') -> bool:
         ''' Determines if this line segment intersects an other one.
-        
+
         Args:
             other: The other line segment
-            
+
         Returns:
             `True` if the two segments intersect each other.
         '''
         return (
-            Point.ccw(self.pt1, other.pt1, other.pt2) != Point.ccw(self.pt2, other.pt1, other.pt2) 
-            and 
+            Point.ccw(self.pt1, other.pt1, other.pt2) != Point.ccw(self.pt2, other.pt1, other.pt2)
+            and
             Point.ccw(self.pt1, self.pt2, other.pt1) != Point.ccw(self.pt1, self.pt2, other.pt2)
         )
 
@@ -178,14 +178,14 @@ class Line:
          - sequence containing exactly two values that can be deserialized with Point.from_value
          - dictionary containing such Point values under 'pt1' and 'pt2' keys
          - Line instance (returns the same instance)
-        
+
         Args:
             value: the value to be converted
 
         Returns: the Line instance
 
         Raises: ValueError if the value could not be converted to a Line.
-        ''' 
+        '''
         if isinstance(value, Line):
             return value
         elif _issequence(value) and len(value) == 2:
@@ -197,10 +197,10 @@ class Line:
 
     def __getitem__(self, key: int) -> Point:
         ''' Returns the first or the second point of this Line.
-        
+
         Args:
             key: the index passed to the bracket operator, must be 0 or 1.
-        
+
         Returns:
             The first or the second point of this Line.
         '''
@@ -216,7 +216,7 @@ class Line:
 
 @dataclass(frozen=True)
 class Rectangle:
-    ''' An axis aligned rectangle. 
+    ''' An axis aligned rectangle.
 
     Args:
         pt1 (Point): The first corner of the rectangle
@@ -246,10 +246,10 @@ class Rectangle:
 
         Args:
             pt: the point
-        
+
         Returns:
             `True` if the point lies inside this rectangle.
-        ''' 
+        '''
         return (
             pt.x >= self.pt_min.x and pt.y >= self.pt_min.y and
             pt.x <= self.pt_max.x and pt.y <= self.pt_max.y
@@ -273,14 +273,14 @@ class Rectangle:
     @classmethod
     def from_value(cls, value):
         ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4)) to a Rectangle.
-        
+
         Args:
             value: the tuple
 
         Returns: the Rectangle instance
 
         Raises: ValueError if the tuple could not be converted to a Rectangle.
-        ''' 
+        '''
         if isinstance(value, Rectangle):
             return value
         elif _issequence(value) and len(value) == 2:
@@ -295,7 +295,7 @@ class Rectangle:
 
         Args:
             key: the index passed to the bracket operator, must be 0 or 1.
-        
+
         Returns:
             The first or the second point of this Rectangle.
         '''
@@ -311,8 +311,8 @@ class Rectangle:
 
 @dataclass(frozen=True)
 class PolyLine:
-    ''' A :class:`PolyLine` is a connected series of line segments. 
-    
+    ''' A :class:`PolyLine` is a connected series of line segments.
+
     Args:
         points: the list of the points of the polyline
         closed: `True` if the :class:`PolyLine` is closed
@@ -354,14 +354,14 @@ class PolyLine:
     def self_intersects(self) -> bool:
         ''' Determines if this :class:`PolyLine` self-intersects. '''
         return any(
-            l1.intersects(l2) 
+            l1.intersects(l2)
                 for idx, l1 in enumerate(self.lines) for l2 in self.lines[idx + 2:]
         )
 
     @lazy_property
     def is_convex(self) -> bool:
-        ''' Determines if the polygon formed from this :class:`PolyLine` is convex. 
-        
+        ''' Determines if the polygon formed from this :class:`PolyLine` is convex.
+
         The result of this method is undefined for complex (self-intersecting) polygons.
 
         Returns:
@@ -369,13 +369,13 @@ class PolyLine:
         '''
         if len(self.points) < 4:
             return True
-        
+
         # Iterate over consequitive point triplets
         it0 = self.points
         it1 = islice(cycle(self.points), 1, None)
         it2 = islice(cycle(self.points), 2, None)
 
-        # Check if all angles are ccw, see 
+        # Check if all angles are ccw, see
         # https://docs.python.org/3/library/itertools.html#itertools-recipes
         group = groupby(
             Point.ccw(pt0, pt1, pt2) for pt0, pt1, pt2 in zip(it0, it1, it2)
@@ -383,18 +383,18 @@ class PolyLine:
         return next(group, True) and not next(group, False)
 
     def has_inside(self, point: Point) -> bool:
-        ''' Determines if a point is inside this closed :class:`PolyLine`. 
-        
+        ''' Determines if a point is inside this closed :class:`PolyLine`.
+
         This implementation uses the `ray casting algorithm`_.
 
-        .. _`ray casting algorithm`: 
+        .. _`ray casting algorithm`:
            https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
 
         Args:
             point: The point
 
         Returns:
-            `True` if the point is inside this closed :class:`PolyLine`. 
+            `True` if the point is inside this closed :class:`PolyLine`.
         '''
         if not self.closed:
             raise ValueError('PolyLine.has_inside works only for closed polylines.')
@@ -407,7 +407,7 @@ class PolyLine:
     @classmethod
     def from_value(cls, value, closed=True):
         ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4), ...) to a PolyLine.
-        
+
         Args:
             value: the tuple
             closed: flags if the newly created PolyLine should be closed or not.
@@ -415,7 +415,7 @@ class PolyLine:
         Returns: the PolyLine instance
 
         Raises: ValueError if the tuple could not be converted to a PolyLine.
-        ''' 
+        '''
         if isinstance(value, PolyLine):
             return value
         elif _issequence(value):
@@ -431,7 +431,7 @@ class PolyLine:
 
         Args:
             key: the index passed to the bracket operator.
-        
+
         Returns:
             A single point of this PolyLine.
         '''

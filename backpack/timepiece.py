@@ -12,16 +12,16 @@ from abc import ABC, abstractmethod
 from dateutil.tz import tzlocal
 
 def local_now() -> datetime.datetime:
-    ''' Returns the current time in local time zone. 
-    
+    ''' Returns the current time in local time zone.
+
     Returns:
         A timezone aware datettime instance in the local time zone.
     '''
     return datetime.datetime.now(tz=tzlocal())
 
 def local_dt(dt: datetime.datetime) -> datetime.datetime:
-    ''' Converts the supplied naive datetime to be time zone aware in the local time zone. 
-    
+    ''' Converts the supplied naive datetime to be time zone aware in the local time zone.
+
     Args:
         dt: The naive datetime instance.
 
@@ -46,7 +46,7 @@ def panorama_timestamp_to_datetime(panorama_ts: Tuple[int, int]) -> datetime.dat
 
 class BaseTimer(ABC):
     ''' Base class for code execution time measuring timers.
-    
+
     Args:
         max_intervals: Maximum number of intervals to remember.
     '''

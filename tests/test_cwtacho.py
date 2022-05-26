@@ -11,7 +11,7 @@ time = Mock()
 @patch('backpack.timepiece.time')
 @patch('backpack.timepiece.local_now')
 class TestCWTacho(unittest.TestCase):
-    
+
     def setUp(self):
         self.namespace = 'unit_test'
         self.metric_name = 'test_metric'
@@ -61,14 +61,14 @@ class TestCWTacho(unittest.TestCase):
 
         expected_ts = (self.start + datetime.timedelta(seconds=60)).astimezone(datetime.timezone.utc)
         expected_metrics = {
-            'MetricName': 'test_metric', 
-            'Dimensions': [{'Name': 'dim1', 'Value': 'val1'}, {'Name': 'dim2', 'Value': 'val2'}], 
-            'Timestamp': expected_ts, 
-            'StatisticValues': {'SampleCount': 60, 'Sum': 60, 'Minimum': 1, 'Maximum': 1}, 
+            'MetricName': 'test_metric',
+            'Dimensions': [{'Name': 'dim1', 'Value': 'val1'}, {'Name': 'dim2', 'Value': 'val2'}],
+            'Timestamp': expected_ts,
+            'StatisticValues': {'SampleCount': 60, 'Sum': 60, 'Minimum': 1, 'Maximum': 1},
             'Unit': 'Seconds'
         }
         self.assertEqual(cb_return_value, expected_metrics, 'callback returned correct value')
-        
+
         self.cloudwatch.put_metric_data.assert_called_with(
             Namespace=self.namespace,
             MetricData=[expected_metrics]
@@ -82,7 +82,7 @@ class TestCWTacho(unittest.TestCase):
         with self.assertLogs(self.cw_tacho.logger, 'WARNING') as logs:
             self._do_test_callback(backpack_mock_local_now)
             self.assertTrue(any('TestException' in o for o in logs.output))
-        
+
     def test_attributeerror_handling(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self.cloudwatch.put_metric_data.side_effect = AttributeError

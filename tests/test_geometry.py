@@ -60,7 +60,7 @@ class TestLine(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             Line('foo', 'bar')
         self.assertEqual(
-            str(ctx.exception), 
+            str(ctx.exception),
             'Line arguments "pt1" and "pt2" must be Point objects.'
         )
 
@@ -108,17 +108,17 @@ class TestRectangle(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             Rectangle('foo', 'bar')
         self.assertEqual(
-            str(ctx.exception), 
+            str(ctx.exception),
             'Rectangle arguments "pt1" and "pt2" must be Point objects.'
         )
-    
+
     def test_has_inside(self):
         self.assertTrue(self.rect.has_inside(Point(1, 1)))
         self.assertFalse(self.rect.has_inside(Point(4, 4)))
 
     def test_center(self) -> None:
         self.assertEqual(self.rect.center, Point(2, 1))
-    
+
     def test_base(self) -> None:
         self.assertEqual(self.rect.base, Point(2, 2))
 
@@ -167,7 +167,7 @@ class TestPolyLine(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             PolyLine('foo')
         self.assertEqual(str(ctx.exception), 'The elements of PolyLine points argument must be Point objects.')
-        
+
     def test_open(self) -> None:
         self.assertEqual(self.poly_open.lines, self.test_lines_open)
         self.assertFalse(self.poly_open.closed)
@@ -175,7 +175,7 @@ class TestPolyLine(unittest.TestCase):
     def test_boundingbox(self) -> None:
         expected_bb = Rectangle(Point(-4, -4), Point(4, 4))
         self.assertEqual(self.poly_closed.boundingbox, expected_bb)
-    
+
     def test_has_inside(self) -> None:
         self.assertTrue(self.poly_closed.has_inside(Point(0, 0)))
         self.assertFalse(self.poly_closed.has_inside(Point(5, 5)))
@@ -202,7 +202,7 @@ class TestPolyLine(unittest.TestCase):
 
         with self.subTest('concave shape'):
             concave = PolyLine(
-                [Point(0, 0), Point(2, 0), Point(2, 2), Point(1, 1), Point(0, 2)], 
+                [Point(0, 0), Point(2, 0), Point(2, 2), Point(1, 1), Point(0, 2)],
                 closed=True
             )
             self.assertFalse(concave.is_convex)
@@ -212,7 +212,7 @@ class TestPolyLine(unittest.TestCase):
             self.assertEqual(self.poly_open, PolyLine.from_value(self.poly_open))
         with self.subTest('dictionary'):
             self.assertEqual(self.poly_open, PolyLine.from_value(
-                {'points': [{'x': -4, 'y': 0}, {'x': 0, 'y': 4}, 
+                {'points': [{'x': -4, 'y': 0}, {'x': 0, 'y': 4},
                             {'x': 4, 'y': 0}, {'x': 0, 'y': -4}],
                  'closed': False }
             ))

@@ -1,4 +1,4 @@
-''' This module contains the :class:`AutoIdentity` class that provides information about the 
+''' This module contains the :class:`AutoIdentity` class that provides information about the
 application execution environment. '''
 
 import os
@@ -11,8 +11,8 @@ import boto3
 class AutoIdentity:
     ''' AutoIdentity instance queries metadata of the current application instance.
 
-    The IAM policy associated with the `Panorama Application Role`_ 
-    of this app should grant the execution of 
+    The IAM policy associated with the `Panorama Application Role`_
+    of this app should grant the execution of
     `panorama:ListApplicationInstances`_ operation.
 
     Args:
@@ -33,9 +33,9 @@ class AutoIdentity:
         device_id (str): Device id of the appliance running this application.
         device_name (str): Name of the appliance running this application.
 
-    .. _`Panorama Application Role`: 
+    .. _`Panorama Application Role`:
         https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html
-    .. _`panorama:ListApplicationInstances`: 
+    .. _`panorama:ListApplicationInstances`:
         https://docs.aws.amazon.com/service-authorization/latest/reference/list_awspanorama.html#awspanorama-actions-as-permissions
     '''
 
@@ -43,9 +43,9 @@ class AutoIdentity:
     # This class functions as a data class that reads its values from the environment
 
     def __init__(
-        self, 
-        device_region: str, 
-        application_instance_id: str = None, 
+        self,
+        device_region: str,
+        application_instance_id: str = None,
         parent_logger: logging.Logger = None
     ):
         self._logger = (

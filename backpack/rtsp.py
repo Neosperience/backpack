@@ -29,17 +29,17 @@ from gi.repository import GLib, GstRtspServer
 from .spyglass import SpyGlass
 
 class RTSPServer:
-    ''' The :class:`RTSPServer` instance wraps a GStreamer RTSP server that serves video streams 
+    ''' The :class:`RTSPServer` instance wraps a GStreamer RTSP server that serves video streams
     to clients using the RTSP protocol.
 
-    You typically want to have a single instance of :class:`RTSPServer` for your application. 
-    You can register any number of video streams that will be served by a single instance of 
-    RTSP server. The port number of the server should be unique among all applications on the 
+    You typically want to have a single instance of :class:`RTSPServer` for your application.
+    You can register any number of video streams that will be served by a single instance of
+    RTSP server. The port number of the server should be unique among all applications on the
     device.
 
-    For an example usage of :class:`RTSPServer`, see the documentation of :class:`RTSPSpyGlass` 
+    For an example usage of :class:`RTSPServer`, see the documentation of :class:`RTSPSpyGlass`
     class.
-    
+
     Args:
         port: The port to listen on. You can not modify the port after the initialization of
             the :class:`RTSPServer` instance. Defaults to ``8554``.
@@ -48,8 +48,8 @@ class RTSPServer:
     '''
 
     def __init__(
-        self, 
-        port: str = '8554', 
+        self,
+        port: str = '8554',
         parent_logger: Optional[logging.Logger] = None,
     ):
         self.logger = (
@@ -64,16 +64,16 @@ class RTSPServer:
         self._thread = None
 
     def add_stream(self, mount_point: str, pipeline: str) -> None:
-        ''' Registers a new video stream to the server. 
-        
+        ''' Registers a new video stream to the server.
+
         Args:
-            mount_point: The path that will be used to access the stream. For example, 
+            mount_point: The path that will be used to access the stream. For example,
                 if you specify ``/my_stream``, the stream will be accessible for clients using
                 the ``rtsp://127.0.0.1:8854/mystream`` url (change the IP address and the port
                 number accordingly).
             pipeline: The GStreamer pipeline to use for the stream. This will be typically
                 a pipeline picking up the raw UDP packets from a local port and wrapping it to a
-                H.264 envelope, for example: 
+                H.264 envelope, for example:
                 ``udpsrc port=5000 ! application/x-rtp,media=video,encoding-name=H264 ! rtph264depay !
                 rtph264pay name=pay0``
         '''
@@ -87,7 +87,7 @@ class RTSPServer:
 
     def remove_stream(self, mount_point: str) -> None:
         ''' It removes a registered stream from the server.
-        
+
         :param mount_point: The registered path of the stream.
         '''
         mounts = self.gst_server.get_mount_points()
@@ -95,22 +95,22 @@ class RTSPServer:
         del self.streams[mount_point]
 
     def start(self):
-        ''' Starts the RTSP server asynchronously. 
-        
+        ''' Starts the RTSP server asynchronously.
+
         After calling this method, the RTSP requests will be served.
         '''
         self.logger.info('Starting RTSPServer')
         self.gst_server.attach()
         self._thread = threading.Thread(
-            name='RTSPServerThread', 
+            name='RTSPServerThread',
             target=self._loop.run,
             daemon=True
         )
         self._thread.start()
-    
+
     def stop(self):
-        ''' Stops the RTSP server. 
-        
+        ''' Stops the RTSP server.
+
         After calling this method, no RTSP requests will be served. The server can be restarted
         later on calling the :meth:`start()` method.
         '''
@@ -131,12 +131,12 @@ class RTSPServer:
 
 
 class RTSPSpyGlass(SpyGlass):
-    ''' Together with :class:`RTSPServer`, :class:`RTSPSpyGlass` a sequence of OpenCV frames 
+    ''' Together with :class:`RTSPServer`, :class:`RTSPSpyGlass` a sequence of OpenCV frames
     on the RTSP protocol.
 
-    A single instance of :class:`RTSPServer` application can serve streams coming from multiple 
-    :class:`RTSPSpyGlass` instances. You should instantiate the :class:`RTSPServer` instance first. 
-    For example, if you want to serve two seperate RTSP streams, you could use this code to set up 
+    A single instance of :class:`RTSPServer` application can serve streams coming from multiple
+    :class:`RTSPSpyGlass` instances. You should instantiate the :class:`RTSPServer` instance first.
+    For example, if you want to serve two seperate RTSP streams, you could use this code to set up
     your scenario::
 
         server = RTSPServer(port="8554")
@@ -162,11 +162,11 @@ class RTSPSpyGlass(SpyGlass):
 
     Args:
         server: The RTSPServer instance that this stream is being served by
-        path: The path to the stream. This is the path that the client will use to connect to 
+        path: The path to the stream. This is the path that the client will use to connect to
             the stream
-        args: Positional arguments to be passed to :class:`~backpack.spyglass.SpyGlass` 
+        args: Positional arguments to be passed to :class:`~backpack.spyglass.SpyGlass`
             superclass initializer.
-        kwargs: Keyword arguments to be passed to :class:`~backpack.spyglass.SpyGlass` 
+        kwargs: Keyword arguments to be passed to :class:`~backpack.spyglass.SpyGlass`
             superclass initializer.
     '''
 

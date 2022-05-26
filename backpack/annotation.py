@@ -1,6 +1,6 @@
 ''' This module makes it possible to draw annotations on different
-backends with an unified API. Currently, you can draw rectangles and labels with 
-:mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images 
+backends with an unified API. Currently, you can draw rectangles and labels with
+:mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
 from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Callable, Sequence, Mapping
@@ -17,9 +17,9 @@ from .geometry import Point, Rectangle, Line, PolyLine
 
 class Color(NamedTuple):
     ''' A color in the red, blue, green space.
-    
+
     The color coordinates are integers in the [0; 255] range.
-    
+
     Args:
         r (int): The red component of the color
         g (int): The green component of the color
@@ -33,12 +33,12 @@ class Color(NamedTuple):
     b: int
     ''' The blue component of the color. '''
     alpha: float = 1.0
-    ''' The alpha component of transparency. ''' 
+    ''' The alpha component of transparency. '''
 
     @classmethod
     def from_hex(cls, value: Union[str, int]) -> 'Color':
-        ''' Creates a color object from its hexadeciman representation. 
-        
+        ''' Creates a color object from its hexadeciman representation.
+
         Args:
             value: integer or HTML color string
 
@@ -57,10 +57,10 @@ class Color(NamedTuple):
 
     @classmethod
     def from_value(cls, value: Union[str, int, Sequence, Mapping, 'Color']):
-        ''' Converts an integer (interpreted as 3 bytes hex value), a HTML color string, a 
+        ''' Converts an integer (interpreted as 3 bytes hex value), a HTML color string, a
         sequence of 3 or 4 integers, or a dictionary containing 'r', 'g', 'b' and optionally
-        'alpha' keys to a Color object. 
-        
+        'alpha' keys to a Color object.
+
         Args:
             value: The value to be converted.
 
@@ -75,13 +75,13 @@ class Color(NamedTuple):
         if isinstance(value, (str, int)):
             return cls.from_hex(value)
         elif (
-            isinstance(value, collections.abc.Sequence) and 
+            isinstance(value, collections.abc.Sequence) and
             (len(value) == 3 or len(value) == 4) and
             all(isinstance(e, int if idx < 3 else float) for idx, e in enumerate(value))
         ):
             return cls(*value)
         elif (
-            isinstance(value, collections.abc.Mapping) and 
+            isinstance(value, collections.abc.Mapping) and
             'r' in value and 'g' in value and 'b' in value
         ):
             params = {k: v for k, v in value.items() if k in ('r', 'g', 'b')}
@@ -119,7 +119,7 @@ class LabelAnnotation(NamedTuple):
         CENTER = 2
         ''' Center anchor point '''
         BASELINE = 3
-        ''' Text baseline anchor point ''' 
+        ''' Text baseline anchor point '''
         BOTTOM = 4
         ''' Bottom anchor point '''
 
@@ -172,7 +172,7 @@ class LineAnnotation(NamedTuple):
 
 class MarkerAnnotation(NamedTuple):
     ''' A marker annotation to be rendered in an AnnotationDriver context.
-    
+
     Args:
         point (Point): The coordinates of the maker
         style (MarkerAnnotation.Style): The style of the marker
@@ -204,8 +204,8 @@ class MarkerAnnotation(NamedTuple):
 
 
 class PolyLineAnnotation(NamedTuple):
-    ''' A PolyLine annotation to be rendered in an AnnotationDriver context. 
-    
+    ''' A PolyLine annotation to be rendered in an AnnotationDriver context.
+
     Args:
         polyline(PolyLine): The PolyLine instance
         thickness(int): Line thickness
@@ -213,7 +213,7 @@ class PolyLineAnnotation(NamedTuple):
         fill_color(Color): Fill color
     '''
 
-    polyline : PolyLine 
+    polyline : PolyLine
     ''' The PolyLine instance. '''
     thickness : int = 1
     ''' Line thickness. '''
@@ -239,8 +239,8 @@ class TimestampAnnotation(LabelAnnotation):
 
 
 class BoundingBoxAnnotation(NamedTuple):
-    ''' A bounding box annotation with a rectangle, and optional upper and lower labels. 
-    
+    ''' A bounding box annotation with a rectangle, and optional upper and lower labels.
+
     Args:
         rectangle: The rectangle of the bounding box.
         top_label: The optional top label.
@@ -278,8 +278,8 @@ class AnnotationDriverBase(ABC):
         )
 
     def render(
-        self, 
-        annotations: Iterable[Union[LabelAnnotation, RectAnnotation]], 
+        self,
+        annotations: Iterable[Union[LabelAnnotation, RectAnnotation]],
         context: Any
     ) -> Any:
         ''' Renders a collection of annotations on a context.
@@ -288,7 +288,7 @@ class AnnotationDriverBase(ABC):
             annotations: An iterable collection of annotation type definied in this module.
             context: The context of the backend. Type is implementation-specific.
 
-        Returns: 
+        Returns:
             The context.
         '''
         for anno in annotations:
@@ -310,8 +310,8 @@ class AnnotationDriverBase(ABC):
 
     @abstractmethod
     def add_rect(self, rect: RectAnnotation, context: Any) -> None:
-        ''' Renders a rectangle on the frame. 
-        
+        ''' Renders a rectangle on the frame.
+
         Args:
             rect: A rectangle annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
@@ -319,8 +319,8 @@ class AnnotationDriverBase(ABC):
 
     @abstractmethod
     def add_label(self, label: LabelAnnotation, context: Any) -> None:
-        ''' Renders a label on the frame. 
-        
+        ''' Renders a label on the frame.
+
         Args:
             label: A label annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
@@ -328,8 +328,8 @@ class AnnotationDriverBase(ABC):
 
     @abstractmethod
     def add_marker(self, marker: MarkerAnnotation, context: Any) -> None:
-        ''' Renders a marker on the frame. 
-        
+        ''' Renders a marker on the frame.
+
         Args:
             marker: A marker annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
@@ -337,16 +337,16 @@ class AnnotationDriverBase(ABC):
 
     @abstractmethod
     def add_line(self, label: LineAnnotation, context: Any) -> None:
-        ''' Renders a line on the frame. 
-        
+        ''' Renders a line on the frame.
+
         Args:
             line: A line annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
         '''
-    
+
     @abstractmethod
     def add_polyline(self, polyline: PolyLineAnnotation, context: Any) -> None:
-        ''' Renders a polyline. 
+        ''' Renders a polyline.
 
         Args:
             polyline: A polyline annotation.
@@ -355,7 +355,7 @@ class AnnotationDriverBase(ABC):
 
     def add_bounding_box(self, bounding_box: BoundingBoxAnnotation, context: Any) -> None:
         ''' Renders a bounding box.
-        
+
         Args:
             bounding_box: A bounding box annotation.
             context: A backend-specific context object that was passed to the :meth:`render` method.
@@ -365,7 +365,7 @@ class AnnotationDriverBase(ABC):
         if bounding_box.top_label:
             annos.append(
                 LabelAnnotation(
-                    point=rect.pt_min, 
+                    point=rect.pt_min,
                     text=bounding_box.top_label,
                     color=bounding_box.color,
                     horizontal_anchor=LabelAnnotation.HorizontalAnchor.LEFT,
@@ -386,11 +386,11 @@ class AnnotationDriverBase(ABC):
 
 
 class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
-    ''' Annotation driver implementation for Panorama media type images. 
-    
-    You should pass an ``panoramasdk.media`` instance as the context argument of the 
-    :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. 
-    
+    ''' Annotation driver implementation for Panorama media type images.
+
+    You should pass an ``panoramasdk.media`` instance as the context argument of the
+    :meth:`~backpack.annotation.AnnotationDriverBase.render()` method.
+
     :class:`PanoramaMediaAnnotationDriver` currently does not support colors.
     '''
 
@@ -417,22 +417,22 @@ class PanoramaMediaAnnotationDriver(AnnotationDriverBase):
         marker_str = PanoramaMediaAnnotationDriver.MARKER_STYLE_TO_STR.get(marker.style, '.')
         x, y = marker.point
         context.add_label(marker_str, x, y)
-    
+
     def add_line(self, label: LineAnnotation, context: Any) -> None:
-        print( # pragma: no cover 
+        print( # pragma: no cover
             'WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented'
         )
 
     def add_polyline(self, polyline: PolyLineAnnotation, context: Any) -> None:
-        print( # pragma: no cover 
+        print( # pragma: no cover
             'WARNING: PanoramaMediaAnnotationDriver.add_line is not implemented'
         )
 
 
 class OpenCVImageAnnotationDriver(AnnotationDriverBase):
-    ''' Annotation driver implementation for OpenCV images. 
-    
-    You should pass an :class:`numpy.ndarray` instance as the context argument of the 
+    ''' Annotation driver implementation for OpenCV images.
+
+    You should pass an :class:`numpy.ndarray` instance as the context argument of the
     :meth:`~backpack.annotation.AnnotationDriverBase.render()` method. '''
 
     DEFAULT_COLOR = Color(255, 255, 255)
@@ -454,13 +454,13 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
         MarkerAnnotation.Style.TRIANGLE_DOWN: cv2.MARKER_TRIANGLE_DOWN,
     }
 
-    def draw_transparent(self, 
-        alpha: float, 
-        context: np.ndarray, 
+    def draw_transparent(self,
+        alpha: float,
+        context: np.ndarray,
         drawer: Callable[[np.ndarray], None]
     ) -> None:
         ''' Semi-transparent drawing.
-        
+
         Args:
             alpha: The transparency factor. Set 0 for opaque drawing, 1 for complete transparency.
             context: The drawing context.
@@ -498,17 +498,17 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
                 thickness=OpenCVImageAnnotationDriver.DEFAULT_LINEWIDTH
             )
         self.draw_transparent(color.alpha, context, drawer)
-        
+
 
     @staticmethod
     def _get_anchor_shift(
-        horizontal_anchor: LabelAnnotation.HorizontalAnchor, 
-        vertical_anchor: LabelAnnotation.VerticalAnchor, 
-        size_x: int, 
-        size_y: int, 
+        horizontal_anchor: LabelAnnotation.HorizontalAnchor,
+        vertical_anchor: LabelAnnotation.VerticalAnchor,
+        size_x: int,
+        size_y: int,
         baseline: int
     ) -> Tuple[int, int]:
-        ''' Gets the shift of the text position based on anchor point location and size of the 
+        ''' Gets the shift of the text position based on anchor point location and size of the
         text. '''
         padding_x, padding_y = OpenCVImageAnnotationDriver.DEFAULT_TEXT_PADDING
         shift_x, shift_y = (padding_x, -padding_y)
@@ -540,7 +540,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
                 anno.horizontal_anchor,
                 anno.vertical_anchor,
                 size_x, size_y, baseline
-            )        
+            )
             x += shift_x
             y += shift_y
 

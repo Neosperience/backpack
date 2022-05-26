@@ -75,14 +75,14 @@ class TestSpyGlass(unittest.TestCase):
             return self.current_time
         mock_time.perf_counter.side_effect = _mock_time_perf_counter
         time.sleep.side_effect = _mock_time_sleep
-        
+
     # ---------- Init tests ----------
 
     def test_init_config(self, mock_os, _):
         self._setup_os_mock(mock_os)
         DummySpyGlass(
-            parent_logger=self.parent_logger, 
-            gst_log_file=GST_DEBUG_FILE, 
+            parent_logger=self.parent_logger,
+            gst_log_file=GST_DEBUG_FILE,
             gst_log_level=GST_DEBUG
         )
         mock_os.environ.__setitem__.assert_any_call('LD_LIBRARY_PATH', LD_LIBRARY_PATH)
@@ -103,7 +103,7 @@ class TestSpyGlass(unittest.TestCase):
         mock_os.environ.__getitem__.return_value = EXISTING_ENVIRON_VALUE
         spyglass = DummySpyGlass(parent_logger=self.parent_logger)
         mock_os.environ.__setitem__.assert_any_call(
-            'LD_LIBRARY_PATH', 
+            'LD_LIBRARY_PATH',
             EXISTING_ENVIRON_VALUE + ':' + LD_LIBRARY_PATH
         )
 
@@ -162,7 +162,7 @@ class TestSpyGlass(unittest.TestCase):
         spyglass = DummySpyGlass(parent_logger=self.parent_logger)
         ret = spyglass.put(self.frame)
         self.assertFalse(ret)
-        
+
     def assertStreaming(self, spyglass):
         self.assertEqual(spyglass.state, SpyGlass.State.STREAMING)
         self.assertEqual(spyglass.video_width, TEST_FRAME_WIDTH)
