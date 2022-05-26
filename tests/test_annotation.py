@@ -234,7 +234,7 @@ class TestOpenCVImageAnnotationDriver(unittest.TestCase):
                 thickness=unittest.mock.ANY
             )
             self.assertEqual(mock_cv2.putText.call_count, 1)
-            called_org = mock_cv2.putText.call_args.kwargs['org']
+            called_org = mock_cv2.putText.call_args[1]['org']
             self.assertAlmostEqual(
                 called_org[0], 
                 x + shift_x(text_size_x, baseline), 
