@@ -1,9 +1,9 @@
-''' :class:`SpyGlass` streams OpenCV frames to a `GStreamer`_ pipeline.
+''' :class:`Telescope` streams OpenCV frames to a `GStreamer`_ pipeline.
 
-:class:`SpyGlass` itself is an abstract base class that you can not instantiate directly. Instead,
-use one of the subclasses derived from :class:`SpyGlass` that provide concrete implementation.
-For example, :class:`~backpack.kvs.KVSSpyGlass` sends frames to AWS Kinesis Video Streams service,
-and :class:`~backpack.rtsp.RTSPSpyGlass` streams your frames with a built-in RTSP server.
+:class:`Telescope` itself is an abstract base class that you can not instantiate directly. Instead,
+use one of the subclasses derived from :class:`Telescope` that provide concrete implementation.
+For example, :class:`~backpack.kvs.KVSTelescope` sends frames to AWS Kinesis Video Streams service,
+and :class:`~backpack.rtsp.RTSPTelescope` streams your frames with a built-in RTSP server.
 
 .. _`GStreamer`: https://gstreamer.freedesktop.org
 '''
@@ -26,12 +26,12 @@ USE_LAST_VALUE = -999
 ''' Using this value for dynamic streaming attributes like fps, width and heigth
 will cause to use the values from the last streaming session. '''
 
-class SpyGlass(ABC):
+class Telescope(ABC):
 
     ''' Abstract base class for sending OpenCV frames to a remote service using GStreamer.
 
-    :class:`SpyGlass` can be used to create programatically a video stream and send it to
-    an external video ingestion service supported by GStreamer. Once the :class:`SpyGlass`
+    :class:`Telescope` can be used to create programatically a video stream and send it to
+    an external video ingestion service supported by GStreamer. Once the :class:`Telescope`
     instances is configured and the streaming pipeline was opened by calling
     :meth:`start_streaming`, successive frames can be passed to the :meth:`put` method of the
     instance in OpenCV image format (:class:`numpy.ndarray` with a shape of ``(height, width, 3)``,
@@ -39,7 +39,7 @@ class SpyGlass(ABC):
 
     The frequency of frames (frames per second) as well as the image
     dimensions (width, heigth) are static during the streaming. You can either
-    specify these properties upfront in the constructor, or let SpyGlass figure out
+    specify these properties upfront in the constructor, or let Telescope figure out
     these values. In the later case, up to :attr:`FPS_METER_WARMUP_FRAMES`
     frames (by default 100) will be discarded at the begining of the streaming
     and during this period the value of the stream fps, width and height will
@@ -61,7 +61,7 @@ class SpyGlass(ABC):
         gst_log_level: If you want to override GStreamer log level configuration,
             specify in this parameter.
         dotenv_path: The path of the .env configuration file. If left to None,
-            SpyGlass will use the default search mechanism of the python-dotenv library
+            Telescope will use the default search mechanism of the python-dotenv library
             to search for the .env file (searching in the current and parent folders).
 
     Attributes:
@@ -82,16 +82,16 @@ class SpyGlass(ABC):
     FPS_METER_WARMUP_FRAMES = 100
 
     class State(Enum):
-        ''' States of the :class:`SpyGlass`.
+        ''' States of the :class:`Telescope`.
 
         Attributes:
-            STOPPED: The :class:`SpyGlass` instance is stopped.
-            START_WARMUP: The :class:`SpyGlass` instance is about to start the warmup period.
-            WARMUP: The :class:`SpyGlass` instance is measuring frame rate and frame size during
+            STOPPED: The :class:`Telescope` instance is stopped.
+            START_WARMUP: The :class:`Telescope` instance is about to start the warmup period.
+            WARMUP: The :class:`Telescope` instance is measuring frame rate and frame size during
                 the warmup period.
-            STREAMING: The :class:`SpyGlass` instance is streaming. The
-                :meth:`~backpack.spyglass.SpyGlass.put` method should be called regularly.
-            ERROR: The :class:`SpyGlass` instance is encountered an error.
+            STREAMING: The :class:`Telescope` instance is streaming. The
+                :meth:`~Telescope.put` method should be called regularly.
+            ERROR: The :class:`Telescope` instance is encountered an error.
         '''
         STOPPED = 0
         START_WARMUP = 1
@@ -125,7 +125,7 @@ class SpyGlass(ABC):
         self._last_width = None
         self._last_height = None
         self._video_writer = None
-        self.state = SpyGlass.State.STOPPED
+        self.state = Telescope.State.STOPPED
 
     def _check_gst_plugin(self, plugin_name: str) -> bool:
         ''' Checks if a given GStreamer plugin can be correctly loaded.
@@ -242,19 +242,19 @@ class SpyGlass(ABC):
     def _try_open_stream(self, fps, width, height):
         if not self._open_stream(fps, width, height):
             self.logger.warning('Could not open cv2.VideoWriter')
-            self.state = SpyGlass.State.ERROR
+            self.state = Telescope.State.ERROR
             return False
-        self.state = SpyGlass.State.STREAMING
+        self.state = Telescope.State.STREAMING
         return True
 
     @property
-    def state(self) -> 'SpyGlass.State':
-        ''' State of the SpyGlass. '''
+    def state(self) -> 'Telescope.State':
+        ''' State of the Telescope. '''
         return self._state
 
     @state.setter
-    def state(self, state: 'SpyGlass.State') -> None:
-        ''' Set the state of the SpyGlass. '''
+    def state(self, state: 'Telescope.State') -> None:
+        ''' Set the state of the Telescope. '''
         self.logger.info('state = %s', state)
         self._state = state
 
@@ -270,7 +270,7 @@ class SpyGlass(ABC):
 
         After calling this method, you are exepcted to call the :meth:`put` method at
         regular intervals. The streaming can be stopped and restarted arbitrary times on
-        the same :class:`SpyGlass` instance.
+        the same :class:`Telescope` instance.
 
         You should specify the desired frame rate and frame dimensions. Using :attr:`USE_LAST_VALUE`
         for any of theses attributes will use the value from the last streaming session. If no
@@ -291,11 +291,11 @@ class SpyGlass(ABC):
         self.video_fps = self._last_fps if fps == USE_LAST_VALUE else fps
         self.video_width = self._last_width if width == USE_LAST_VALUE else width
         self.video_height = self._last_height if width == USE_LAST_VALUE else height
-        if self.state in [SpyGlass.State.WARMUP, SpyGlass.State.STREAMING]:
+        if self.state in [Telescope.State.WARMUP, Telescope.State.STREAMING]:
             self._close_stream()
         if any(p is None for p in (self.video_fps, self.video_width, self.video_height)):
             self.logger.info('Starting FPS meter warmup.')
-            self.state = SpyGlass.State.START_WARMUP
+            self.state = Telescope.State.START_WARMUP
         else:
             self.logger.info('No FPS meter warmup needed.')
             self._try_open_stream(self.video_fps, self.video_width, self.video_height)
@@ -313,11 +313,11 @@ class SpyGlass(ABC):
             ``True`` if the frame was effectively put on the downstream pipeline.
         '''
 
-        if self.state == SpyGlass.State.STOPPED:
+        if self.state == Telescope.State.STOPPED:
             # Streamer paused
             return False
 
-        if self.state == SpyGlass.State.ERROR:
+        if self.state == Telescope.State.ERROR:
             self._frame_log(
                 lambda: self.logger.warning(
                     '%s.put() was called in %s state', self.__class__.__name__, self.state
@@ -325,12 +325,12 @@ class SpyGlass(ABC):
             )
             return False
 
-        if self.state == SpyGlass.State.START_WARMUP:
+        if self.state == Telescope.State.START_WARMUP:
             self._start_warmup()
-            self.state = SpyGlass.State.WARMUP
+            self.state = Telescope.State.WARMUP
             return False
 
-        if self.state == SpyGlass.State.WARMUP:
+        if self.state == Telescope.State.WARMUP:
             self._fps_meter_ticker.tick()
             self._fps_meter_warmup_cnt -= 1
             if self._fps_meter_warmup_cnt <= 0:
@@ -344,11 +344,11 @@ class SpyGlass(ABC):
 
             return False
 
-        if self.state == SpyGlass.State.STREAMING:
+        if self.state == Telescope.State.STREAMING:
             return self._put_frame(frame)
 
         # Should not arrive here
-        assert False, f'Unhandled SpyGlass state {self.state}' # pragma: no cover
+        assert False, f'Unhandled Telescope state {self.state}' # pragma: no cover
 
     def stop_streaming(self) -> None:
         ''' Stops the streaming.
@@ -356,4 +356,4 @@ class SpyGlass(ABC):
         Successive calls to :meth:`put` method will silently discard the frames.
         '''
         self._close_stream()
-        self.state = SpyGlass.State.STOPPED
+        self.state = Telescope.State.STOPPED

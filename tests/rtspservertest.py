@@ -6,8 +6,8 @@ os.environ['GST_DEBUG'] = '3'
 logging.basicConfig(level=logging.INFO)
 
 server = backpack.rtsp.RTSPServer(port='8554')
-sg1 = backpack.rtsp.RTSPSpyGlass(server, 'rainbow')
-sg2 = backpack.rtsp.RTSPSpyGlass(server, 'bw')
+sg1 = backpack.rtsp.RTSPTelescope(server, 'rainbow')
+sg2 = backpack.rtsp.RTSPTelescope(server, 'bw')
 sg1.start_streaming(30, 640, 480)
 sg2.start_streaming(30, 640, 480)
 server.start()

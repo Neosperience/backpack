@@ -14,7 +14,7 @@ Backpack is a toolset that makes development for AWS Panorama hopefully more enj
 Backpack provides the following modules:
  - *AutoIdentity* allows your application to learn more about itself and the host device. It gives access to the Panorama device id, application instance id, application name and description, and other similar information.
  - *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
- - *SpyGlass* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSpyGlass* is an implementation of a SpyGlass pipeline that lets you send the processed video to AWS Kinesis Video Streams.
+ - *Telescope* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSTelescope* is an implementation of a Telescope pipeline that lets you send the processed video to AWS Kinesis Video Streams.
  - *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
 
 ## Installation ⚙️
@@ -25,7 +25,7 @@ Backpack consists of several loosely coupled components, each solving a specific
 RUN pip install git+https://github.com/neosperience/backpack.git
 ```
 
-Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSSpyGlass` to restream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
+Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSTelescope` to restream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
 
 ## Permissions 🛡️
 
@@ -67,7 +67,7 @@ print(auto_identity)
 
 The code above prints details of the running application in the CloudWatch log stream of your Panorama app, something similar to:
 ```
-<AutoIdentity 
+<AutoIdentity
     application_created_time="2022-02-17 16:38:05.510000+00:00"
     application_description="Sample application description"
     application_instance_id="applicationInstance-0123456789abcdefghijklmn"
@@ -138,10 +138,10 @@ Results:
 ```
 <StopWatch name=root intervals=[0.5416] min=0.5416 mean=0.5416 max=0.5416 children=[
     <StopWatch name=task1 intervals=[0.2505] min=0.2505 mean=0.2505 max=0.2505 children=[
-        <StopWatch name=subtask1_1 intervals=[0.0301, 0.0501] min=0.0301 mean=0.0401 max=0.0501>, 
-        <StopWatch name=subtask1_2 intervals=[0.0701] min=0.0701 mean=0.0701 max=0.0701>, 
+        <StopWatch name=subtask1_1 intervals=[0.0301, 0.0501] min=0.0301 mean=0.0401 max=0.0501>,
+        <StopWatch name=subtask1_2 intervals=[0.0701] min=0.0701 mean=0.0701 max=0.0701>,
         <StopWatch name=subtask1_3 intervals=[0.0901] min=0.0901 mean=0.0901 max=0.0901>
-    ]>, 
+    ]>,
     <StopWatch name=task2 intervals=[0.0275, 0.0825, 0.0334, 0.0843, 0.0633] min=0.0275 mean=0.0582 max=0.0843>
 ]>
 ```
@@ -150,9 +150,9 @@ You can access all interval data, as well as the statistical values using `StopW
 
 ### Schedules 📅
 
-Schedules allow you to schedule the execution of a function at a later time. 
+Schedules allow you to schedule the execution of a function at a later time.
 
-It is important to note that `Schedule` instances do not intrinsically have an event loop or use kernel-based timing operations. Instead, call regularly the `tick()` method of the `Schedule`, and the scheduled function will be executed when the next `tick()` is called after the scheduled time. When developing Panorama applications, you typically call the `tick()` function in the frame processing loop. 
+It is important to note that `Schedule` instances do not intrinsically have an event loop or use kernel-based timing operations. Instead, call regularly the `tick()` method of the `Schedule`, and the scheduled function will be executed when the next `tick()` is called after the scheduled time. When developing Panorama applications, you typically call the `tick()` function in the frame processing loop.
 
 You can also specify a [python executor](https://docs.python.org/3/library/concurrent.futures.html) when creating `Schedule` objects. If an executor is specified, the scheduled function will be called asynchronously using that executor, the `tick()` method can immediately return, and the scheduled function will be executed in another thread.
 
@@ -292,7 +292,7 @@ class Application(panoramasdk.node):
         self.tacho.tick()
 
         # this  will block until next frame is available
-        streams = self.inputs.video_in.get() 
+        streams = self.inputs.video_in.get()
 
         for stream in streams:
             # process stream.image here ...
@@ -311,31 +311,31 @@ def main():
 main()
 ```
 
-## SpyGlass 🔭
+## Telescope 🔭
 
-As you may know, the only official way to get visual feedback on the correct functionality of your Panorama application is to physically connect a display to the HDMI port of the Panorama appliance. When connected, the display will show the output video stream of a single application deployed on the device. However, physically accessing the appliance is not always feasible. SpyGlass allows you to re-stream the output video of your Panorama application to an external service, for example to [AWS Kinesis Video Streams](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html). This can be very convenient to remotely monitor your application.
+As you may know, the only official way to get visual feedback on the correct functionality of your Panorama application is to physically connect a display to the HDMI port of the Panorama appliance. When connected, the display will show the output video stream of a single application deployed on the device. However, physically accessing the appliance is not always feasible. Telescope allows you to re-stream the output video of your Panorama application to an external service, for example to [AWS Kinesis Video Streams](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html). This can be very convenient to remotely monitor your application.
 
-### Warning notes about using SpyGlass
+### Warning notes about using Telescope
 
-Even if SpyGlass is a very helpful tool, using it might arise two concerns that you should consider carefully. For the same reason we discourage using SpyGlass in a production environment: it is principally a development aid or at most a debugging tool. 
+Even if Telescope is a very helpful tool, using it might arise two concerns that you should consider carefully. For the same reason we discourage using Telescope in a production environment: it is principally a development aid or at most a debugging tool.
 
-The first concern is of technical nature. Currently the application code in a Panorama app does not have direct access to the onboard GPU, thus all video encoding codecs used by SpyGlass run on the CPU of the device. This could take precious computing time from the CPUs that occupy with streaming the output instead of processing the video. We measured that streaming a single output stream with SpyGlass could require anything between 10-30% of the CPU capacity of the device. 
+The first concern is of technical nature. Currently the application code in a Panorama app does not have direct access to the onboard GPU, thus all video encoding codecs used by Telescope run on the CPU of the device. This could take precious computing time from the CPUs that occupy with streaming the output instead of processing the video. We measured that streaming a single output stream with Telescope could require anything between 10-30% of the CPU capacity of the device.
 
-The second concern regards data protection. The Panorama appliance is designed so to strongly protect the video streams being processed: it has even two ethernet interfaces to physically separate the network of the video cameras (typically a closed-circuit local area network) and the Internet access of the device. Using SpyGlass you might effectively relay the video stream from the protected, closed-circuit camera network to the public Internet. For this reason, you should carefully examine the data protection requirements of your application and the camera network before integrating SpyGlass.
+The second concern regards data protection. The Panorama appliance is designed so to strongly protect the video streams being processed: it has even two ethernet interfaces to physically separate the network of the video cameras (typically a closed-circuit local area network) and the Internet access of the device. Using Telescope you might effectively relay the video stream from the protected, closed-circuit camera network to the public Internet. For this reason, you should carefully examine the data protection requirements of your application and the camera network before integrating Telescope.
 
 ### How does it work?
 
-Technically speaking, SpyGlass instantiates a [GStreamer pipeline](https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html) with an [appsrc](https://gstreamer.freedesktop.org/documentation/app/appsrc.html) element at the head. An [OpenCV VideoWriter](https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html) is configured to write to the `appsrc` element: instead of saving the consecutive frames to a video file, it streams to the output sink. When opening the `VideoWriter` instance, the user should specify the frame width and height, as well as the frame rate of the output stream. You can manually specify these parameters or let SpyGlass infer these values from the input dimensions and the frequency you send new frames to it. If using this auto-configuration feature, some frames (by default 100) will be discarded at the beginning of the streaming, as they will be used to calculate statistics of the frame rate and measure the frame dimensions. This phase is referred to as the "warmup" state of SpyGlass. If later on, you send frames of different dimensions compared to the expected width and height, SpyGlass will redimension the input, but this has a performance penalty of the pipeline. You are also expected to send new frames to SpyGlass with the frequency specified in the frame-per-second parameter. If you send frames slower or faster, the KVS video fragments get out of sync and you won't be able to play back the video continuously.
+Technically speaking, Telescope instantiates a [GStreamer pipeline](https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html) with an [appsrc](https://gstreamer.freedesktop.org/documentation/app/appsrc.html) element at the head. An [OpenCV VideoWriter](https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html) is configured to write to the `appsrc` element: instead of saving the consecutive frames to a video file, it streams to the output sink. When opening the `VideoWriter` instance, the user should specify the frame width and height, as well as the frame rate of the output stream. You can manually specify these parameters or let Telescope infer these values from the input dimensions and the frequency you send new frames to it. If using this auto-configuration feature, some frames (by default 100) will be discarded at the beginning of the streaming, as they will be used to calculate statistics of the frame rate and measure the frame dimensions. This phase is referred to as the "warmup" state of Telescope. If later on, you send frames of different dimensions compared to the expected width and height, Telescope will redimension the input, but this has a performance penalty of the pipeline. You are also expected to send new frames to Telescope with the frequency specified in the frame-per-second parameter. If you send frames slower or faster, the KVS video fragments get out of sync and you won't be able to play back the video continuously.
 
 ### Configuring the Panorama Application Docker container
 
-SpyGlass depends on a set of custom compiled external libraries. You should have all these libraries compiled and configured correctly in your application's docker container in order to make `SpyGlass` work correctly. These libraries include:
+Telescope depends on a set of custom compiled external libraries. You should have all these libraries compiled and configured correctly in your application's docker container in order to make `Telescope` work correctly. These libraries include:
 
  - GStreamer 1.0 installed with standard plugins pack, libav, tools, and development libraries
  - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
  - numpy (it is typically installed by the base docker image of your Panorama application)
 
-Furthermore, if you want to use `KVSSpyGlass`, the `SpyGlass` implementation that streams the video to Kinesis Video Streams, you will need also the following libraries:
+Furthermore, if you want to use `KVSTelescope`, the `Telescope` implementation that streams the video to Kinesis Video Streams, you will need also the following libraries:
 
  - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
  - Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
@@ -344,29 +344,29 @@ Furthermore, if you want to use `KVSSpyGlass`, the `SpyGlass` implementation tha
    compiled by KVS Producer SDK
  - boto3 (it is typically installed by the base docker image of your Panorama application)
 
-We provide a sample Dockerfile in the examples folder that shows you how to install correctly these libraries in your Docker container. In most cases, it should be enough to copy the relevant sections from the sample to your application's Dockerfile. The first time you compile the docker container, it might take up to one hour to correctly compile all libraries. 
+We provide a sample Dockerfile in the examples folder that shows you how to install correctly these libraries in your Docker container. In most cases, it should be enough to copy the relevant sections from the sample to your application's Dockerfile. The first time you compile the docker container, it might take up to one hour to correctly compile all libraries.
 
-### Using KVSSpyGlass
+### Using KVSTelescope
 
-Compared to the `SpyGlass` base class, `KVSSpyGlass` adds an additional element to the pipeline: the Amazon Kinesis Video Streams (KVS) Producer library, wrapped in a GStreamer sink element. KVS Producer needs AWS credentials to function correctly: it does not use automatically the credentials associated with the Panorama Application Role. You have different options to provide credentials using `KVSCredentialsHandler` subclasses, provided in the `kvs` module. For testing purposes, you can create an IAM user in your AWS account that has the privileges only to the following operations to write media to KVS: 
- 
+Compared to the `Telescope` base class, `KVSTelescope` adds an additional element to the pipeline: the Amazon Kinesis Video Streams (KVS) Producer library, wrapped in a GStreamer sink element. KVS Producer needs AWS credentials to function correctly: it does not use automatically the credentials associated with the Panorama Application Role. You have different options to provide credentials using `KVSCredentialsHandler` subclasses, provided in the `kvs` module. For testing purposes, you can create an IAM user in your AWS account that has the privileges only to the following operations to write media to KVS:
+
  - `kinesisvideo:DescribeStream`
  - `kinesisvideo:GetStreamingEndpoint`
  - `kinesisvideo:PutMedia`
 
 You should configure this user to have programmatic access to AWS resources, and get the AWS Access Key and Secret Key pair of the user. These are so-called static credentials that do not expire. You can create a `KVSInlineCredentialsHandler` or `KVSEnvironmentCredentialsHandler` instance to pass these credentials to KVS Producer Plugin directly in the GStreamer pipeline definition, or as environment variables. However as these credentials do not expire, it is not recommended to use this setting in a production environment. Even in a development and testing environment, you should take the appropriate security measures to protect these credentials: never hard code them in the source code. Instead, use AWS Secret Manager or a similar service to provision these parameters.
 
-`KVSSpyGlass` can use also the Panorama Application Role to pass the application's credentials to KVS Producer. These credentials are temporary, meaning that they expire within a couple of hours, and they should be renewed. The Producer library expects temporary credentials in a text file. `KVSFileCredentialsHandler` takes manages the renewal of the credentials and periodically updates the text file with the new credentials. You should always test your Panorama application - KVS integration that it still works when the credentials are refreshed. This means letting run your application for several hours and periodically checking if it still streams the video to KVS. You will also find diagnostic information in the CloudWatch logs of your application when the credentials were renewed.
+`KVSTelescope` can use also the Panorama Application Role to pass the application's credentials to KVS Producer. These credentials are temporary, meaning that they expire within a couple of hours, and they should be renewed. The Producer library expects temporary credentials in a text file. `KVSFileCredentialsHandler` takes manages the renewal of the credentials and periodically updates the text file with the new credentials. You should always test your Panorama application - KVS integration that it still works when the credentials are refreshed. This means letting run your application for several hours and periodically checking if it still streams the video to KVS. You will also find diagnostic information in the CloudWatch logs of your application when the credentials were renewed.
 
-`KvsSpyGlass` needs also two correctly configured environment variables to make GStreamer find the KVS Producer plugin. The name of these variables are `GST_PLUGIN_PATH` and `LD_LIBRARY_PATH`. They point to the folder where the KVS Producer binary and its 3rd party dependencies can be found. If you've used the example Dockerfile provided, the correct values of these variables are written to a small configuration file at `/panorama/.env`. You should pass the path of this file to `KvsSpyGlass` or otherwise ensure that these variables contain the correct value.
+`KvsTelescope` needs also two correctly configured environment variables to make GStreamer find the KVS Producer plugin. The name of these variables are `GST_PLUGIN_PATH` and `LD_LIBRARY_PATH`. They point to the folder where the KVS Producer binary and its 3rd party dependencies can be found. If you've used the example Dockerfile provided, the correct values of these variables are written to a small configuration file at `/panorama/.env`. You should pass the path of this file to `KvsTelescope` or otherwise ensure that these variables contain the correct value.
 
-At instantiation time, you should pass at least the AWS region name where your stream is created, the name of the stream, and a credentials handler instance. If you want to configure manually the frame rate and the dimensions of the frames, you should also pass them here: if both are specified, the warmup period will be skipped and your first frame will be sent directly to KVS. When you are ready to send the frames, you should call the `start_streaming` method: this will open the GStreamer pipeline. After this method is called, you are expected to send new frames to the stream calling the `put` method periodically, with the frequency of the frame rate specified, or inferred by `KvsSpyGlass`. You can stop and restart streaming any number of times on the same `KvsSpyGlass` instance.
+At instantiation time, you should pass at least the AWS region name where your stream is created, the name of the stream, and a credentials handler instance. If you want to configure manually the frame rate and the dimensions of the frames, you should also pass them here: if both are specified, the warmup period will be skipped and your first frame will be sent directly to KVS. When you are ready to send the frames, you should call the `start_streaming` method: this will open the GStreamer pipeline. After this method is called, you are expected to send new frames to the stream calling the `put` method periodically, with the frequency of the frame rate specified, or inferred by `KvsTelescope`. You can stop and restart streaming any number of times on the same `KvsTelescope` instance.
 
 Example usage:
 
 ```python
 import panoramasdk
-from backpack.kvs import KVSSpyGlass, KVSFileCredentialsHandler
+from backpack.kvs import KVSTelescope, KVSFileCredentialsHandler
 
 # You might want to read these values from Panorama application parameters
 stream_region = 'us-east-1'
@@ -382,27 +382,27 @@ class Application(panoramasdk.node):
         super().__init__()
         # ...
         credentials_handler = KVSFileCredentialsHandler()
-        self.spyglass = KVSSpyGlass(
+        self.telescope = KVSTelescope(
             stream_region=stream_region,
             stream_name=stream_name,
             credentials_handler=credentials_handler,
             dotenv_path=DOTENV_PATH
         )
         # This call opens the streaming pipeline:
-        self.spyglass.start_streaming()
+        self.telescope.start_streaming()
 
     # called from video processing loop:
     def process_streams(self):
         streams = self.inputs.video_in.get()
 
         for idx, stream in enumerate(streams):
-            
+
             # Process the stream, for example with:
             # self.process_media(stream)
 
             # TODO: eventually multiplex streams to a single frame
             if idx == 0:
-                self.spyglass.put(stream.image)
+                self.telescope.put(stream.image)
 ```
 
 If everything worked well, you can watch the restreamed video in the [Kinesis Video Streams page](https://console.aws.amazon.com/kinesisvideo/home) of the AWS console.
@@ -426,7 +426,7 @@ Example usage:
 import panoramasdk
 from backpack.annotation import (
     Point, LabelAnnotation, RectAnnotation, TimestampAnnotation,
-    OpenCVImageAnnotationDriver, 
+    OpenCVImageAnnotationDriver,
     PanoramaMediaAnnotationDriver
 )
 
@@ -434,7 +434,7 @@ class Application(panoramasdk.node):
 
     def __init__(self):
         super().__init__()
-        # self.spyglass = ... 
+        # self.telescope = ...
         self.panorama_driver = PanoramaMediaAnnotationDriver()
         self.cv2_driver = OpenCVImageAnnotationDriver()
 
@@ -452,5 +452,5 @@ class Application(panoramasdk.node):
             # TODO: eventually multiplex streams to a single frame
             if idx == 0:
                 rendered = self.cv2_driver.render(annotations, stream.image.copy())
-                # self.spyglass.put(rendered)
+                # self.telescope.put(rendered)
 ```

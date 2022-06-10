@@ -1,4 +1,4 @@
-# Example Dockerfile that installs all required dependencies for KVSSpyGlass
+# Example Dockerfile that installs all required dependencies for KVSTelescope
 
 FROM public.ecr.aws/panorama/panorama-application
 
@@ -138,7 +138,7 @@ WORKDIR /
 # COPY src /panorama
 
 # For local testing, build this container from the root of the backpack repo with this command:
-# $ docker build . -f examples/Dockerfile -t panorama-backpack:1.0 
+# $ docker build . -f examples/Dockerfile -t panorama-backpack:1.0
 COPY . /opt/backpack
 RUN python3 -m pip install /opt/backpack
 

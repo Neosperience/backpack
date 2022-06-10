@@ -1,5 +1,5 @@
 '''
-This module contains RTSPSpyGlass and RTSPServer. These two classes allow serving a sequence of
+This module contains RTSPTelescope and RTSPServer. These two classes allow serving a sequence of
 OpenCV images as video streams using the RTSP protocol.
 
 To use this class you MUST have the following dependencies correctly configured on your system:
@@ -26,7 +26,7 @@ gi.require_version('Gst', '1.0')
 gi.require_version('GstRtspServer', '1.0')
 from gi.repository import GLib, GstRtspServer
 
-from .spyglass import SpyGlass
+from .telescope import Telescope
 
 class RTSPServer:
     ''' The :class:`RTSPServer` instance wraps a GStreamer RTSP server that serves video streams
@@ -37,7 +37,7 @@ class RTSPServer:
     RTSP server. The port number of the server should be unique among all applications on the
     device.
 
-    For an example usage of :class:`RTSPServer`, see the documentation of :class:`RTSPSpyGlass`
+    For an example usage of :class:`RTSPServer`, see the documentation of :class:`RTSPTelescope`
     class.
 
     Args:
@@ -130,27 +130,27 @@ class RTSPServer:
 
 
 
-class RTSPSpyGlass(SpyGlass):
-    ''' Together with :class:`RTSPServer`, :class:`RTSPSpyGlass` a sequence of OpenCV frames
+class RTSPTelescope(Telescope):
+    ''' Together with :class:`RTSPServer`, :class:`RTSPTelescope` a sequence of OpenCV frames
     on the RTSP protocol.
 
     A single instance of :class:`RTSPServer` application can serve streams coming from multiple
-    :class:`RTSPSpyGlass` instances. You should instantiate the :class:`RTSPServer` instance first.
+    :class:`RTSPTelescope` instances. You should instantiate the :class:`RTSPServer` instance first.
     For example, if you want to serve two seperate RTSP streams, you could use this code to set up
     your scenario::
 
         server = RTSPServer(port="8554")
-        spyglass1 = RTSPSpyGlass(server, "/stream1")
-        spyglass2 = RTSPSpyGlass(server, "/stream2")
-        spyglass1.start_streaming(30, 640, 480)
-        spyglass2.start_streaming(30, 640, 480)
+        telescope1 = RTSPTelescope(server, "/stream1")
+        telescope2 = RTSPTelescope(server, "/stream2")
+        telescope1.start_streaming(30, 640, 480)
+        telescope2.start_streaming(30, 640, 480)
         server.start()
 
         while True:
             frame1 = ... # Get frame for the first stream as a numpy array of shape (640, 480, 3)
             frame2 = ... # Get frame for the second stream
-            spyglass1.put(frame1)
-            spyglass2.put(frame2)
+            telescope1.put(frame1)
+            telescope2.put(frame2)
 
     Using this code, you can access the streams at the following URLs:
 
@@ -164,9 +164,9 @@ class RTSPSpyGlass(SpyGlass):
         server: The RTSPServer instance that this stream is being served by
         path: The path to the stream. This is the path that the client will use to connect to
             the stream
-        args: Positional arguments to be passed to :class:`~backpack.spyglass.SpyGlass`
+        args: Positional arguments to be passed to :class:`~backpack.telescope.Telescope`
             superclass initializer.
-        kwargs: Keyword arguments to be passed to :class:`~backpack.spyglass.SpyGlass`
+        kwargs: Keyword arguments to be passed to :class:`~backpack.telescope.Telescope`
             superclass initializer.
     '''
 
@@ -177,8 +177,8 @@ class RTSPSpyGlass(SpyGlass):
         super().__init__(*args, **kwargs)
         self.server = server
         self.path = path if path.startswith('/') else '/' + path
-        self.loopback_port = RTSPSpyGlass.last_loopback_port
-        RTSPSpyGlass.last_loopback_port += 1
+        self.loopback_port = RTSPTelescope.last_loopback_port
+        RTSPTelescope.last_loopback_port += 1
         self.server.add_stream(self.path, self._get_server_pipeline())
 
     def _get_pipeline(self, fps: float, width: int, height: int) -> str:

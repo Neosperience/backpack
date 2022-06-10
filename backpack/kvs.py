@@ -1,4 +1,4 @@
-''' :class:`~backpack.kvs.KVSSpyGlass` is a :class:`~backpack.spyglass.SpyGlass` implementation
+''' :class:`~backpack.kvs.KVSTelescope` is a :class:`~backpack.telescope.Telescope` implementation
 that streams the output of the AWS Panorama application to AWS Kinesis Video Streams service.
 
 To use this class you MUST have the following dependencies correctly configured on your system:
@@ -38,7 +38,7 @@ from abc import ABC, abstractmethod
 import boto3
 from botocore.credentials import RefreshableCredentials
 
-from .spyglass import SpyGlass
+from .telescope import Telescope
 from .timepiece import AtSchedule, Callback, local_now
 
 def _is_refreshable(credentials):
@@ -47,14 +47,14 @@ def _is_refreshable(credentials):
 def _format_time(datetime_):
     return datetime_.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-class KVSSpyGlass(SpyGlass):
+class KVSTelescope(Telescope):
 
     ''' Sends OpenCV frames to Kinesis Video Streams.
 
-    :class:`KVSSpyGlass` can be used to create programatically a video stream and send
+    :class:`KVSTelescope` can be used to create programatically a video stream and send
     it to AWS Kinesis Video Streams service.
 
-    When initializing the :class:`KVSSpyGlass` instance, you should provide the AWS
+    When initializing the :class:`KVSTelescope` instance, you should provide the AWS
     credentials that will be used to stream the video in your AWS account.
     The :class:`KVSCredentialsHandler` subclasses implement different ways of passing the
     credentials to the underlying Kinesis Video Stream Producer. In most of the
@@ -62,14 +62,14 @@ class KVSSpyGlass(SpyGlass):
     as long as your AWS user or the assumed IAM Role have a policy to put data in KVS.
 
     You can configure the frame width, height and fps auto-detection as described
-    in the :class:`~backpack.spyglass.SpyGlass` class documentation.
+    in the :class:`~backpack.telescope.Telescope` class documentation.
 
     Args:
         stream_region: The AWS region of the Kinesis Video Stream
         stream_name: The name of the Kinesis Video Stream
         credentials_handler: The credentials handler
-        args: Positional arguments to be passed to SpyGlass initializer.
-        kwargs: Keyword arguments to be passed to SpyGlass initializer.
+        args: Positional arguments to be passed to Telescope initializer.
+        kwargs: Keyword arguments to be passed to Telescope initializer.
     '''
 
     def __init__(self,

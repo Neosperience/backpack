@@ -1,59 +1,59 @@
-.. _spyglass-readme:
+.. _telescope-readme:
 
-SpyGlass
---------
+Telescope
+---------
 
 As you may know, the only official way to get visual feedback on the correct functionality of your
 Panorama application is to physically connect a display to the HDMI port of the Panorama appliance.
 When connected, the display will show the output video stream of a single application deployed on
-the device. However, physically accessing the appliance is not always feasible. SpyGlass allows you
+the device. However, physically accessing the appliance is not always feasible. Telescope allows you
 to re-stream the output video of your Panorama application to an external service, for example, to
 `AWS Kinesis Video Streams`_. This can be very convenient to remotely monitor your application.
 
-.. _`AWS Kinesis Video Streams`: 
+.. _`AWS Kinesis Video Streams`:
    https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html
 
-Warning notes about using SpyGlass
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Warning notes about using Telescope
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Even if SpyGlass is a helpful tool, it might raise two concerns that you should consider
-carefully. For the same reason, we discourage using SpyGlass in a production environment: it is
-principally a development aid or, at most, a debugging tool. 
+Even if Telescope is a helpful tool, it might raise two concerns that you should consider
+carefully. For the same reason, we discourage using Telescope in a production environment: it is
+principally a development aid or, at most, a debugging tool.
 
 The first concern is technical. Currently, the application code in a Panorama app does not
-have direct access to the onboard GPU thus all video encoding codecs used by SpyGlass run on the
+have direct access to the onboard GPU thus all video encoding codecs used by Telescope run on the
 CPU of the device. This could take precious computing time from the CPUs that occupy with streaming
 the output instead of processing the video. We measured that streaming a single output stream with
-SpyGlass could require anything between 10-30% of the CPU capacity of the device. 
+Telescope could require anything between 10-30% of the CPU capacity of the device.
 
 The second concern regards data protection. The Panorama appliance is designed so to strongly
 protect the video streams being processed: it has even two ethernet interfaces to physically
 separate the network of the video cameras (typically a closed-circuit local area network) and the
-Internet access of the device. Using SpyGlass you might effectively relay the video stream from the
+Internet access of the device. Using Telescope you might effectively relay the video stream from the
 protected, closed-circuit camera network to the public Internet. For this reason, you should
-carefully examine the data protection requirements of your application and the camera network 
-before integrating SpyGlass.
+carefully examine the data protection requirements of your application and the camera network
+before integrating Telescope.
 
 How does it work?
 ^^^^^^^^^^^^^^^^^
 
-Technically speaking, SpyGlass instantiates a `GStreamer pipeline`_ with an `appsrc`_ element at the
+Technically speaking, Telescope instantiates a `GStreamer pipeline`_ with an `appsrc`_ element at the
 head. An OpenCV  `VideoWriter`_ is configured to write to the `appsrc`_ element: instead of saving
-the consecutive frames to a video file, it streams to the output sink. 
+the consecutive frames to a video file, it streams to the output sink.
 
 When opening the `VideoWriter`_ instance, the user should specify the frame width and height, as
 well as the frame rate of the output stream. You can manually specify these parameters or let
-SpyGlass infer these values from the input dimensions and the frequency you send new frames to it.
+Telescope infer these values from the input dimensions and the frequency you send new frames to it.
 If using this auto-configuration feature, some frames (by default 100) will be discarded at the
 beginning of the streaming, as they will be used to calculate statistics of the frame rate and
-measure the frame dimensions. This phase is referred to as the "warmup" state of SpyGlass. If later
-on, you send frames of different dimensions compared to the expected width and height, SpyGlass will
+measure the frame dimensions. This phase is referred to as the "warmup" state of Telescope. If later
+on, you send frames of different dimensions compared to the expected width and height, Telescope will
 redimension the input, but this has a performance penalty of the pipeline. You are also expected to
-send new frames to SpyGlass with the frequency specified in the frame-per-second parameter. If you
+send new frames to Telescope with the frequency specified in the frame-per-second parameter. If you
 send frames slower or faster, the KVS video fragments get out of sync and you won't be able to play
 back the video continuously.
 
-.. _`GStreamer pipeline`: 
+.. _`GStreamer pipeline`:
    https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html
 .. _`appsrc`: https://gstreamer.freedesktop.org/documentation/app/appsrc.html
 .. _`VideoWriter`: https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html
@@ -61,11 +61,11 @@ back the video continuously.
 Configuring the Panorama Application Docker container
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-SpyGlass
-~~~~~~~~
+Telescope
+~~~~~~~~~
 
-SpyGlass depends on a set of custom compiled external libraries. You should have all these libraries
-compiled and configured correctly in your application's docker container in order to make SpyGlass
+Telescope depends on a set of custom compiled external libraries. You should have all these libraries
+compiled and configured correctly in your application's docker container in order to make Telescope
 work correctly. These libraries include:
 
  - ``GStreamer 1.0`` installed with standard plugins pack, libav, tools, and development libraries
@@ -161,12 +161,12 @@ The following snippet shows how to configure your ``Dockerfile`` to install thes
   WORKDIR /panorama
 
 
-KVSSpyGlass
-~~~~~~~~~~~
+KVSTelescope
+~~~~~~~~~~~~
 
-Furthermore, if you want to use :class:`~backpack.kvs.KVSSpyGlass`, the
-:class:`backpack.spyglass.SpyGlass` implementation that streams the video to Kinesis Video Streams,
-you will need also the following libraries and configurations:
+Furthermore, if you want to use :class:`~backpack.kvs.KVSTelescope`, the
+:class:`backpack.telescope.Telescope` implementation that streams the video to Kinesis Video
+Streams, you will need also the following libraries and configurations:
 
  - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
  - Environment variable ``GST_PLUGIN_PATH`` configured to point to the directory where the compiled
@@ -205,11 +205,11 @@ You should add the following lines to the application's Dockerfile to install th
   # custom version into the container
   RUN curl https://github.com/neosperience/backpack/raw/main/resources/kvs_log_configuration -o /kvs_log_configuration
 
-RTSPSpyGlass
-~~~~~~~~~~~~
+RTSPTelescope
+~~~~~~~~~~~~~
 
-If you wish to stream your video to an RTSP server using :class:`backpack.rtsp.RTSPSpyGlass`, in
-addition to SpyGlass dependencies you will need:
+If you wish to stream your video to an RTSP server using :class:`backpack.rtsp.RTSPTelescope`, in
+addition to Telescope dependencies you will need:
 
 - `gst-rtsp-server`_ with development libraries (libgstrtspserver-1.0-dev)
 
@@ -230,18 +230,18 @@ it might take up to one hour to correctly compile all libraries.
 Usage
 ^^^^^
 
-KVSSpyGlass
-~~~~~~~~~~~
+KVSTelescope
+~~~~~~~~~~~~
 
-Compared to the :class:`~backpack.spyglass.SpyGlass` base class, :class:`~backpack.kvs.KVSSpyGlass`
+Compared to the :class:`~backpack.telescope.Telescope` base class, :class:`~backpack.kvs.KVSTelescope`
 adds an additional element to the pipeline: the `Amazon Kinesis Video Streams Producer Library`_,
 wrapped in a GStreamer sink element. KVS Producer needs AWS credentials to function correctly: it
 does not use automatically the credentials associated with the Panorama Application Role. You have
 different options to provide credentials using :class:`~backpack.kvs.KVSCredentialsHandler`
 subclasses, provided in the :mod:`~backpack.kvs` module. For testing purposes, you can `create an
 IAM user`_ in your AWS account and `attach an IAM policy`_ to it that has the privileges only to the
-following operations to write media to KVS: 
- 
+following operations to write media to KVS:
+
  - ``kinesisvideo:DescribeStream``
  - ``kinesisvideo:GetStreamingEndpoint``
  - ``kinesisvideo:PutMedia``
@@ -256,7 +256,7 @@ environment. Even in a development and testing environment, you should take the 
 measures to protect these credentials: never hard code them in the source code. Instead, use AWS
 Secret Manager or a similar service to provision these parameters.
 
-:class:`~backpack.kvs.KVSSpyGlass` can use also the Panorama Application Role to pass the
+:class:`~backpack.kvs.KVSTelescope` can use also the Panorama Application Role to pass the
 application's credentials to KVS Producer. These credentials are temporary, meaning that they expire
 within a couple of hours, and they should be renewed. The Producer library expects temporary
 credentials in a text file. :class:`~backpack.kvs.KVSFileCredentialsHandler` takes manages the
@@ -266,29 +266,29 @@ credentials are refreshed. This means letting run your application for several h
 periodically checking if it still streams the video to KVS. You will also find diagnostic
 information in the CloudWatch logs of your application when the credentials were renewed.
 
-:class:`~backpack.kvs.KVSSpyGlass` needs also two correctly configured environment variables to make
+:class:`~backpack.kvs.KVSTelescope` needs also two correctly configured environment variables to make
 GStreamer find the KVS Producer plugin. The name of these variables are ``GST_PLUGIN_PATH`` and
 ``LD_LIBRARY_PATH``. They point to the folder where the KVS Producer binary and its 3rd party
 dependencies can be found. If you've used the example Dockerfile provided, the correct values of
 these variables are written to a small configuration file at ``/panorama/.env``. You should pass the
-path of this file to :class:`~backpack.kvs.KVSSpyGlass` or otherwise ensure that these variables
+path of this file to :class:`~backpack.kvs.KVSTelescope` or otherwise ensure that these variables
 contain the correct value.
 
 At instantiation time, you should pass at least the AWS region name where your stream is created,
 the name of the stream, and a credentials handler instance. If you want to configure manually the
 frame rate and the dimensions of the frames, you should also pass them here: if both are specified,
 the warmup period will be skipped and your first frame will be sent directly to KVS. When you are
-ready to send the frames, you should call the :meth:`~backpack.spyglass.SpyGlass.start_streaming`
+ready to send the frames, you should call the :meth:`~backpack.telescope.Telescope.start_streaming`
 method: this will open the GStreamer pipeline. After this method is called, you are expected to send
-new frames to the stream calling the :meth:`~backpack.spyglass.SpyGlass.put` method periodically,
-with the frequency of the frame rate specified, or inferred by :class:`~backpack.kvs.KVSSpyGlass`.
+new frames to the stream calling the :meth:`~backpack.telescope.Telescope.put` method periodically,
+with the frequency of the frame rate specified, or inferred by :class:`~backpack.kvs.KVSTelescope`.
 You can stop and restart streaming any number of times on the same
-:class:`~backpack.kvs.KVSSpyGlass` instance.
+:class:`~backpack.kvs.KVSTelescope` instance.
 
-.. _`Amazon Kinesis Video Streams Producer library`: 
+.. _`Amazon Kinesis Video Streams Producer library`:
    https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/producer-sdk.html
 .. _`create an IAM user`: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
-.. _`attach an IAM policy`: 
+.. _`attach an IAM policy`:
    https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-edit.html
 
 Example usage:
@@ -296,7 +296,7 @@ Example usage:
 .. code-block:: python
 
   import panoramasdk
-  from backpack.kvs import KVSSpyGlass, KVSFileCredentialsHandler
+  from backpack.kvs import KVSTelescope, KVSFileCredentialsHandler
 
   # You might want to read these values from Panorama application parameters
   stream_region = 'us-east-1'
@@ -312,41 +312,41 @@ Example usage:
           super().__init__()
           # ...
           credentials_handler = KVSFileCredentialsHandler()
-          self.spyglass = KVSSpyGlass(
+          self.telescope = KVSTelescope(
               stream_region=stream_region,
               stream_name=stream_name,
               credentials_handler=credentials_handler,
               dotenv_path=DOTENV_PATH
           )
           # This call opens the streaming pipeline:
-          self.spyglass.start_streaming()
+          self.telescope.start_streaming()
 
       # called from video processing loop:
       def process_streams(self):
           streams = self.inputs.video_in.get()
 
           for idx, stream in enumerate(streams):
-              
+
               # Process the stream, for example with:
               # self.process_media(stream)
 
               # TODO: eventually multiplex streams to a single frame
               if idx == 0:
-                  self.spyglass.put(stream.image)
+                  self.telescope.put(stream.image)
 
 If everything worked well, you can watch the restreamed video in the `Kinesis Video Streams page`_
 of the AWS console.
 
 .. _`Kinesis Video Streams page`: https://console.aws.amazon.com/kinesisvideo/home
 
-For more information, refer to the :ref:`spyglass-api`, :ref:`kvs-api` and the :ref:`rtsp-api`
+For more information, refer to the :ref:`telescope-api`, :ref:`kvs-api` and the :ref:`rtsp-api`
 module API documentation.
 
-RTSPSpyGlass
-~~~~~~~~~~~~
+RTSPTelescope
+~~~~~~~~~~~~~
 
-:class:`~backpack.rtsp.RTSPSpyGlass` starts an `RTSP`_ server rigth in the container of your
-Panorama application. You can connect to the server with RTSP client applications running on your 
+:class:`~backpack.rtsp.RTSPTelescope` starts an `RTSP`_ server rigth in the container of your
+Panorama application. You can connect to the server with RTSP client applications running on your
 development computer and remotely play back the video stream annotated by your Panorama application.
 
 The following conditions should hold true for successful playback:
@@ -354,7 +354,7 @@ The following conditions should hold true for successful playback:
  * The Panorama Appliance should run firmware version 4.3.45 or later and your application should be
    built against the base image of version 1.1.0 or later. The Panorama SDK added the possibility of
    `serving inbound traffic`_ starting from these software versions. See
-   also the `Panorama release notes`_. 
+   also the `Panorama release notes`_.
  * You should correctly configure the server port in the application and package manifest files of
    your Panorama app to enable inbound traffic. You can find more information on how to do this in
    the `Serving inbound traffic`_ section of the Panorama documentation, or in the later paragraphs
@@ -368,18 +368,18 @@ The following conditions should hold true for successful playback:
  * The routing table and firewall configuration of the Panorama appliance's network should allow
    accessing the server on the configured port. Naturally, the computer running the RTSP client
    should also be able to access the server on this port.
- * You should install an RTSP client on your development computer to access the RTSP server. The 
+ * You should install an RTSP client on your development computer to access the RTSP server. The
    most popular choice is `VLC Media Player`_.
 
 .. _`RTSP`: https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol
 .. _`Serving inbound traffic`: https://docs.aws.amazon.com/panorama/latest/dev/applications-ports.html
 .. _`Panorama release notes`: https://docs.aws.amazon.com/panorama/latest/dev/panorama-releases.html
 .. _`VLC Media Player`: https://www.videolan.org
- 
-Before using :class:`~backpack.rtsp.RTSPSpyGlass`, first you should create a single instance of
+
+Before using :class:`~backpack.rtsp.RTSPTelescope`, first you should create a single instance of
 :class:`~backpack.rtsp.RTSPServer`. One server instance can serve multiple video streams. Each
-:class:`~backpack.rtsp.RTSPSpyGlass` instance should be associated with a server and an URL path 
-where the RTSP stream generated by the SpyGlass will be served:
+:class:`~backpack.rtsp.RTSPTelescope` instance should be associated with a server and an URL path
+where the RTSP stream generated by the Telescope will be served:
 
 .. code-block:: python
 
@@ -389,12 +389,12 @@ where the RTSP stream generated by the SpyGlass will be served:
       def __init__(self, logger):
           super().__init__()
           self.server = RTSPServer(port=RTSP_SERVER_PORT)
-          self.spyglass = RTSPSpyGlass(self.server, "/my_awesome_stream")
+          self.telescope = RTSPTelescope(self.server, "/my_awesome_stream")
 
           # This call opens the streaming pipeline:
-          self.spyglass.start_streaming()
+          self.telescope.start_streaming()
 
-          # Start the RTSP server. You can not register more RTSPSpyGlass instances 
+          # Start the RTSP server. You can not register more RTSPTelescope instances
           # to the server once the it was started.
           self.server.start()
 
@@ -403,13 +403,13 @@ where the RTSP stream generated by the SpyGlass will be served:
           streams = self.inputs.video_in.get()
 
           for idx, stream in enumerate(streams):
-              
+
               # Process the stream, for example with:
               # self.process_media(stream)
 
               # TODO: eventually multiplex streams to a single frame
               if idx == 0:
-                  self.spyglass.put(stream.image)
+                  self.telescope.put(stream.image)
 
 Apart from the application code, you should also configure the inbound networking for your
 application modifying the manifest files. Below you can find the example of an application package
@@ -487,23 +487,23 @@ The application manifest file, typically found under a path similar to
       }
   }
 
-You should confirm the opening the inbount port for the application at deployment time. Using the 
+You should confirm the opening the inbount port for the application at deployment time. Using the
 deployment wizard on the AWS console, the required steps follow.
 
 #. In the "Configure" step, select "Configure application":
 
-   .. image:: rtspspyglass/config-wizard1.png
+   .. image:: rtsptelescope/config-wizard1.png
 
 #. In the "Configure application" page, select "Inbound ports" tab:
 
-   .. image:: rtspspyglass/config-wizard2.png
+   .. image:: rtsptelescope/config-wizard2.png
 
 #. Enter the server port in the text field and save the configuration:
 
-   .. image:: rtspspyglass/config-wizard3.png
+   .. image:: rtsptelescope/config-wizard3.png
 
-If everyhing was configured correctly, you can open the video stream generated by the SpyGlass with
+If everyhing was configured correctly, you can open the video stream generated by the Telescope with
 an RTSP client. The format of the URL will be ``rtsp://192.168.0.100:8554/my_awesome_stream``
 where you should replace ``192.168.0.100`` with the IP address of the Panorama appliance, ``8554``
 with the port number of the RTSP server (if you've changed it), and ``my_awesome_stream`` with the
-URL path you've passed to the :class:`~backpack.rtsp.RTSPSpyGlass` initializer.
+URL path you've passed to the :class:`~backpack.rtsp.RTSPTelescope` initializer.

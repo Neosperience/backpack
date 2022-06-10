@@ -36,7 +36,7 @@ Example usage:
     import panoramasdk
     from backpack.annotation import (
         Point, LabelAnnotation, RectAnnotation, TimestampAnnotation,
-        OpenCVImageAnnotationDriver, 
+        OpenCVImageAnnotationDriver,
         PanoramaMediaAnnotationDriver
     )
 
@@ -44,7 +44,7 @@ Example usage:
 
         def __init__(self):
             super().__init__()
-            # self.spyglass = ... 
+            # self.telescope = ...
             self.panorama_driver = PanoramaMediaAnnotationDriver()
             self.cv2_driver = OpenCVImageAnnotationDriver()
 
@@ -62,6 +62,6 @@ Example usage:
                 # TODO: eventually multiplex streams to a single frame
                 if idx == 0:
                     rendered = self.cv2_driver.render(annotations, stream.image.copy())
-                    # self.spyglass.put(rendered)
+                    # self.telescope.put(rendered)
 
 For more information, refer to the :ref:`annotation-api` API documentation.
