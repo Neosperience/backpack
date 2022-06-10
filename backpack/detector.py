@@ -36,7 +36,7 @@ class Detection:
 class Detector(ABC):
 
     @abstractmethod
-    def process_frame(image: np.ndarray) -> List[Detection]:
+    def process_frame(self, image: np.ndarray) -> List[Detection]:
         ''' Processes a single frame and returns the list of detections.
 
         Args:
