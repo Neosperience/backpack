@@ -14,6 +14,7 @@ import numpy as np
 
 from .timepiece import local_now
 from .geometry import Point, Rectangle, Line, PolyLine
+from .detector import Detection
 
 class Color(NamedTuple):
     ''' A color in the red, blue, green space.
@@ -259,6 +260,21 @@ class BoundingBoxAnnotation(NamedTuple):
 
     color: Optional[Color] = None
     ''' The color of the bounding box and the labels. '''
+
+    @staticmethod
+    def from_detection(detection: Detection, color: Optional[Color]=None):
+        ''' Creates a BoundingBoxAnnotation from a detected object.
+
+        Args:
+            detection: the detected object
+            color: the color of the annotation
+        '''
+        name = detection.class_name or str(detection.class_id)
+        return BoundingBoxAnnotation(
+            rectangle=detection.box,
+            top_label=f'{name}: {detection.score:.2%}',
+            color=color
+        )
 
 
 class AnnotationDriverBase(ABC):
