@@ -32,6 +32,22 @@ class Detection:
     class_name: Optional[str] = None
     ''' The class name of the detected object. '''
 
+@dataclass(frozen=True)
+class TrackedObject(Detection):
+    ''' The current position of an object tracked by an object tracker.
+
+    Args:
+        box (Rectangle): The bounding box of the tracked object. The coordinate pairs should
+            be normalized to the `[0; 1]` range respect to the size of the original image.
+        score (float): The confidence score of the detection in the `[0; 1]` range.
+        class_id (int): The class identifier of the detected object.
+        class_name (str): The class name of the detected object, if known.
+        track_id (int): The identifier of the object instance being tracked.
+    '''
+
+    track_id: int = 0
+    ''' The identifier of the object instance being tracked. '''
+
 
 class Detector(ABC):
 
