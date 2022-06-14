@@ -1,6 +1,6 @@
 ''' This module contains a generic interface for object detectors. '''
 
-from typing import List, Optional
+from typing import List, Optional, Mapping
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -50,6 +50,9 @@ class TrackedObject(Detection):
 
 
 class Detector(ABC):
+
+    class_names: Mapping[int, str]
+    ''' Mapping that associates the detected object class (categories) identifiers with names. '''
 
     @abstractmethod
     def process_frame(self, image: np.ndarray) -> List[Detection]:
