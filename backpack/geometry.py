@@ -268,7 +268,27 @@ class Rectangle:
     @lazy_property
     def size(self) -> Tuple[float, float]:
         ''' The width and height of the rectangle. '''
-        return self.pt_max.x - self.pt_min.x, self.pt_max.y - self.pt_min.y
+        return self.pt_width, self.height
+
+    @lazy_property
+    def width(self) -> float:
+        ''' The width of the rectangle. '''
+        return self.pt_max.x - self.pt_min.x
+
+    @lazy_property
+    def height(self) -> float:
+        ''' The height of the rectangle. '''
+        return self.pt_max.y - self.pt_min.y
+
+    @lazy_property
+    def area(self) -> float:
+        ''' The area of the rectangle. '''
+        return self.width * self.height
+
+    @lazy_property
+    def aspect_ratio(self) -> float:
+        ''' The aspect ratio of the rectangle. '''
+        return self.width / self.height
 
     @classmethod
     def from_value(cls, value):
