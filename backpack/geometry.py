@@ -340,6 +340,42 @@ class Rectangle:
         else:
             raise ValueError(f'Could not convert {value} to Rectangle.')
 
+
+    @classmethod
+    def from_tlbr(cls, tlbr: Tuple[float, float, float, float]) -> 'Rectangle':
+        ''' Converts a top-left-bottom-right sequence of floats to a Rectangle.
+
+        Args:
+            tlbr: A top-left-bottom-right sequence of floats.
+
+        Returns: the Rectangle instance
+
+        Raises: ValueError if the sequence could not be converted to a Rectangle.
+        '''
+        if _issequence(tlbr) and len(tlbr) == 4:
+            return cls(pt1=Point(x=tlbr[1], y=tlbr[0]), pt2=Point(x=tlbr[3], y=tlbr[2]))
+        else:
+            raise ValueError(f'Could not use {tlbr} as top-left-bottom-right sequence.')
+
+    @classmethod
+    def from_tlwh(cls, tlwh: Tuple[float, float, float, float]) -> 'Rectangle':
+        ''' Converts a top-left-width-height sequence of floats to a Rectangle.
+
+        Args:
+            tlbr: A top-left-width-height sequence of floats.
+
+        Returns: the Rectangle instance
+
+        Raises: ValueError if the sequence could not be converted to a Rectangle.
+        '''
+        if _issequence(tlwh) and len(tlwh) == 4:
+            return cls(
+                pt1=Point(x=tlwh[1], y=tlwh[0]),
+                pt2=Point(x=tlwh[1]+tlwh[2], y=tlwh[0]+tlwh[3])
+            )
+        else:
+            raise ValueError(f'Could not use {tlwh} as top-left-width-height sequence.')
+
     def __getitem__(self, key: int) -> float:
         ''' Returns the first or the second point of this Rectangle.
 
