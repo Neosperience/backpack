@@ -290,6 +290,36 @@ class Rectangle:
         ''' The aspect ratio of the rectangle. '''
         return self.width / self.height
 
+    @property
+    def top(self) -> float:
+        ''' The top edge of the rectangle. '''
+        return self.pt_min.y
+
+    @property
+    def left(self) -> float:
+        ''' The left edge of the rectangle. '''
+        return self.pt_min.x
+
+    @property
+    def bottom(self) -> float:
+        ''' The bottom edge of the rectangle. '''
+        return self.pt_max.y
+
+    @property
+    def right(self) -> float:
+        ''' The right edge of the rectangle. '''
+        return self.pt_max.x
+
+    @property
+    def tlbr(self) -> Tuple[float, float, float, float]:
+        ''' Returns this rectangles coordinates as a top-left-bottom-right tuple. '''
+        return self.top, self.left, self.bottom, self.right
+
+    @property
+    def tlwh(self) -> Tuple[float, float, float, float]:
+        ''' Returns this rectangles coordinates as a top-left-width-height tuple. '''
+        return self.top, self.left, self.width, self.height
+
     @classmethod
     def from_value(cls, value):
         ''' Converts a tuple in the form of ((0.1, 0.2), (0.3, 0.4)) to a Rectangle.
