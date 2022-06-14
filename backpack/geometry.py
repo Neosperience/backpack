@@ -268,7 +268,7 @@ class Rectangle:
     @lazy_property
     def size(self) -> Tuple[float, float]:
         ''' The width and height of the rectangle. '''
-        return self.pt_width, self.height
+        return self.width, self.height
 
     @lazy_property
     def width(self) -> float:
