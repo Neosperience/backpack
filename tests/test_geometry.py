@@ -170,8 +170,8 @@ class TestRectangle(unittest.TestCase):
     def test_tlbr(self) -> None:
         self.assertEqual(self.rect.tlbr, (0, 0, 2, 4))
 
-    def test_tlwh(self) -> None:
-        self.assertEqual(self.rect.tlwh, (0, 0, 4, 2))
+    def test_tlhw(self) -> None:
+        self.assertEqual(self.rect.tlhw, (0, 0, 2, 4))
 
     def test_from_value(self) -> None:
         rect = Rectangle(Point(1, 2), Point(3, 4))
@@ -200,18 +200,18 @@ class TestRectangle(unittest.TestCase):
             with self.assertRaises(ValueError):
                 Rectangle.from_tlbr('foo')
 
-    def test_from_tlwh(self) -> None:
-        tlwh = (1, 2, 3, 2)
+    def test_from_tlhw(self) -> None:
+        tlhw = (1, 2, 2, 3)
         expected_rect = Rectangle(pt1=Point(2, 1), pt2=Point(5, 3))
         with self.subTest('tuple'):
-            self.assertEqual(Rectangle.from_tlwh(tlwh), expected_rect)
+            self.assertEqual(Rectangle.from_tlhw(tlhw), expected_rect)
         with self.subTest('list'):
-            self.assertEqual(Rectangle.from_tlwh(list(tlwh)), expected_rect)
+            self.assertEqual(Rectangle.from_tlhw(list(tlhw)), expected_rect)
         with self.subTest('numpy'):
-            self.assertEqual(Rectangle.from_tlwh(np.array(tlwh)), expected_rect)
+            self.assertEqual(Rectangle.from_tlhw(np.array(tlhw)), expected_rect)
         with self.subTest('invalid'):
             with self.assertRaises(ValueError):
-                Rectangle.from_tlwh('foo')
+                Rectangle.from_tlhw('foo')
 
     def test_getitem(self) -> None:
         self.assertEqual(self.rect[0], self.pt00)
