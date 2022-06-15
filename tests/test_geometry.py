@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 
 from backpack.geometry import Point, Line, Rectangle, PolyLine
 
@@ -53,6 +54,14 @@ class TestPoint(unittest.TestCase):
             with self.assertRaises(ValueError):
                 Point.from_value('foo')
 
+    def test_getitem(self):
+        pt1 = Point(4, 7)
+        self.assertEqual(pt1[0], 4)
+        self.assertEqual(pt1[1], 7)
+        with self.assertRaises(IndexError):
+            pt1[2]
+        with self.assertRaises(TypeError):
+            pt1['foo']
 
 class TestLine(unittest.TestCase):
 
@@ -86,7 +95,16 @@ class TestLine(unittest.TestCase):
             with self.assertRaises(ValueError):
                 Line.from_value('foo')
 
-
+    def test_getitem(self):
+        pt1 = Point(1, 2)
+        pt2 = Point(3, 4)
+        line = Line(pt1, pt2)
+        self.assertEqual(line[0], pt1)
+        self.assertEqual(line[1], pt2)
+        with self.assertRaises(IndexError):
+            line[2]
+        with self.assertRaises(TypeError):
+            line['foo']
 
 class TestRectangle(unittest.TestCase):
 
@@ -125,7 +143,37 @@ class TestRectangle(unittest.TestCase):
     def test_size(self) -> None:
         self.assertEqual(self.rect.size, (4, 2))
 
-    def test_from_value(self):
+    def test_width(self) -> None:
+        self.assertEqual(self.rect.width, 4)
+
+    def test_height(self) -> None:
+        self.assertEqual(self.rect.height, 2)
+
+    def test_area(self) -> None:
+        self.assertEqual(self.rect.area, 8)
+
+    def test_aspect_ratio(self) -> None:
+        self.assertEqual(self.rect.aspect_ratio, 2)
+
+    def test_top(self) -> None:
+        self.assertEqual(self.rect.top, 0)
+
+    def test_bottom(self) -> None:
+        self.assertEqual(self.rect.bottom, 2)
+
+    def test_left(self) -> None:
+        self.assertEqual(self.rect.left, 0)
+
+    def test_right(self) -> None:
+        self.assertEqual(self.rect.right, 4)
+
+    def test_tlbr(self) -> None:
+        self.assertEqual(self.rect.tlbr, (0, 0, 2, 4))
+
+    def test_tlwh(self) -> None:
+        self.assertEqual(self.rect.tlwh, (0, 0, 4, 2))
+
+    def test_from_value(self) -> None:
         rect = Rectangle(Point(1, 2), Point(3, 4))
         with self.subTest('identity'):
             self.assertEqual(rect, Rectangle.from_value(rect))
@@ -139,6 +187,39 @@ class TestRectangle(unittest.TestCase):
             with self.assertRaises(ValueError):
                 Rectangle.from_value('foo')
 
+    def test_from_tlbr(self) -> None:
+        tlbr = (1, 2, 3, 4)
+        expected_rect = Rectangle(pt1=Point(2, 1), pt2=Point(4, 3))
+        with self.subTest('tuple'):
+            self.assertEqual(Rectangle.from_tlbr(tlbr), expected_rect)
+        with self.subTest('list'):
+            self.assertEqual(Rectangle.from_tlbr(list(tlbr)), expected_rect)
+        with self.subTest('numpy'):
+            self.assertEqual(Rectangle.from_tlbr(np.array(tlbr)), expected_rect)
+        with self.subTest('invalid'):
+            with self.assertRaises(ValueError):
+                Rectangle.from_tlbr('foo')
+
+    def test_from_tlwh(self) -> None:
+        tlwh = (1, 2, 3, 2)
+        expected_rect = Rectangle(pt1=Point(2, 1), pt2=Point(5, 3))
+        with self.subTest('tuple'):
+            self.assertEqual(Rectangle.from_tlwh(tlwh), expected_rect)
+        with self.subTest('list'):
+            self.assertEqual(Rectangle.from_tlwh(list(tlwh)), expected_rect)
+        with self.subTest('numpy'):
+            self.assertEqual(Rectangle.from_tlwh(np.array(tlwh)), expected_rect)
+        with self.subTest('invalid'):
+            with self.assertRaises(ValueError):
+                Rectangle.from_tlwh('foo')
+
+    def test_getitem(self) -> None:
+        self.assertEqual(self.rect[0], self.pt00)
+        self.assertEqual(self.rect[1], self.pt11)
+        with self.assertRaises(IndexError):
+            self.rect[2]
+        with self.assertRaises(TypeError):
+            self.rect['foo']
 
 
 class TestPolyLine(unittest.TestCase):
@@ -223,3 +304,14 @@ class TestPolyLine(unittest.TestCase):
         with self.subTest('invalid'):
             with self.assertRaises(ValueError):
                 PolyLine.from_value('foo')
+
+    def test_getitem(self) -> None:
+        for idx, pt in enumerate(self.poly_open):
+            self.assertEqual(self.poly_open[idx], pt)
+        with self.assertRaises(IndexError):
+            self.poly_open[len(self.poly_open)]
+        with self.assertRaises(TypeError):
+            self.poly_open['foo']
+
+    def test_len(self) -> None:
+        self.assertEqual(len(self.poly_open), len(self.test_points))

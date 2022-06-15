@@ -7,11 +7,16 @@ from dataclasses import dataclass
 import math
 from itertools import islice, cycle, groupby
 from numbers import Number
+import numpy as np
+
 from . import lazy_property
 
 def _issequence(value):
     ''' Returns True if value is a sequence but not a string. '''
     return isinstance(value, collections.abc.Sequence) and not isinstance(value, str)
+
+def _issequence_or_numpy(value):
+    return _issequence(value) or isinstance(value, np.ndarray)
 
 class PointMeta(type):
     @classmethod
@@ -352,7 +357,7 @@ class Rectangle:
 
         Raises: ValueError if the sequence could not be converted to a Rectangle.
         '''
-        if _issequence(tlbr) and len(tlbr) == 4:
+        if _issequence_or_numpy(tlbr) and len(tlbr) == 4:
             return cls(pt1=Point(x=tlbr[1], y=tlbr[0]), pt2=Point(x=tlbr[3], y=tlbr[2]))
         else:
             raise ValueError(f'Could not use {tlbr} as top-left-bottom-right sequence.')
@@ -368,7 +373,7 @@ class Rectangle:
 
         Raises: ValueError if the sequence could not be converted to a Rectangle.
         '''
-        if _issequence(tlwh) and len(tlwh) == 4:
+        if _issequence_or_numpy(tlwh) and len(tlwh) == 4:
             return cls(
                 pt1=Point(x=tlwh[1], y=tlwh[0]),
                 pt2=Point(x=tlwh[1]+tlwh[2], y=tlwh[0]+tlwh[3])
@@ -524,3 +529,11 @@ class PolyLine:
         if not isinstance(key, int):
             raise TypeError('PolyLine indices must be integers.')
         return self.points[key]
+
+    def __len__(self) -> int:
+        ''' Returns the number of line segments in this PolyLine.
+
+        Returns:
+            The number of line segments.
+        '''
+        return len(self.points)
