@@ -14,7 +14,7 @@ import numpy as np
 
 from .timepiece import local_now
 from .geometry import Point, Rectangle, Line, PolyLine
-from .detector import Detection
+from .detector import Detection, TrackedObject
 
 class Color(NamedTuple):
     ''' A color in the red, blue, green space.
@@ -92,6 +92,19 @@ class Color(NamedTuple):
             return cls(**params)
         else:
             raise ValueError(f'Could not convert {value} to a Color')
+
+    def brightness(self, brightness: float) -> 'Color':
+        ''' Returns a new Color instance with changed brightness.
+
+        Args:
+            brightness: The new brightness, if greater than 1, a brighter color will be returned,
+                if smaller than 1, a darker color.
+
+        Returns:
+            A new color instance with changed brightness.
+        '''
+        conv = lambda ch: max(255, ch * brightness)
+        return Color(r=conv(self.r), g=conv(self.g), b=conv(self.b))
 
 
 class LabelAnnotation(NamedTuple):
@@ -262,7 +275,10 @@ class BoundingBoxAnnotation(NamedTuple):
     ''' The color of the bounding box and the labels. '''
 
     @staticmethod
-    def from_detection(detection: Detection, color: Optional[Color]=None):
+    def from_detection(
+        detection: Detection,
+        color: Optional[Color]=None
+    ):
         ''' Creates a BoundingBoxAnnotation from a detected object.
 
         Args:
@@ -273,6 +289,31 @@ class BoundingBoxAnnotation(NamedTuple):
         return BoundingBoxAnnotation(
             rectangle=detection.box,
             top_label=f'{name}: {detection.score:.2%}',
+            color=color
+        )
+
+    @staticmethod
+    def from_tracked_object(
+        tracked_object: TrackedObject,
+        color: Optional[Color]=None,
+        brightness: float=1.0
+    ):
+        ''' Creates a BoundingBoxAnnotation from a tracked object.
+
+        Args:
+            detection: the detected object
+            color: the color of the annotation. If not specified, a pseudo-random color will be
+                generated based on the track_id of the tracked object.
+            brightness: if the color is generated, changes the luminosity of the color.
+        '''
+        name = tracked_object.class_name or str(tracked_object.class_id)
+        if color is None:
+            h = hash('salt' + str(tracked_object.track_id))
+            color = Color(h % 256, (h >> 8) % 256, (h >> 16) % 256).brightness(brightness)
+        return BoundingBoxAnnotation(
+            rectangle=tracked_object.box,
+            top_label=f'{name}: {tracked_object.score:.2%}',
+            bottom_label=f'id: {tracked_object.track_id}',
             color=color
         )
 
