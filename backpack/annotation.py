@@ -103,7 +103,7 @@ class Color(NamedTuple):
         Returns:
             A new color instance with changed brightness.
         '''
-        conv = lambda ch: min(255, ch * brightness)
+        conv = lambda ch: min(255, int(ch * brightness))
         return Color(r=conv(self.r), g=conv(self.g), b=conv(self.b), alpha=self.alpha)
 
 
