@@ -13,13 +13,13 @@ Backpack provides the following modules:
    (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics
    to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms
    if your app stops processing frames.
- - :ref:`telescope-readme` provides a framework to restream the processed video (annotated by
+ - :ref:`skyline-readme` provides a framework to restream the processed video (annotated by
    your application) to media endpoints supported by `GStreamer`_. Two implementation of the
-   abstract base class :class:`~backpack.telescope.Telescope` is provided:
+   abstract base class :class:`~backpack.skyline.SkyLine` is provided:
 
-     - :class:`~backpack.kvs.KVSTelescope` lets you send the processed video to `AWS Kinesis Video
+     - :class:`~backpack.kvs.KVSSkyLine` lets you send the processed video to `AWS Kinesis Video
        Streams`_ service
-     - :class:`~backpack.rtsp.RTSPTelescope` configures an RTSP server directly in your Panorama
+     - :class:`~backpack.rtsp.RTSPSkyLine` configures an RTSP server directly in your Panorama
        application. You can play back the video stream with an RTSP client (for example, with
        `VLC Media Player`_), directly from your workstation.
 
@@ -38,6 +38,6 @@ Backpack provides the following modules:
 
    autoidentity
    timepiece
-   telescope
+   skyline
    annotation
    geometry

@@ -12,7 +12,7 @@ with pip, so you would add the following line to your ``Dockerfile``:
     RUN pip install git+https://github.com/neosperience/backpack.git
 
 Some components have particular dependencies that can not be installed with the standard pip
-dependency resolver. For example, if you want to use :class:`~backpack.kvs.KVSTelescope` to restream
+dependency resolver. For example, if you want to use :class:`~backpack.kvs.KVSSkyLine` to restream
 the output video of your machine learning model to AWS Kinesis Video Streams, you should have
 several particularly configured libraries in the docker container to make everything work correctly.
 You will find detailed instructions and ``Dockerfile`` snippets in the rest of this documentation

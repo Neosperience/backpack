@@ -1,8 +1,8 @@
-.. _telescope-api:
+.. _skyline-api:
 
-telescope
+skyline
 ---------
 
-.. automodule:: backpack.telescope
+.. automodule:: backpack.skyline
    :members:
    :show-inheritance:

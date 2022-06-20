@@ -1,4 +1,4 @@
-# Example Dockerfile that installs all required dependencies for KVSTelescope
+# Example Dockerfile that installs all required dependencies for KVSSkyLine
 
 FROM public.ecr.aws/panorama/panorama-application
 

@@ -17,7 +17,7 @@ with patch.dict('sys.modules', cv2=mock_cv2, boto3=mock_boto3, dotenv=mock_doten
     from backpack.kvs import (
         KVSCredentialsHandler, KVSInlineCredentialsHandler,
         KVSEnvironmentCredentialsHandler, KVSFileCredentialsHandler,
-        KVSTelescope
+        KVSSkyLine
     )
 
 from backpack.timepiece import local_dt
@@ -223,8 +223,8 @@ class TestFileCredentialsHandler(unittest.TestCase):
 
 
 @patch('subprocess.check_output')
-@patch('backpack.telescope.os')
-class TestKVSTelescope(unittest.TestCase):
+@patch('backpack.skyline.os')
+class TestKVSSkyLine(unittest.TestCase):
 
     STREAM_NAME = 'test_stream'
     STREAM_REGION = 'test-west-1'
@@ -233,26 +233,26 @@ class TestKVSTelescope(unittest.TestCase):
         self.frame = Mock()
         self.frame.shape = [TEST_FRAME_HEIGHT, TEST_FRAME_WIDTH, 3]
 
-    def _create_telescope(self):
+    def _create_skyline(self):
         ch = KVSInlineCredentialsHandler(
             aws_access_key_id=TEST_AWS_ACCESS_KEY_ID,
             aws_secret_access_key=TEST_AWS_SECRET_KEY
         )
-        return KVSTelescope(
+        return KVSSkyLine(
             stream_region=self.STREAM_REGION,
             stream_name=self.STREAM_NAME,
             credentials_handler=ch
         )
 
     def test_start_streaming(self, *args):
-        telescope = self._create_telescope()
-        telescope.start_streaming(fps=TEST_FPS, width=TEST_FRAME_WIDTH, height=TEST_FRAME_HEIGHT)
+        skyline = self._create_skyline()
+        skyline.start_streaming(fps=TEST_FPS, width=TEST_FRAME_WIDTH, height=TEST_FRAME_HEIGHT)
         kvs_config_str = ' '.join([
             'storage-size=512',
             f'stream-name="{self.STREAM_NAME}"',
             f'aws-region="{self.STREAM_REGION}"',
             f'framerate={TEST_FPS}',
-            telescope.credentials_handler.plugin_config()
+            skyline.credentials_handler.plugin_config()
         ])
         expected_pipeline = ' ! '.join([
             'appsrc',
@@ -273,14 +273,14 @@ class TestKVSTelescope(unittest.TestCase):
 
     @patch('backpack.kvs.KVSInlineCredentialsHandler.check_refresh')
     def test_put_frame(self, mock_check_refresh, *args):
-        telescope = self._create_telescope()
-        telescope.start_streaming(fps=TEST_FPS, width=TEST_FRAME_WIDTH, height=TEST_FRAME_HEIGHT)
-        telescope.put(self.frame)
+        skyline = self._create_skyline()
+        skyline.start_streaming(fps=TEST_FPS, width=TEST_FRAME_WIDTH, height=TEST_FRAME_HEIGHT)
+        skyline.put(self.frame)
         mock_cv2.VideoWriter().write.assert_called_with(mock_cv2.resize())
         mock_check_refresh.assert_called()
 
-    @patch('backpack.kvs.KVSTelescope._check_gst_plugin', return_value=False)
+    @patch('backpack.kvs.KVSSkyLine._check_gst_plugin', return_value=False)
     def test_no_plugin(self, *args):
         with self.assertRaises(RuntimeError):
-            telescope = self._create_telescope()
+            _ = self._create_skyline()
 

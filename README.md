@@ -14,7 +14,7 @@ Backpack is a toolset that makes development for AWS Panorama hopefully more enj
 Backpack provides the following modules:
  - *AutoIdentity* allows your application to learn more about itself and the host device. It gives access to the Panorama device id, application instance id, application name and description, and other similar information.
  - *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
- - *Telescope* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSTelescope* is an implementation of a Telescope pipeline that lets you send the processed video to AWS Kinesis Video Streams.
+ - *SkyLine* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSkyLine* is an implementation of a SkyLine pipeline that lets you send the processed video to AWS Kinesis Video Streams.
  - *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
 
 ## Installation ⚙️
@@ -25,7 +25,7 @@ Backpack consists of several loosely coupled components, each solving a specific
 RUN pip install git+https://github.com/neosperience/backpack.git
 ```
 
-Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSTelescope` to restream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
+Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSSkyLine` to restream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
 
 ## Permissions 🛡️
 
@@ -311,31 +311,31 @@ def main():
 main()
 ```
 
-## Telescope 🔭
+## SkyLine
 
-As you may know, the only official way to get visual feedback on the correct functionality of your Panorama application is to physically connect a display to the HDMI port of the Panorama appliance. When connected, the display will show the output video stream of a single application deployed on the device. However, physically accessing the appliance is not always feasible. Telescope allows you to re-stream the output video of your Panorama application to an external service, for example to [AWS Kinesis Video Streams](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html). This can be very convenient to remotely monitor your application.
+As you may know, the only official way to get visual feedback on the correct functionality of your Panorama application is to physically connect a display to the HDMI port of the Panorama appliance. When connected, the display will show the output video stream of a single application deployed on the device. However, physically accessing the appliance is not always feasible. SkyLine allows you to re-stream the output video of your Panorama application to an external service, for example to [AWS Kinesis Video Streams](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/what-is-kinesis-video.html). This can be very convenient to remotely monitor your application.
 
-### Warning notes about using Telescope
+### Warning notes about using SkyLine
 
-Even if Telescope is a very helpful tool, using it might arise two concerns that you should consider carefully. For the same reason we discourage using Telescope in a production environment: it is principally a development aid or at most a debugging tool.
+Even if SkyLine is a very helpful tool, using it might arise two concerns that you should consider carefully. For the same reason we discourage using SkyLine in a production environment: it is principally a development aid or at most a debugging tool.
 
-The first concern is of technical nature. Currently the application code in a Panorama app does not have direct access to the onboard GPU, thus all video encoding codecs used by Telescope run on the CPU of the device. This could take precious computing time from the CPUs that occupy with streaming the output instead of processing the video. We measured that streaming a single output stream with Telescope could require anything between 10-30% of the CPU capacity of the device.
+The first concern is of technical nature. Currently the application code in a Panorama app does not have direct access to the onboard GPU, thus all video encoding codecs used by SkyLine run on the CPU of the device. This could take precious computing time from the CPUs that occupy with streaming the output instead of processing the video. We measured that streaming a single output stream with SkyLine could require anything between 10-30% of the CPU capacity of the device.
 
-The second concern regards data protection. The Panorama appliance is designed so to strongly protect the video streams being processed: it has even two ethernet interfaces to physically separate the network of the video cameras (typically a closed-circuit local area network) and the Internet access of the device. Using Telescope you might effectively relay the video stream from the protected, closed-circuit camera network to the public Internet. For this reason, you should carefully examine the data protection requirements of your application and the camera network before integrating Telescope.
+The second concern regards data protection. The Panorama appliance is designed so to strongly protect the video streams being processed: it has even two ethernet interfaces to physically separate the network of the video cameras (typically a closed-circuit local area network) and the Internet access of the device. Using SkyLine you might effectively relay the video stream from the protected, closed-circuit camera network to the public Internet. For this reason, you should carefully examine the data protection requirements of your application and the camera network before integrating SkyLine.
 
 ### How does it work?
 
-Technically speaking, Telescope instantiates a [GStreamer pipeline](https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html) with an [appsrc](https://gstreamer.freedesktop.org/documentation/app/appsrc.html) element at the head. An [OpenCV VideoWriter](https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html) is configured to write to the `appsrc` element: instead of saving the consecutive frames to a video file, it streams to the output sink. When opening the `VideoWriter` instance, the user should specify the frame width and height, as well as the frame rate of the output stream. You can manually specify these parameters or let Telescope infer these values from the input dimensions and the frequency you send new frames to it. If using this auto-configuration feature, some frames (by default 100) will be discarded at the beginning of the streaming, as they will be used to calculate statistics of the frame rate and measure the frame dimensions. This phase is referred to as the "warmup" state of Telescope. If later on, you send frames of different dimensions compared to the expected width and height, Telescope will redimension the input, but this has a performance penalty of the pipeline. You are also expected to send new frames to Telescope with the frequency specified in the frame-per-second parameter. If you send frames slower or faster, the KVS video fragments get out of sync and you won't be able to play back the video continuously.
+Technically speaking, SkyLine instantiates a [GStreamer pipeline](https://gstreamer.freedesktop.org/documentation/application-development/introduction/basics.html) with an [appsrc](https://gstreamer.freedesktop.org/documentation/app/appsrc.html) element at the head. An [OpenCV VideoWriter](https://docs.opencv.org/4.5.5/dd/d43/tutorial_py_video_display.html) is configured to write to the `appsrc` element: instead of saving the consecutive frames to a video file, it streams to the output sink. When opening the `VideoWriter` instance, the user should specify the frame width and height, as well as the frame rate of the output stream. You can manually specify these parameters or let SkyLine infer these values from the input dimensions and the frequency you send new frames to it. If using this auto-configuration feature, some frames (by default 100) will be discarded at the beginning of the streaming, as they will be used to calculate statistics of the frame rate and measure the frame dimensions. This phase is referred to as the "warmup" state of SkyLine. If later on, you send frames of different dimensions compared to the expected width and height, SkyLine will redimension the input, but this has a performance penalty of the pipeline. You are also expected to send new frames to SkyLine with the frequency specified in the frame-per-second parameter. If you send frames slower or faster, the KVS video fragments get out of sync and you won't be able to play back the video continuously.
 
 ### Configuring the Panorama Application Docker container
 
-Telescope depends on a set of custom compiled external libraries. You should have all these libraries compiled and configured correctly in your application's docker container in order to make `Telescope` work correctly. These libraries include:
+SkyLine depends on a set of custom compiled external libraries. You should have all these libraries compiled and configured correctly in your application's docker container in order to make `SkyLine` work correctly. These libraries include:
 
  - GStreamer 1.0 installed with standard plugins pack, libav, tools, and development libraries
  - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
  - numpy (it is typically installed by the base docker image of your Panorama application)
 
-Furthermore, if you want to use `KVSTelescope`, the `Telescope` implementation that streams the video to Kinesis Video Streams, you will need also the following libraries:
+Furthermore, if you want to use `KVSSkyLine`, the `SkyLine` implementation that streams the video to Kinesis Video Streams, you will need also the following libraries:
 
  - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
  - Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
@@ -346,9 +346,9 @@ Furthermore, if you want to use `KVSTelescope`, the `Telescope` implementation t
 
 We provide a sample Dockerfile in the examples folder that shows you how to install correctly these libraries in your Docker container. In most cases, it should be enough to copy the relevant sections from the sample to your application's Dockerfile. The first time you compile the docker container, it might take up to one hour to correctly compile all libraries.
 
-### Using KVSTelescope
+### Using KVSSkyLine
 
-Compared to the `Telescope` base class, `KVSTelescope` adds an additional element to the pipeline: the Amazon Kinesis Video Streams (KVS) Producer library, wrapped in a GStreamer sink element. KVS Producer needs AWS credentials to function correctly: it does not use automatically the credentials associated with the Panorama Application Role. You have different options to provide credentials using `KVSCredentialsHandler` subclasses, provided in the `kvs` module. For testing purposes, you can create an IAM user in your AWS account that has the privileges only to the following operations to write media to KVS:
+Compared to the `SkyLine` base class, `KVSSkyLine` adds an additional element to the pipeline: the Amazon Kinesis Video Streams (KVS) Producer library, wrapped in a GStreamer sink element. KVS Producer needs AWS credentials to function correctly: it does not use automatically the credentials associated with the Panorama Application Role. You have different options to provide credentials using `KVSCredentialsHandler` subclasses, provided in the `kvs` module. For testing purposes, you can create an IAM user in your AWS account that has the privileges only to the following operations to write media to KVS:
 
  - `kinesisvideo:DescribeStream`
  - `kinesisvideo:GetStreamingEndpoint`
@@ -356,17 +356,17 @@ Compared to the `Telescope` base class, `KVSTelescope` adds an additional elemen
 
 You should configure this user to have programmatic access to AWS resources, and get the AWS Access Key and Secret Key pair of the user. These are so-called static credentials that do not expire. You can create a `KVSInlineCredentialsHandler` or `KVSEnvironmentCredentialsHandler` instance to pass these credentials to KVS Producer Plugin directly in the GStreamer pipeline definition, or as environment variables. However as these credentials do not expire, it is not recommended to use this setting in a production environment. Even in a development and testing environment, you should take the appropriate security measures to protect these credentials: never hard code them in the source code. Instead, use AWS Secret Manager or a similar service to provision these parameters.
 
-`KVSTelescope` can use also the Panorama Application Role to pass the application's credentials to KVS Producer. These credentials are temporary, meaning that they expire within a couple of hours, and they should be renewed. The Producer library expects temporary credentials in a text file. `KVSFileCredentialsHandler` takes manages the renewal of the credentials and periodically updates the text file with the new credentials. You should always test your Panorama application - KVS integration that it still works when the credentials are refreshed. This means letting run your application for several hours and periodically checking if it still streams the video to KVS. You will also find diagnostic information in the CloudWatch logs of your application when the credentials were renewed.
+`KVSSkyLine` can use also the Panorama Application Role to pass the application's credentials to KVS Producer. These credentials are temporary, meaning that they expire within a couple of hours, and they should be renewed. The Producer library expects temporary credentials in a text file. `KVSFileCredentialsHandler` takes manages the renewal of the credentials and periodically updates the text file with the new credentials. You should always test your Panorama application - KVS integration that it still works when the credentials are refreshed. This means letting run your application for several hours and periodically checking if it still streams the video to KVS. You will also find diagnostic information in the CloudWatch logs of your application when the credentials were renewed.
 
-`KvsTelescope` needs also two correctly configured environment variables to make GStreamer find the KVS Producer plugin. The name of these variables are `GST_PLUGIN_PATH` and `LD_LIBRARY_PATH`. They point to the folder where the KVS Producer binary and its 3rd party dependencies can be found. If you've used the example Dockerfile provided, the correct values of these variables are written to a small configuration file at `/panorama/.env`. You should pass the path of this file to `KvsTelescope` or otherwise ensure that these variables contain the correct value.
+`KvsSkyLine` needs also two correctly configured environment variables to make GStreamer find the KVS Producer plugin. The name of these variables are `GST_PLUGIN_PATH` and `LD_LIBRARY_PATH`. They point to the folder where the KVS Producer binary and its 3rd party dependencies can be found. If you've used the example Dockerfile provided, the correct values of these variables are written to a small configuration file at `/panorama/.env`. You should pass the path of this file to `KvsSkyLine` or otherwise ensure that these variables contain the correct value.
 
-At instantiation time, you should pass at least the AWS region name where your stream is created, the name of the stream, and a credentials handler instance. If you want to configure manually the frame rate and the dimensions of the frames, you should also pass them here: if both are specified, the warmup period will be skipped and your first frame will be sent directly to KVS. When you are ready to send the frames, you should call the `start_streaming` method: this will open the GStreamer pipeline. After this method is called, you are expected to send new frames to the stream calling the `put` method periodically, with the frequency of the frame rate specified, or inferred by `KvsTelescope`. You can stop and restart streaming any number of times on the same `KvsTelescope` instance.
+At instantiation time, you should pass at least the AWS region name where your stream is created, the name of the stream, and a credentials handler instance. If you want to configure manually the frame rate and the dimensions of the frames, you should also pass them here: if both are specified, the warmup period will be skipped and your first frame will be sent directly to KVS. When you are ready to send the frames, you should call the `start_streaming` method: this will open the GStreamer pipeline. After this method is called, you are expected to send new frames to the stream calling the `put` method periodically, with the frequency of the frame rate specified, or inferred by `KvsSkyLine`. You can stop and restart streaming any number of times on the same `KvsSkyLine` instance.
 
 Example usage:
 
 ```python
 import panoramasdk
-from backpack.kvs import KVSTelescope, KVSFileCredentialsHandler
+from backpack.kvs import KVSSkyLine, KVSFileCredentialsHandler
 
 # You might want to read these values from Panorama application parameters
 stream_region = 'us-east-1'
@@ -382,14 +382,14 @@ class Application(panoramasdk.node):
         super().__init__()
         # ...
         credentials_handler = KVSFileCredentialsHandler()
-        self.telescope = KVSTelescope(
+        self.skyline = KVSSkyLine(
             stream_region=stream_region,
             stream_name=stream_name,
             credentials_handler=credentials_handler,
             dotenv_path=DOTENV_PATH
         )
         # This call opens the streaming pipeline:
-        self.telescope.start_streaming()
+        self.skyline.start_streaming()
 
     # called from video processing loop:
     def process_streams(self):
@@ -402,7 +402,7 @@ class Application(panoramasdk.node):
 
             # TODO: eventually multiplex streams to a single frame
             if idx == 0:
-                self.telescope.put(stream.image)
+                self.skyline.put(stream.image)
 ```
 
 If everything worked well, you can watch the restreamed video in the [Kinesis Video Streams page](https://console.aws.amazon.com/kinesisvideo/home) of the AWS console.
@@ -434,7 +434,7 @@ class Application(panoramasdk.node):
 
     def __init__(self):
         super().__init__()
-        # self.telescope = ...
+        # self.skyline = ...
         self.panorama_driver = PanoramaMediaAnnotationDriver()
         self.cv2_driver = OpenCVImageAnnotationDriver()
 
@@ -452,5 +452,5 @@ class Application(panoramasdk.node):
             # TODO: eventually multiplex streams to a single frame
             if idx == 0:
                 rendered = self.cv2_driver.render(annotations, stream.image.copy())
-                # self.telescope.put(rendered)
+                # self.skyline.put(rendered)
 ```

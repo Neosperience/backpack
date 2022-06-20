@@ -44,7 +44,7 @@ Example usage:
 
         def __init__(self):
             super().__init__()
-            # self.telescope = ...
+            # self.skyline = ...
             self.panorama_driver = PanoramaMediaAnnotationDriver()
             self.cv2_driver = OpenCVImageAnnotationDriver()
 
@@ -62,6 +62,6 @@ Example usage:
                 # TODO: eventually multiplex streams to a single frame
                 if idx == 0:
                     rendered = self.cv2_driver.render(annotations, stream.image.copy())
-                    # self.telescope.put(rendered)
+                    # self.skyline.put(rendered)
 
 For more information, refer to the :ref:`annotation-api` API documentation.
