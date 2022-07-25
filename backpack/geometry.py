@@ -228,23 +228,15 @@ class Rectangle:
         pt2 (Point): The second corner of the rectangle
     '''
 
-    pt1: dataclasses.InitVar[Point]
+    pt1: Point
     ''' The first corner of the rectangle '''
 
-    pt2: dataclasses.InitVar[Point]
+    pt2: Point
     ''' The second corner of the rectangle '''
 
-    pt_min: Point = dataclasses.field(init=False)
-    ''' The corner with minimum coordinates of the rectangle '''
-
-    pt_max: Point = dataclasses.field(init=False)
-    ''' The corner with maximum coordinates of the rectangle '''
-
-    def __post_init__(self, pt1, pt2):
-        if not isinstance(pt1, Point) or not isinstance(pt2, Point):
+    def __post_init__(self):
+        if not isinstance(self.pt1, Point) or not isinstance(self.pt2, Point):
             raise ValueError('Rectangle arguments "pt1" and "pt2" must be Point objects.')
-        object.__setattr__(self, 'pt_min', Point(min(pt1.x, pt2.x), min(pt1.y, pt2.y)))
-        object.__setattr__(self, 'pt_max', Point(max(pt1.x, pt2.x), max(pt1.y, pt2.y)))
 
     def has_inside(self, pt: Point) -> bool:
         ''' Determines if a point is inside this rectangle.
@@ -259,6 +251,16 @@ class Rectangle:
             pt.x >= self.pt_min.x and pt.y >= self.pt_min.y and
             pt.x <= self.pt_max.x and pt.y <= self.pt_max.y
         )
+
+    @lazy_property
+    def pt_min(self) -> Point:
+        ''' The point with the minimum coordinates of this rectangle. '''
+        return Point(min(self.pt1.x, self.pt2.x), min(self.pt1.y, self.pt2.y))
+
+    @lazy_property
+    def pt_max(self) -> Point:
+        ''' The point with the maximum coordinates of this rectangle. '''
+        return Point(max(self.pt1.x, self.pt2.x), max(self.pt1.y, self.pt2.y))
 
     @lazy_property
     def center(self) -> Point:
