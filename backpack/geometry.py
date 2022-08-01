@@ -98,6 +98,18 @@ class Point(metaclass=PointMeta):
         Point._check_arg(other, '-')
         return Point(self.x - other.x, self.y - other.y)
 
+    def __truediv__(self, divisor: float) -> 'Point':
+        ''' Interpret this point as a vector and divide it by a real number.
+
+        Args:
+            divisor: a real number
+
+        Returns:
+            The original point divided by the number as if it was a vector.
+        '''
+        return Point(self.x / divisor, self.y / divisor)
+
+
     def __getitem__(self, key: int) -> float:
         ''' Returns the first or the second coordinate of this Point.'''
         if not isinstance(key, int):
