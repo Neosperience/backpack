@@ -170,6 +170,9 @@ class LabelAnnotation(NamedTuple):
     vertical_anchor: VerticalAnchor = VerticalAnchor.BOTTOM
     ''' Vertical anchor point location '''
 
+    size: float = 1.0
+    ''' The relative size of the text '''
+
 
 class RectAnnotation(NamedTuple):
     ''' A rectangle annotation to be rendered in an AnnotationDriver context.
@@ -601,7 +604,7 @@ class OpenCVImageAnnotationDriver(AnnotationDriverBase):
 
     def add_label(self, anno: LabelAnnotation, context: np.ndarray) -> None:
         ctx_height = context.shape[0]
-        scale = ctx_height / OpenCVImageAnnotationDriver.IMG_HEIGHT_FOR_UNIT_FONT_SCALE
+        scale = ctx_height / OpenCVImageAnnotationDriver.IMG_HEIGHT_FOR_UNIT_FONT_SCALE * anno.size
         thickness = max(int(scale), 1)
         font = OpenCVImageAnnotationDriver.DEFAULT_FONT
         x, y = OpenCVImageAnnotationDriver.scale(anno.point, context)
