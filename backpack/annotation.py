@@ -93,6 +93,24 @@ class Color(NamedTuple):
         else:
             raise ValueError(f'Could not convert {value} to a Color')
 
+
+    @classmethod
+    def from_id(cls, identifier: int, salt: str = 'salt') -> 'Color':
+        ''' Creates a pseudo-random color from an integer identifier.
+
+        For the same identifier and salt the same color will be generated.
+
+        Args:
+            identifier: the identifier
+            salt: the salt, change this if you want a different color for the same identifier
+
+        Returns:
+            A pseudo-random color based on the identifier and the salt.
+        '''
+        h = hash(salt + str(identifier))
+        return Color(h % 256, (h >> 8) % 256, (h >> 16) % 256)
+
+
     def brightness(self, brightness: float) -> 'Color':
         ''' Returns a new Color instance with changed brightness.
 
