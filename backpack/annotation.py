@@ -9,6 +9,7 @@ from enum import Enum
 import datetime
 import logging
 from abc import ABC, abstractmethod
+import hashlib
 import cv2
 import numpy as np
 
@@ -93,7 +94,6 @@ class Color(NamedTuple):
         else:
             raise ValueError(f'Could not convert {value} to a Color')
 
-
     @classmethod
     def from_id(cls, identifier: int, salt: str = 'salt') -> 'Color':
         ''' Creates a pseudo-random color from an integer identifier.
@@ -107,9 +107,8 @@ class Color(NamedTuple):
         Returns:
             A pseudo-random color based on the identifier and the salt.
         '''
-        h = hash(salt + str(identifier))
-        return Color(h % 256, (h >> 8) % 256, (h >> 16) % 256)
-
+        h = hashlib.md5((salt + str(identifier)).encode('utf-8')).digest()
+        return Color(h[0], h[1], h[2])
 
     def brightness(self, brightness: float) -> 'Color':
         ''' Returns a new Color instance with changed brightness.
@@ -329,8 +328,7 @@ class BoundingBoxAnnotation(NamedTuple):
         '''
         name = tracked_object.class_name or str(tracked_object.class_id)
         if color is None:
-            h = hash('salt' + str(tracked_object.track_id))
-            color = Color(h % 256, (h >> 8) % 256, (h >> 16) % 256).brightness(brightness)
+            color = Color.from_id(tracked_object.track_id).brightness(brightness)
         return BoundingBoxAnnotation(
             rectangle=tracked_object.box,
             top_label=f'{name}: {tracked_object.score:.2%}',
