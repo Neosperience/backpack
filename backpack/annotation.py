@@ -4,7 +4,6 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
 from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Callable, Sequence, Mapping
-import collections.abc
 from enum import Enum
 import datetime
 import logging
@@ -12,6 +11,7 @@ from abc import ABC, abstractmethod
 import hashlib
 import cv2
 import numpy as np
+from collections import OrderedDict
 
 from .timepiece import local_now
 from .geometry import Point, Rectangle, Line, PolyLine
@@ -122,6 +122,63 @@ class Color(NamedTuple):
         '''
         conv = lambda ch: min(255, int(ch * brightness))
         return Color(r=conv(self.r), g=conv(self.g), b=conv(self.b), alpha=self.alpha)
+
+
+class ColorMap:
+    ''' A simply color map implementation. '''
+
+    colors: Mapping[str, Color] = OrderedDict()
+    ''' A map of colors by name. Subclasses are supposed to override this argument. '''
+
+    @classmethod
+    def from_name(cls, name: str) -> Optional[Color]:
+        ''' Returns a color from its name. '''
+        return cls.colors.get(name)
+
+    @classmethod
+    def as_list(cls) -> Sequence[Color]:
+        ''' Returns the colors of this color map as a list. '''
+        return list(cls.colors.items())
+
+
+class HTMLColors(ColorMap):
+    ''' HTML Basic colors as of https://en.wikipedia.org/wiki/Web_colors#HTML_color_names '''
+
+    WHITE   = Color(255, 255, 255)
+    SILVER  = Color(192, 192, 192)
+    GRAY    = Color(128, 128, 128)
+    BLACK   = Color(  0,   0,   0)
+    RED     = Color(255,   0,   0)
+    MAROON  = Color(128, 128, 128)
+    YELLOW  = Color(255, 255,   0)
+    OLIVE   = Color(128, 128,   0)
+    LIME    = Color(  0, 255,   0)
+    GREEN   = Color(  0, 128,   0)
+    AQUA    = Color(  0, 255, 255)
+    TEAL    = Color(255, 128, 128)
+    BLUE    = Color(  0,   0, 255)
+    NAVY    = Color(  0,   0, 128)
+    FUCHSIA = Color(255,   0, 255)
+    PURPLE  = Color(128,   0, 128)
+
+    colors: Mapping[str, Color] = OrderedDict([
+        ('white', WHITE),
+        ('silver', SILVER),
+        ('gray', GRAY),
+        ('black', BLACK),
+        ('red', RED),
+        ('maroon', MAROON),
+        ('yellow', YELLOW),
+        ('olive', OLIVE),
+        ('lime', LIME),
+        ('green', GREEN),
+        ('acqua', AQUA),
+        ('teal', TEAL),
+        ('blue', BLUE),
+        ('navy', NAVY),
+        ('fuchsia', FUCHSIA),
+        ('purple', PURPLE)
+    ])
 
 
 class LabelAnnotation(NamedTuple):
