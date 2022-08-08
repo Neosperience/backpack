@@ -4,7 +4,7 @@ import os
 from setuptools import setup
 
 name = "panorama-backpack"
-version = "v0.1.1"
+version = "0.1.1"
 
 # get the dependencies and installs
 with open("requirements.txt", "r") as f:
@@ -23,7 +23,7 @@ setup(
     author="Janos Tolgyesi",
     author_email='janos.tolgyesi@neosperience.com',
     url="https://github.com/Neosperience/backpack",
-    download_url="https://github.com/Neosperience/backpack/archive/refs/tags/{}.tar.gz".format(version),
+    download_url="https://github.com/Neosperience/backpack/archive/refs/tags/v{}.tar.gz".format(version),
     keywords=["aws", "panorama", "video-analysis"],
     entry_points={},
     zip_safe=False,
