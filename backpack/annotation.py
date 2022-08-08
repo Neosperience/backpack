@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 import hashlib
 import cv2
 import numpy as np
+import collections
 from collections import OrderedDict
 
 from .timepiece import local_now
