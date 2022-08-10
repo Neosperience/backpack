@@ -1,7 +1,7 @@
 from glob import glob
 import os
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 name = "panorama-backpack"
 version = "0.1.2"
@@ -10,16 +10,20 @@ version = "0.1.2"
 with open("requirements.txt", "r") as f:
     requires = [x.strip() for x in f if x.strip()]
 
+with open("README.md", "r", encoding="utf-8") as f:
+    long_description = f.read()
+
 setup(
     name=name,
     version=version,
     description="Tools for AWS Panorama development",
     python_requires=">=3.7",
-    packages=["backpack"],
+    packages=find_packages(exclude=["tests.*", "tests"]),
     package_dir={"backpack": "backpack"},
-    py_modules=[os.path.splitext(os.path.basename(path))[0] for path in glob("src/*.py")],
     include_package_data=True,
     install_requires=requires,
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Janos Tolgyesi",
     author_email='janos.tolgyesi@neosperience.com',
     url="https://github.com/Neosperience/backpack",
@@ -28,7 +32,7 @@ setup(
     entry_points={},
     zip_safe=False,
     classifiers=[
-        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.7",
     ],
     extras_require={
     },
