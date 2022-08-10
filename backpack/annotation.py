@@ -3,22 +3,29 @@ backends with an unified API. Currently, you can draw rectangles and labels with
 :mod:`~backpack.annotation` on ``panoramasdk.media`` and OpenCV images
 (:class:`numpy arrays <numpy.ndarray>`).'''
 
-from typing import Tuple, Optional, Any, Iterable, NamedTuple, Union, Callable, Sequence, Mapping
+from typing import Tuple, Optional, Any, Iterable, Union, Callable, Sequence, Mapping
 from enum import Enum
 import datetime
 import logging
 from abc import ABC, abstractmethod
 import hashlib
-import cv2
-import numpy as np
 import collections
 from collections import OrderedDict
+from dataclasses import dataclass
+
+import cv2
+import numpy as np
 
 from .timepiece import local_now
 from .geometry import Point, Rectangle, Line, PolyLine
-from .detector import Detection, TrackedObject
 
-class Color(NamedTuple):
+
+class Annotation(ABC):
+    ''' Abstract base class for annotations. '''
+
+
+@dataclass(frozen=True)
+class Color:
     ''' A color in the red, blue, green space.
 
     The color coordinates are integers in the [0; 255] range.
@@ -181,8 +188,8 @@ class HTMLColors(ColorMap):
         ('purple', PURPLE)
     ])
 
-
-class LabelAnnotation(NamedTuple):
+@dataclass(frozen=True)
+class LabelAnnotation(Annotation):
     ''' A label annotation to be rendered in an :class:`AnnotationDriver` context.
 
     The :attr:`point` refers to the position of the anchor point.
@@ -231,7 +238,8 @@ class LabelAnnotation(NamedTuple):
     ''' The relative size of the text '''
 
 
-class RectAnnotation(NamedTuple):
+@dataclass(frozen=True)
+class RectAnnotation(Annotation):
     ''' A rectangle annotation to be rendered in an AnnotationDriver context.
 
     Args:
@@ -245,7 +253,8 @@ class RectAnnotation(NamedTuple):
     ''' The line color of the rectangle. If `None`, the default drawing color will be used. '''
 
 
-class LineAnnotation(NamedTuple):
+@dataclass(frozen=True)
+class LineAnnotation(Annotation):
     ''' A line annotation to be rendered in an AnnotationDriver context.
 
     Args:
@@ -262,7 +271,8 @@ class LineAnnotation(NamedTuple):
     ''' The thickness of the line. '''
 
 
-class MarkerAnnotation(NamedTuple):
+@dataclass(frozen=True)
+class MarkerAnnotation(Annotation):
     ''' A marker annotation to be rendered in an AnnotationDriver context.
 
     Args:
@@ -295,7 +305,8 @@ class MarkerAnnotation(NamedTuple):
     ''' The color of the maker. '''
 
 
-class PolyLineAnnotation(NamedTuple):
+@dataclass(frozen=True)
+class PolyLineAnnotation(Annotation):
     ''' A PolyLine annotation to be rendered in an AnnotationDriver context.
 
     Args:
@@ -315,6 +326,7 @@ class PolyLineAnnotation(NamedTuple):
     ''' Fill color. '''
 
 
+@dataclass(frozen=True)
 class TimestampAnnotation(LabelAnnotation):
     ''' A timestamp annotation to be rendered in an AnnotationDriver context.
 
@@ -324,13 +336,14 @@ class TimestampAnnotation(LabelAnnotation):
         point: The origin of the timestamp. If not specified, the timestamp will be places
             on the top-left corner of the image.
     '''
-    def __new__(cls, timestamp: Optional[datetime.datetime]=None, point: Point=Point(0.02, 0.04)):
+    def __init__(self, timestamp: Optional[datetime.datetime]=None, point: Point=Point(0.02, 0.04)):
         timestamp = timestamp or local_now()
         time_str = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-        return LabelAnnotation.__new__(cls, point=point, text=time_str)
+        return super().__init__(point=point, text=time_str)
 
 
-class BoundingBoxAnnotation(NamedTuple):
+@dataclass(frozen=True)
+class BoundingBoxAnnotation(Annotation):
     ''' A bounding box annotation with a rectangle, and optional upper and lower labels.
 
     Args:
@@ -352,48 +365,6 @@ class BoundingBoxAnnotation(NamedTuple):
     color: Optional[Color] = None
     ''' The color of the bounding box and the labels. '''
 
-    @staticmethod
-    def from_detection(
-        detection: Detection,
-        color: Optional[Color]=None
-    ):
-        ''' Creates a BoundingBoxAnnotation from a detected object.
-
-        Args:
-            detection: the detected object
-            color: the color of the annotation
-        '''
-        name = detection.class_name or str(detection.class_id)
-        return BoundingBoxAnnotation(
-            rectangle=detection.box,
-            top_label=f'{name}: {detection.score:.2%}',
-            color=color
-        )
-
-    @staticmethod
-    def from_tracked_object(
-        tracked_object: TrackedObject,
-        color: Optional[Color]=None,
-        brightness: float=1.0
-    ):
-        ''' Creates a BoundingBoxAnnotation from a tracked object.
-
-        Args:
-            detection: the detected object
-            color: the color of the annotation. If not specified, a pseudo-random color will be
-                generated based on the track_id of the tracked object.
-            brightness: if the color is generated, changes the luminosity of the color.
-        '''
-        name = tracked_object.class_name or str(tracked_object.class_id)
-        if color is None:
-            color = Color.from_id(tracked_object.track_id).brightness(brightness)
-        return BoundingBoxAnnotation(
-            rectangle=tracked_object.box,
-            top_label=f'{name}: {tracked_object.score:.2%}',
-            bottom_label=f'id: {tracked_object.track_id}',
-            color=color
-        )
-
 
 class AnnotationDriverBase(ABC):
     ''' Base class for annotating drawing drivers.
@@ -411,9 +382,8 @@ class AnnotationDriverBase(ABC):
             parent_logger.getChild(self.__class__.__name__)
         )
 
-    def render(
-        self,
-        annotations: Iterable[Union[LabelAnnotation, RectAnnotation]],
+    def render(self,
+        annotations: Iterable[Annotation],
         context: Any
     ) -> Any:
         ''' Renders a collection of annotations on a context.
