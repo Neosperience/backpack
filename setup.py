@@ -4,7 +4,7 @@ import os
 from setuptools import setup, find_packages
 
 name = "panorama-backpack"
-version = "0.1.2"
+version = "0.1.3"
 
 # get the dependencies and installs
 with open("requirements.txt", "r") as f:
