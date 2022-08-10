@@ -127,6 +127,11 @@ class ColorMap:
         ''' Returns the colors of this color map as a list. '''
         return list(cls.colors.items())
 
+    @classmethod
+    def color_from_id(cls, identifier: int) -> Color:
+        colors = cls.as_list()
+        return colors[identifier % len(colors)]
+
 
 class HTMLColors(ColorMap):
     ''' HTML Basic colors as of https://en.wikipedia.org/wiki/Web_colors#HTML_color_names '''
