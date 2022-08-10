@@ -6,11 +6,14 @@ import datetime
 
 mock_cv2 = Mock(name='mock_cv2')
 mock_np = Mock(name='mock_np')
-with patch.dict('sys.modules', cv2=mock_cv2, numpy=mock_np):
+mock_panoramasdk = Mock(name='panoramasdk')
+with patch.dict('sys.modules', cv2=mock_cv2, numpy=mock_np, panoramasdk=mock_panoramasdk):
+    from backpack.annotation.driver import AnnotationDriverBase
+    from backpack.annotation.panorama import PanoramaMediaAnnotationDriver
+    from backpack.annotation.opencv import OpenCVImageAnnotationDriver
     from backpack.annotation import (
         TimestampAnnotation, LabelAnnotation, LineAnnotation, RectAnnotation, MarkerAnnotation,
         BoundingBoxAnnotation, PolyLineAnnotation,
-        AnnotationDriverBase, PanoramaMediaAnnotationDriver, OpenCVImageAnnotationDriver,
         Color
     )
 
