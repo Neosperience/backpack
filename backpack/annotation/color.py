@@ -125,7 +125,7 @@ class ColorMap:
     @classmethod
     def as_list(cls) -> Sequence[Color]:
         ''' Returns the colors of this color map as a list. '''
-        return list(cls.colors.items())
+        return list(cls.colors.values())
 
     @classmethod
     def color_from_id(cls, identifier: int) -> Color:
