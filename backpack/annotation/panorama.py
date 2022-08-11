@@ -1,4 +1,10 @@
-import panoramasdk
+try:
+    import panoramasdk
+except ImportError as e:
+    raise ImportError(
+        'PanoramaMediaAnnotationDriver is supposed to be used only from a AWS Panorama SDK '
+        'application, either on a Panorama device or using the test_utility.'
+    ) from e
 
 from .driver import AnnotationDriverBase
 

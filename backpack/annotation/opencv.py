@@ -1,6 +1,13 @@
 from typing import Callable, Tuple, Any
 
-import cv2
+try:
+    import cv2
+except ImportError as e:
+    raise ImportError(
+        'In order to use OpenCVImageAnnotationDriver you should have the optional dependency '
+        'OpenCV installed. You can install it with: pip install "panorama-backpack[opencv]"'
+    )
+
 import numpy as np
 
 from ..geometry import Point

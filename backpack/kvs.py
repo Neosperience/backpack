@@ -9,7 +9,7 @@ To use this class you MUST have the following dependencies correctly configured 
    support`_
  - Environment variable ``GST_PLUGIN_PATH`` configured to point to the directory where the compiled
    binaries of KVS Producer SDK GStreamer plugin is placed
- - Environment vatiable ``LD_LIBRARY_PATH`` including the open source third party dependencies
+ - Environment variable ``LD_LIBRARY_PATH`` including the open source third party dependencies
    compiled by KVS Producer SDK
  - `numpy`_
  - `boto3`_

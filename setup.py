@@ -35,6 +35,7 @@ setup(
         "Programming Language :: Python :: 3.7",
     ],
     extras_require={
+        "opencv": ["opencv-headless"]
     },
     test_suite='tests'
 )

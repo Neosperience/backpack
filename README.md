@@ -1,4 +1,4 @@
-# Backpack 🎒
+# Backpack
 
 ![hit count](https://hits.dwyl.com/Neosperience/backpack.svg?style=flat&show=unique)
 ![pipeline](https://s3.eu-west-1.amazonaws.com/github-ci.experiments.neosperience.com/Neosperience/backpack/build/pipeline.svg?)
@@ -17,7 +17,7 @@ Backpack provides the following modules:
  - *SkyLine* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSkyLine* is an implementation of a SkyLine pipeline that lets you send the processed video to AWS Kinesis Video Streams.
  - *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
 
-## Installation ⚙️
+## Installation
 
 Backpack consists of several loosely coupled components, each solving a specific task. Backpack python package is expected to be installed in the docker container of your Panorama application with pip, so you would add the following line to your `Dockerfile`:
 
@@ -27,7 +27,7 @@ RUN pip install git+https://github.com/neosperience/backpack.git
 
 Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSSkyLine` to restream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
 
-## Permissions 🛡️
+## Permissions
 
 Several components of Backpack call AWS services in the account where your Panorama appliance is provisioned. To use these components, you should grant permissions to the Panorama Application IAM Role to use these services. Please refer to [AWS Panorama documentation](https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html) for more information. For each component, we will list the services required by the component. For example, `AutoIdentity` needs permission to execute the following AWS service operations:
 
@@ -48,7 +48,7 @@ To make this component work correctly, you should include the following inline p
 
 The rest of this readme discusses the different components in Backpack.
 
-## AutoIdentity 📛
+## AutoIdentity
 
 When your application's code is running in a Panorama application, there is no official way to know which device is running your app or which deployment version of your app is currently running. `AutoIdentity` queries these details directly by calling AWS Panorama management services based on the UID of your Application that you typically can find in the `AppGraph_Uid` environment variable. When instantiating the `AutoIdentity` object, you should pass the AWS region name where you provisioned the Panorama appliance. You can pass the region name, for example, as an application parameter.
 
@@ -81,11 +81,11 @@ The code above prints details of the running application in the CloudWatch log s
 
 You can access all these details as the properties of the `AutoIdentity` object, for example, with `auto_identity.application_description`.
 
-## Timepiece ⌚
+## Timepiece
 
 Timepiece component includes classes that allow you to quickly time profile the video processing pipeline. For detailed information, please check the API documentation.
 
-### Ticker ⏲️
+### Ticker
 
 `Ticker` allows you to calculate statistics of the time intervals between recurring events. You can use a ticker, for example, to get statistics about how much time the application spends to process frames.
 
@@ -107,7 +107,7 @@ This code returns the time interval (in seconds) between the last five `tick()` 
 <Ticker intervals=[0.0899, 0.0632, 0.0543, 0.0713, 0.0681] min=0.0543 mean=0.0694 max=0.0899>
 ```
 
-### StopWatch ⏱️
+### StopWatch
 
 With `StopWatch`, you can measure the execution time of a code block, even repeatedly, and get statistics about the time spent on different invocations. You can use `StopWatch`, for example, to profile the inference time of your machine learning model or your preprocessing or postprocessing functions. Stopwatches can be organized in a hierarchy, where the parent watch measures the summary of the time of child watches.
 
@@ -148,7 +148,7 @@ Results:
 
 You can access all interval data, as well as the statistical values using `StopWatch` properties.
 
-### Schedules 📅
+### Schedules
 
 Schedules allow you to schedule the execution of a function at a later time.
 
@@ -209,7 +209,7 @@ OrdinalSchedule was called at 2022-02-18 13:08:31.093451+00:00
 OrdinalSchedule was called at 2022-02-18 13:08:31.776985+00:00
 ```
 
-### Tachometer 📈
+### Tachometer
 
 A `Tachometer` combines a `Ticker` and an `IntervalSchedule` to measure the time interval of a recurring event and periodically report statistics about it. You can use it, for example, to report the frame processing time statistics to an external service. You can specify the reporting interval and a callback function that will be called with the timing statistics. You should consider using an *executor*, as your reporting callback can take a considerable amount of time to finish, and you might not want to hold up the processing loop synchronously meanwhile.
 
@@ -247,7 +247,7 @@ timestamp: 2022-02-18 13:08:40.083832+00:00
 min: 0.0028, max: 0.0975, sum: 1.9781, num: 39
 ```
 
-### CWTachometer 🌩️📈
+### CWTachometer
 
 `CWTachometer` is a `Tachometer` subclass that reports frame processing time statistics to [AWS CloudWatch Metrics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html) service. You can use this class as a drop-in to your frame processing loop. It will give you detailed statistics about the behavior the timing of your application and you can mount [CloudWatch alarms](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html) on this metric to receive email or SMS notifications when your application stops processing the video for whatever reason.
 
@@ -407,7 +407,7 @@ class Application(panoramasdk.node):
 
 If everything worked well, you can watch the restreamed video in the [Kinesis Video Streams page](https://console.aws.amazon.com/kinesisvideo/home) of the AWS console.
 
-## Annotations 🖍️
+## Annotations
 
 *Annotations* and *annotation drivers* provide a unified way to draw annotations on different rendering backends. Currently, two annotation drivers are implemented:
 
@@ -426,9 +426,10 @@ Example usage:
 import panoramasdk
 from backpack.annotation import (
     Point, LabelAnnotation, RectAnnotation, TimestampAnnotation,
-    OpenCVImageAnnotationDriver,
-    PanoramaMediaAnnotationDriver
 )
+
+from backpack.annotation.opencv import OpenCVImageAnnotationDriver
+from backpack.annotation.panorama import PanoramaMediaAnnotationDriver
 
 class Application(panoramasdk.node):
 

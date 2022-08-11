@@ -17,7 +17,14 @@ from enum import Enum
 from typing import Optional
 from abc import ABC, abstractmethod
 
-import cv2
+try:
+    import cv2
+except ImportError as e:
+    raise ImportError(
+        'OpenCV installation is not found. You must manually install OpenCV with GStreamer '
+        'support to use SkyLine. Please refer to installation instructions for details.'
+    ) from e
+
 from dotenv import find_dotenv, dotenv_values
 
 from .timepiece import Ticker
