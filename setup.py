@@ -36,4 +36,5 @@ setup(
     ],
     extras_require={
     },
+    test_suite='tests'
 )
