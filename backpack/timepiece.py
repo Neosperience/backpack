@@ -8,6 +8,7 @@ from collections import deque
 from itertools import islice
 from typing import List, Deque, Optional, Iterator, Dict, Any, Callable, Tuple
 from abc import ABC, abstractmethod
+import concurrent.futures
 
 from dateutil.tz import tzlocal
 
@@ -289,7 +290,7 @@ class Callback:
         cb: Callable,
         cbargs: Optional[List[Any]] = None,
         cbkwargs: Optional[Dict[str, Any]] = None,
-        executor: Optional['concurrent.futures.Executor'] = None
+        executor: Optional[concurrent.futures.Executor] = None
     ):
         self.cb = cb
         self.cbargs = cbargs or []
@@ -514,7 +515,7 @@ class Tachometer:
         self,
         stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
-        executor: Optional['concurrent.futures.Executor'] = None
+        executor: Optional[concurrent.futures.Executor] = None
     ):
         self.stats_callback = stats_callback
         self.schedule = IntervalSchedule(
