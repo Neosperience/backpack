@@ -110,6 +110,17 @@ class Color:
         conv = lambda ch: min(255, int(ch * brightness))
         return Color(r=conv(self.r), g=conv(self.g), b=conv(self.b), alpha=self.alpha)
 
+    def with_alpha(self, alpha: float) -> 'Color':
+        ''' Returns a new Color instance with changed alpha.
+
+        Args:
+            alpha: The new alpha.
+
+        Returns:
+            A new color instance with changed alpha.
+        '''
+        return Color(r=self.r, g=self.g, b=self.b, alpha=alpha)
+
 
 class ColorMap:
     ''' A simply color map implementation. '''
