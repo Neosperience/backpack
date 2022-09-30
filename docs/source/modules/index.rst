@@ -27,6 +27,9 @@ Backpack provides the following modules:
    `panoramasdk.media`_ class or OpenCV images.
  - :ref:`geometry-readme` is a collection of classes representing 2D geometric primitives like
    points, lines, polylines, and some useful geometric algorithms.
+ - :ref:`config-readme` helps you to define the deploy-time configuration parameters, parse them
+   into arbitrary Python object, as well as gives you a developer tool to avoid manually editing
+   ``graph.json`` and business logic ``package.json`` when the parameters change.
 
 .. _`AWS Kinesis Video Streams`: https://aws.amazon.com/kinesis/video-streams/
 .. _`VLC Media Player`: https://www.videolan.org
@@ -41,3 +44,4 @@ Backpack provides the following modules:
    skyline
    annotation
    geometry
+   config

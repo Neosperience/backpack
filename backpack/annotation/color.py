@@ -1,3 +1,8 @@
+''' This module defines the :class:`~backpack.annotation.color.Color` class, an abstraction over
+RGBA colors, as well ass :class:`~backpack.annotation.color.ColorMap`, that lets you easily access
+frequently used colors.
+'''
+
 from dataclasses import dataclass
 from typing import Union, Optional, Sequence, Mapping, OrderedDict
 import collections

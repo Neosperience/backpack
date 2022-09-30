@@ -424,8 +424,9 @@ Example usage:
 
 ```python
 import panoramasdk
+from backpack.geometry import Point
 from backpack.annotation import (
-    Point, LabelAnnotation, RectAnnotation, TimestampAnnotation,
+    LabelAnnotation, RectAnnotation, TimestampAnnotation,
 )
 
 from backpack.annotation.opencv import OpenCVImageAnnotationDriver

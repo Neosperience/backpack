@@ -22,7 +22,7 @@ copyright = '2022, Janos Tolgyesi'
 author = 'Janos Tolgyesi'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = 'v0.1.6'
 
 
 # -- General configuration ---------------------------------------------------
@@ -71,3 +71,5 @@ intersphinx_mapping = {
     'python': ('http://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable', None)
 }
+
+autodoc_mock_imports = ["panoramasdk"]

@@ -3,18 +3,10 @@
 annotation
 ==========
 
-.. automodule:: backpack.annotation
+Colors
+------
 
-Helper structures
------------------
-
-.. autoclass:: backpack.annotation.Point
-   :members:
-   :show-inheritance:
-
-.. autoclass:: backpack.annotation.Color
-   :members:
-   :show-inheritance:
+.. automodule:: backpack.annotation.color
 
 Annotation types
 ----------------
@@ -42,10 +34,10 @@ Annotation types
 Annotation driver API
 ---------------------
 
-:class:`~backpack.annotation.AnnotationDriverBase` specifies the unified API to draw annotation
-on different backends.
+:class:`~backpack.annotation.driver.AnnotationDriverBase` specifies the unified API to draw
+annotation on different backends.
 
-.. autoclass:: backpack.annotation.AnnotationDriverBase
+.. autoclass:: backpack.annotation.driver.AnnotationDriverBase
    :members:
    :show-inheritance:
 
@@ -54,10 +46,10 @@ Annotation driver implementations
 
 Currently, annotations can be drawn on panoramasdk.media and OpenCV images.
 
-.. autoclass:: backpack.annotation.PanoramaMediaAnnotationDriver
+.. autoclass:: backpack.annotation.panorama.PanoramaMediaAnnotationDriver
    :members:
    :show-inheritance:
 
-.. autoclass:: backpack.annotation.OpenCVImageAnnotationDriver
+.. autoclass:: backpack.annotation.opencv.OpenCVImageAnnotationDriver
    :members:
    :show-inheritance:

@@ -21,6 +21,8 @@ profiling your Panorama application, and remote view the output of your model.
    API
  - :ref:`geometry-api` contains 2D geometry primitives and implementation of some geometric
    algorithms
+ - :ref:`config-api` provides a way to standardize the configuration of Panorama applications via
+   deploy-time parameters
 
 .. toctree::
     :hidden:
@@ -32,4 +34,5 @@ profiling your Panorama application, and remote view the output of your model.
     rtsp
     annotation
     geometry
+    config
 
