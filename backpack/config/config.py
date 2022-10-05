@@ -33,27 +33,37 @@ class ConfigBase:
         serde_metadata: Mapping[str, Any]={}
     ):
         fields = dataclasses.fields(self)
-        for f in fields:
-            name_components = prefix + [f.name]
-            if dataclasses.is_dataclass(f.type):
-                obj = getattr(self, f.name)
-                for subres in obj.param_walker(prefix=name_components, serde_metadata=serde_metadata):
-                    yield subres
+        for fld in fields:
+            name_components = prefix + [fld.name]
+            if dataclasses.is_dataclass(fld.type):
+                obj = getattr(self, fld.name)
+                for sub_result in obj.param_walker(prefix=name_components, serde_metadata=serde_metadata):
+                    yield sub_result
             else:
-                if 'type' in f.metadata:
-                    typename = f.metadata['type']
+                # Get type name
+                if 'type' in fld.metadata:
+                    typename = fld.metadata['type']
                 else:
-                    typename = ConfigBase.TYPE_MAP.get(f.type)
-                serde = f.metadata.get('serde')
-                if serde is not None and f.default is not None:
-                    default = serde.serialize(f.default, metadata=serde_metadata)
-                else:
-                    default = f.default
+                    typename = ConfigBase.TYPE_MAP.get(fld.type)
                 if typename is None:
-                    raise ValueError(f'Dataclass {self} field has unsupported type: {f}')
+                    raise ValueError(f'Dataclass {self} field has unsupported type: {fld}')
+
+                # Get default value
+                if fld.default is not dataclasses.MISSING:
+                    default = fld.default
+                elif fld.default_factory  is not dataclasses.MISSING:
+                    default = fld.default_factory()
+                else:
+                    default = None
+
+                # Get serde
+                serde = fld.metadata.get('serde')
+                if serde is not None and default is not None:
+                    default = serde.serialize(default, metadata=serde_metadata)
+
                 name = '_'.join(name_components)
-                doc = f.metadata.get('__doc__', f.metadata.get('doc'))
-                yield (name, typename, default, doc, name_components, f)
+                doc = fld.metadata.get('__doc__', fld.metadata.get('doc'))
+                yield (name, typename, default, doc, name_components, fld)
 
     def get_panorama_definitions(self,
         serde_metadata: Mapping[str, Any]={}
