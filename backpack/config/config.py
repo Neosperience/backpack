@@ -28,13 +28,16 @@ class ConfigBase:
     def __init__(self) -> None:
         assert dataclasses.is_dataclass(self), 'ConfigBase instances must be also dataclasses.'
 
-    def param_walker(self, prefix: Sequence[List]=[]):
+    def param_walker(self,
+        prefix: Sequence[List]=[],
+        serde_metadata: Mapping[str, Any]={}
+    ):
         fields = dataclasses.fields(self)
         for f in fields:
             name_components = prefix + [f.name]
             if dataclasses.is_dataclass(f.type):
                 obj = getattr(self, f.name)
-                for subres in obj.param_walker(name_components):
+                for subres in obj.param_walker(prefix=name_components, serde_metadata=serde_metadata):
                     yield subres
             else:
                 if 'type' in f.metadata:
@@ -43,7 +46,7 @@ class ConfigBase:
                     typename = ConfigBase.TYPE_MAP.get(f.type)
                 serde = f.metadata.get('serde')
                 if serde is not None and f.default is not None:
-                    default = serde.serialize(f.default)
+                    default = serde.serialize(f.default, metadata=serde_metadata)
                 else:
                     default = f.default
                 if typename is None:
@@ -52,7 +55,9 @@ class ConfigBase:
                 doc = f.metadata.get('__doc__', f.metadata.get('doc'))
                 yield (name, typename, default, doc, name_components, f)
 
-    def get_panorama_definitions(self) -> List[Mapping[str, Any]]:
+    def get_panorama_definitions(self,
+        serde_metadata: Mapping[str, Any]={}
+    ) -> List[Mapping[str, Any]]:
         ''' Generate the ``nodeGraph.nodes`` snippet in ``graph.json``.
 
         Returns:
@@ -69,10 +74,13 @@ class ConfigBase:
                     'description': doc
                 }
             }
-            for (name, typename, default, doc, *_) in self.param_walker()
+            for (name, typename, default, doc, *_) in self.param_walker(serde_metadata=serde_metadata)
         ]
 
-    def get_panorama_edges(self, code_node_name) -> List[Mapping[str, str]]:
+    def get_panorama_edges(self,
+        code_node_name: str,
+        serde_metadata: Mapping[str, Any]={}
+    ) -> List[Mapping[str, str]]:
         ''' Generate the ``nodeGraph.edges`` snippet in ``graph.json``
 
         Returns:
@@ -83,10 +91,12 @@ class ConfigBase:
                 "producer": name,
                 "consumer": code_node_name + "." + name
             }
-            for (name, *_) in self.param_walker()
+            for (name, *_) in self.param_walker(serde_metadata=serde_metadata)
         ]
 
-    def get_panorama_app_interface(self) -> List[Mapping[str, str]]:
+    def get_panorama_app_interface(self,
+        serde_metadata: Mapping[str, Any]={}
+    ) -> List[Mapping[str, str]]:
         ''' Generate the application interface snippet in app node ``package.json``.
 
         Returns:
@@ -97,10 +107,10 @@ class ConfigBase:
                 "name": name,
                 "type": typename
             }
-            for (name, typename, *_) in self.param_walker()
+            for (name, typename, *_) in self.param_walker(serde_metadata=serde_metadata)
         ]
 
-    def get_panorama_markdown_doc(self) -> str:
+    def get_panorama_markdown_doc(self, serde_metadata: Mapping[str, Any]={}) -> str:
         ''' Generates a markdown table of the parameters that can be used in documentation.
 
         Returns:
@@ -112,12 +122,15 @@ class ConfigBase:
         )
         body = '\n'.join([
             f'| {name} | {typename} | {default} | {doc} |'
-            for name, typename, default, doc, *_ in self.param_walker()
+            for name, typename, default, doc, *_ in self.param_walker(serde_metadata=serde_metadata)
         ])
         return header + body
 
     @classmethod
-    def from_panorama_params(cls: Type[T], inputs: 'panoramasdk.port') -> T:
+    def from_panorama_params(cls: Type[T],
+        inputs: 'panoramasdk.port',
+        serde_metadata: Mapping[str, Any]={}
+    ) -> T:
         ''' Parses the config values form AWS Panorama input parameters.
 
         A new Config object is created with the default values. If a particular value is
@@ -130,7 +143,7 @@ class ConfigBase:
             The config instance filled with the parameter values read from the input port.
         '''
         result = cls()
-        for name, typename, default, doc, name_components, f in result.param_walker():
+        for name, typename, default, doc, name_components, f in result.param_walker(serde_metadata=serde_metadata):
             obj = result
             for name_part in name_components[:-1]:
                 obj = getattr(obj, name_part)

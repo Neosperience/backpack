@@ -1,6 +1,6 @@
 ''' This module contains config serdes for objects from backpack.geometry module. '''
 
-from typing import Optional
+from typing import Optional, Mapping, Any
 import dataclasses
 import json
 
@@ -13,10 +13,11 @@ class PolyLineSerDe(ConfigSerDeBase):
 
     Example string: ``[[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.5, 0.5], [0.1, 0.9]]``
     '''
-    name : str = 'JSON encoded Polygon'
+    description : str = 'JSON encoded Polygon'
+    example: str = '[[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.5, 0.5], [0.1, 0.9]]'
 
     @staticmethod
-    def serialize(value: PolyLine) -> str:
+    def serialize(value: PolyLine, metadata: Mapping[str, Any]={}) -> str:
         ''' Serializes a PolyLine into a string.
 
         Args:
@@ -28,7 +29,7 @@ class PolyLineSerDe(ConfigSerDeBase):
         return json.dumps(dataclasses.astuple(value)[0])
 
     @staticmethod
-    def deserialize(value: str) -> Optional[PolyLine]:
+    def deserialize(value: str, metadata: Mapping[str, Any]={}) -> Optional[PolyLine]:
         '''
         Restores a PolyLine from a string.
 

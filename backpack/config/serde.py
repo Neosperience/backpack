@@ -9,49 +9,55 @@ You should subclass :class:`ConfigSerDeBase` and override the following static f
 - ``deserialize``: Take a string representation of the value and return a Python structure.
 '''
 
-from typing import Any, List, Sequence
+from typing import Any, List, Sequence, Mapping
 from abc import ABC, abstractmethod
 
 class ConfigSerDeBase(ABC):
     ''' Defines a serializer / deserializer interface. '''
 
-    name : str = 'Describe the structure here'
+    description : str = 'The base serde encodes and decodes strings to themselves.'
+    ''' A textual description how the object is encoded in the string. Will be used in docs. '''
+
+    example : str = 'abcdefgh'
+    ''' Provide a textual example of the encoded string. Will be used in docs. '''
 
     @staticmethod
     @abstractmethod
-    def serialize(value: Any) -> str:
+    def serialize(value: Any, metadata: Mapping[str, Any]={}) -> str:
         ''' Serializes a config value to a string.
 
         Args:
             value (Any): a Python object to be serialized.
+            metadata (Mapping[str, Any]): Additional metadata to be passed to SerDe implementations.
 
         Returns:
             The object serialized into a string.
         '''
+        return str(value)
 
     @staticmethod
     @abstractmethod
-    def deserialize(value: str) -> Any:
+    def deserialize(value: str, metadata: Mapping[str, Any]={}) -> Any:
         ''' Deserializes a string to a config value.
 
         Args:
             value (str): a Python object serialized into a string
+            metadata (Mapping[str, Any]): Additional metadata to be passed to SerDe implementations.
 
         Returns:
             The the restored Python object.
         '''
+        return value
 
 
 class IntegerListSerDe(ConfigSerDeBase):
-    ''' De/serializes a string containing a comma-separated list of integers.
+    ''' De/serializes a string containing a comma-separated list of integers.'''
 
-    Example string: ``0, 1, 2``
-    '''
-
-    name : str = 'Comma-separated list of integers'
+    description : str = 'Comma-separated list of integers'
+    example: str = '0, 1, 2'
 
     @staticmethod
-    def serialize(value: Sequence[int]) -> str:
+    def serialize(value: Sequence[int], metadata: Mapping[str, Any]={}) -> str:
         ''' Serializes a list of integers into a string.
 
         Args:
@@ -60,10 +66,11 @@ class IntegerListSerDe(ConfigSerDeBase):
         Returns:
             The list of integers serialized into a string.
         '''
-        return ', '.join(str(e) for e in value)
+        sep = metadata.get('separator', ', ')
+        return sep.join(str(e) for e in value)
 
     @staticmethod
-    def deserialize(value: str) -> List[int]:
+    def deserialize(value: str, metadata: Mapping[str, Any]={}) -> List[int]:
         '''Restores a list of integers from a string.
 
         Args:
@@ -75,4 +82,5 @@ class IntegerListSerDe(ConfigSerDeBase):
         Raises:
             Exception: exceptions related to invalid string format.
         '''
-        return [int(e) for e in value.split(',')]
+        sep = metadata.get('separator', ',')
+        return [int(e) for e in value.split(sep)]
