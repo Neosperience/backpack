@@ -163,7 +163,7 @@ class ConfigBase:
             value = getattr(inputs, name).get()
             serde = f.metadata.get('serde')
             if serde is not None:
-                value = serde.deserialize(value)
+                value = serde.deserialize(value, metadata=serde_metadata)
             setattr(obj, key, value)
         return result
 
