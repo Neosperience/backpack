@@ -34,38 +34,38 @@ class ConfigBase:
         return '_'.join(full_path)
 
     @staticmethod
-    def _get_param_type(fld: dataclasses.field) -> str:
-        if 'type' in fld.metadata:
-            typename = fld.metadata['type']
+    def _get_param_type(field: dataclasses.field) -> str:
+        if 'type' in field.metadata:
+            typename = field.metadata['type']
         else:
-            typename = ConfigBase.TYPE_MAP.get(fld.type)
+            typename = ConfigBase.TYPE_MAP.get(field.type)
         if typename is None:
-            raise ValueError(f'Field has unsupported type: {fld}')
+            raise ValueError(f'Field has unsupported type: {field}')
         return typename
 
     @staticmethod
-    def _get_param_serde(fld: dataclasses.field) -> Optional[Type[ConfigSerDeBase]]:
-        return fld.metadata.get('serde')
+    def _get_param_serde(field: dataclasses.field) -> Optional[Type[ConfigSerDeBase]]:
+        return field.metadata.get('serde')
 
     @staticmethod
     def _get_param_default(
-        fld: dataclasses.field,
+        field: dataclasses.field,
         serde_metadata: Mapping[str, Any]
     ) -> Optional[str]:
-        if fld.default is not dataclasses.MISSING:
-            default = fld.default
-        elif fld.default_factory  is not dataclasses.MISSING:
-            default = fld.default_factory()
+        if field.default is not dataclasses.MISSING:
+            default = field.default
+        elif field.default_factory  is not dataclasses.MISSING:
+            default = field.default_factory()
         else:
             default = None
-        serde = ConfigBase._get_param_serde(fld)
+        serde = ConfigBase._get_param_serde(field)
         if serde is not None and default is not None:
             default = serde.serialize(default, metadata=serde_metadata)
         return default
 
     @staticmethod
-    def _get_param_doc(fld: dataclasses.field) -> Optional[str]:
-        return fld.metadata.get('__doc__', fld.metadata.get('doc'))
+    def _get_param_doc(field: dataclasses.field) -> Optional[str]:
+        return field.metadata.get('__doc__', field.metadata.get('doc'))
 
     def _param_walker(self, _current_path: Sequence[str]=[]) -> Tuple[str, dataclasses.field]:
         ''' Recursively walks all parameters in the config structure.
@@ -99,16 +99,16 @@ class ConfigBase:
         '''
         return [
             {
-                'name': ConfigBase._get_param_name(full_path),
-                'interface': ConfigBase._get_param_type(fld),
-                'value': ConfigBase._get_param_default(fld, serde_metadata),
+                'name': ConfigBase._get_param_name(full_path=full_path),
+                'interface': ConfigBase._get_param_type(field=field),
+                'value': ConfigBase._get_param_default(field=field, serde_metadata=serde_metadata),
                 'overridable': True,
                 'decorator': {
-                    'title': ConfigBase._get_param_name(full_path),
-                    'description': ConfigBase._get_param_doc(fld)
+                    'title': ConfigBase._get_param_name(full_path=full_path),
+                    'description': ConfigBase._get_param_doc(field=field)
                 }
             }
-            for (full_path, fld) in self._param_walker()
+            for (full_path, field) in self._param_walker()
         ]
 
     def get_panorama_edges(self, code_node_name: str) -> List[Mapping[str, str]]:
@@ -119,8 +119,8 @@ class ConfigBase:
         '''
         return [
             {
-                "producer": ConfigBase._get_param_name(full_path),
-                "consumer": code_node_name + "." + ConfigBase._get_param_name(full_path)
+                "producer": ConfigBase._get_param_name(full_path=full_path),
+                "consumer": code_node_name + "." + ConfigBase._get_param_name(full_path=full_path)
             }
             for (full_path, _) in self._param_walker()
         ]
@@ -133,10 +133,10 @@ class ConfigBase:
         '''
         return [
             {
-                "name": ConfigBase._get_param_name(full_path),
-                "type": ConfigBase._get_param_type(fld)
+                "name": ConfigBase._get_param_name(full_path=full_path),
+                "type": ConfigBase._get_param_type(field=field)
             }
-            for (full_path, fld) in self._param_walker()
+            for (full_path, field) in self._param_walker()
         ]
 
     def get_panorama_markdown_doc(self, serde_metadata: Mapping[str, Any]={}) -> str:
@@ -150,11 +150,11 @@ class ConfigBase:
             '|------|---------|---------|-------------|\n'
         )
         body = '\n'.join([
-            f'| {ConfigBase._get_param_name(full_path)} '
-            f'| {ConfigBase._get_param_type(fld)} '
-            f'| {ConfigBase._get_param_default(fld, serde_metadata)} '
-            f'| {ConfigBase._get_param_doc(fld)} |'
-            for (full_path, fld) in self._param_walker()
+            f'| {ConfigBase._get_param_name(full_path=full_path)} '
+            f'| {ConfigBase._get_param_type(field=field)} '
+            f'| {ConfigBase._get_param_default(field=field, serde_metadata=serde_metadata)} '
+            f'| {ConfigBase._get_param_doc(field=field)} |'
+            for (full_path, field) in self._param_walker()
         ])
         return header + body
 
@@ -181,11 +181,11 @@ class ConfigBase:
             for name_part in full_path[:-1]:
                 obj = getattr(obj, name_part)
             key = full_path[-1]
-            name = ConfigBase._get_param_name(fld)
+            name = ConfigBase._get_param_name(full_path=full_path)
             if not hasattr(inputs, name):
                 continue
             value = getattr(inputs, name).get()
-            serde = ConfigBase._get_param_serde(fld)
+            serde = ConfigBase._get_param_serde(fld=fld)
             if serde is not None:
                 value = serde.deserialize(value, metadata=serde_metadata)
             setattr(obj, key, value)
