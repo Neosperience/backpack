@@ -16,7 +16,7 @@ def local_now() -> datetime.datetime:
     ''' Returns the current time in local time zone.
 
     Returns:
-        A timezone aware datettime instance in the local time zone.
+        A timezone aware datetime instance in the local time zone.
     '''
     return datetime.datetime.now(tz=tzlocal())
 
@@ -27,12 +27,12 @@ def local_dt(dt: datetime.datetime) -> datetime.datetime:
         dt: The naive datetime instance.
 
     Returns:
-        A timezone aware datettime instance in the local time zone.
+        A timezone aware datetime instance in the local time zone.
     '''
     return dt.astimezone(tz=tzlocal())
 
 def panorama_timestamp_to_datetime(panorama_ts: Tuple[int, int]) -> datetime.datetime:
-    ''' Converts panoramasdk.media.time_stamp (seconds, microsececonds)
+    ''' Converts panoramasdk.media.time_stamp (seconds, microseconds)
     tuple to python datetime.
 
     Args:
@@ -98,14 +98,14 @@ class BaseTimer(ABC):
             yield f'max={self.max():.4f}'
 
     def __repr__(self) -> str:
-        elems = [self.__class__.__name__] + list(self._repr_props())
-        return '<' + ' '.join(elems) + '>'
+        elements = [self.__class__.__name__] + list(self._repr_props())
+        return '<' + ' '.join(elements) + '>'
 
 
 class Ticker(BaseTimer):
 
     ''' A performance profiler that measures the time interval between repeatedly
-    occuring events.
+    occurring events.
 
     Ticker can also calculate basic statistics of the time intervals.
 
@@ -145,7 +145,7 @@ class StopWatch(BaseTimer):
     There are two ways to use StopWatch: as a context manager, or with the `tick()`
     method. You can use the same StopWatch object in both ways at the same time.
 
-    When used as a context managaer, StopWatch can be used to measure the
+    When used as a context manager, StopWatch can be used to measure the
     performance of python code using an elegant API based on context manager.
     You can measure nested and serial execution.
 
@@ -480,7 +480,7 @@ class Tachometer:
     and periodically report statistics about it.
 
     Call the `tick()` method of the tachometer each time an atomic event happens.
-    For example, if you are interested in the stastics of the frame processing
+    For example, if you are interested in the spastics of the frame processing
     time of your application, call `tick` method each time you process a new
     frame.
 

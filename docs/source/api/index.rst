@@ -6,7 +6,7 @@ API Documentation
 Backpack consists of several modules for getting information about execution environment, time
 profiling your Panorama application, and remote view the output of your model.
 
- - :ref:`autoidentity-api` provides information about the application execution environmen
+ - :ref:`autoidentity-api` provides information about the application execution environment
  - :ref:`timepiece-api` contains time-related utility methods for measuring code execution time and
    scheduling tasks in an external event loop.
  - :ref:`skyline-api` contains an abstract base class to stream OpenCV frames to a GStreamer

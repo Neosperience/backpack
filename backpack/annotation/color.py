@@ -31,7 +31,7 @@ class Color:
 
     @classmethod
     def from_hex(cls, value: Union[str, int]) -> 'Color':
-        ''' Creates a color object from its hexadeciman representation.
+        ''' Creates a color object from its hexadecimal representation.
 
         Args:
             value: integer or HTML color string
@@ -180,7 +180,7 @@ class HTMLColors(ColorMap):
         ('olive', OLIVE),
         ('lime', LIME),
         ('green', GREEN),
-        ('acqua', AQUA),
+        ('aqua', AQUA),
         ('teal', TEAL),
         ('blue', BLUE),
         ('navy', NAVY),

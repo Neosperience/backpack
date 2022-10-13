@@ -51,7 +51,7 @@ class KVSSkyLine(SkyLine):
 
     ''' Sends OpenCV frames to Kinesis Video Streams.
 
-    :class:`KVSSkyLine` can be used to create programatically a video stream and send
+    :class:`KVSSkyLine` can be used to create programmatically a video stream and send
     it to AWS Kinesis Video Streams service.
 
     When initializing the :class:`KVSSkyLine` instance, you should provide the AWS
@@ -132,7 +132,7 @@ class KVSCredentialsHandler(ABC):
     role, you will use dynamic credentials.
 
     When using dynamic credentials, you are expected to call the :meth:`check_refresh`
-    method peridocally to control the expiration of the dynamic credentials. Ideally
+    method periodically to control the expiration of the dynamic credentials. Ideally
     you would call this method each time when you want send a new frame to Kinesis
     Video Streams Producer. If the credentials are not expired, this method should add
     almost no overhead.
@@ -184,7 +184,7 @@ class KVSCredentialsHandler(ABC):
         # we've to use protected members
         if _is_refreshable(self.credentials):
             self.logger.info(f'Refreshing credentials using {self.caller_arn}')
-            # This will refresh the credentials if neeeded
+            # This will refresh the credentials if needed
             advisory = self.credentials.refresh_needed(self.credentials._advisory_refresh_timeout)
             mandatory = self.credentials.refresh_needed(self.credentials._mandatory_refresh_timeout)
             self.logger.info(f'Refresh needed: advisory={advisory}, mandatory={mandatory}')
@@ -309,7 +309,7 @@ class KVSEnvironmentCredentialsHandler(KVSCredentialsHandler):
     environment variables for updated dynamic credentials, so there are chances
     that your stream will stop once the original dynamic credentials expiry.
 
-    For this reason, it is recommened that you use this credentials handler
+    For this reason, it is recommended that you use this credentials handler
     only with static credentials and do not use it in production setting.
 
     Args:

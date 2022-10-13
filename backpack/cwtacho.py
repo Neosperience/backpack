@@ -1,8 +1,9 @@
-''' Reports Tachometer stastitics to AWS CloudWatch Metrics. '''
+''' Reports Tachometer statistics to AWS CloudWatch Metrics. '''
 
 import datetime
 import logging
 from typing import Optional, Dict
+import concurrent
 
 import boto3
 import botocore
@@ -10,9 +11,9 @@ import botocore
 from .timepiece import Tachometer
 
 class CWTachometer(Tachometer):
-    ''' Reports Tachometer stastitics to AWS CloudWatch Metrics.
+    ''' Reports Tachometer statistics to AWS CloudWatch Metrics.
 
-    The IAM policy associated with the Panorama Appplication Role of this app should grant
+    The IAM policy associated with the Panorama Application Role of this app should grant
     the execution of `cloudwatch:PutMetricData` operation.
 
     :param namespace: The name of the CloudWatch namespace of this custom metrics.
@@ -44,13 +45,13 @@ class CWTachometer(Tachometer):
         metric_name: str,
         dimensions: Optional[Dict[str, str]] = None,
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
-        executor: Optional['concurrent.futures.Executor']=None,
+        executor: Optional[concurrent.futures.Executor]=None,
         region: Optional[str] = None,
         boto3_session: Optional[boto3.Session] = None,
         parent_logger: Optional[logging.Logger] = None
     ):
         super().__init__(
-            stats_callback=self._stats_calback,
+            stats_callback=self._stats_callback,
             stats_interval=stats_interval,
             executor=executor
         )
@@ -67,7 +68,7 @@ class CWTachometer(Tachometer):
     def _cw_dimensions(self):
         return [{ 'Name': name, 'Value': value } for name, value in self.dimensions.items()]
 
-    def _stats_calback(self, timestamp, ticker):
+    def _stats_callback(self, timestamp, ticker):
         metric_data = {
             'MetricName': self.metric_name,
             'Dimensions': self._cw_dimensions(),

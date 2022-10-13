@@ -2,7 +2,6 @@
 
 from typing import List, Sequence, Tuple
 import collections.abc
-import dataclasses
 from dataclasses import dataclass
 import math
 from itertools import islice, cycle, groupby
@@ -475,7 +474,7 @@ class PolyLine:
         if len(self.points) < 4:
             return True
 
-        # Iterate over consequitive point triplets
+        # Iterate over consecutive point triplets
         it0 = self.points
         it1 = islice(cycle(self.points), 1, None)
         it2 = islice(cycle(self.points), 2, None)

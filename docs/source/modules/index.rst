@@ -13,7 +13,7 @@ Backpack provides the following modules:
    (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics
    to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms
    if your app stops processing frames.
- - :ref:`skyline-readme` provides a framework to restream the processed video (annotated by
+ - :ref:`skyline-readme` provides a framework to re-stream the processed video (annotated by
    your application) to media endpoints supported by `GStreamer`_. Two implementation of the
    abstract base class :class:`~backpack.skyline.SkyLine` is provided:
 

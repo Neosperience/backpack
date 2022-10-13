@@ -118,7 +118,7 @@ class RTSPServer:
 
     @property
     def port(self) -> str:
-        ''' The port where this server listents to incoming connections. '''
+        ''' The port where this server listens to incoming connections. '''
         return self._port
 
     def urls(self) -> List[str]:
@@ -136,7 +136,7 @@ class RTSPSkyLine(SkyLine):
 
     A single instance of :class:`RTSPServer` application can serve streams coming from multiple
     :class:`RTSPSkyLine` instances. You should instantiate the :class:`RTSPServer` instance first.
-    For example, if you want to serve two seperate RTSP streams, you could use this code to set up
+    For example, if you want to serve two separate RTSP streams, you could use this code to set up
     your scenario::
 
         server = RTSPServer(port="8554")

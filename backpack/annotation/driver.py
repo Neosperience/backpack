@@ -32,7 +32,7 @@ class AnnotationDriverBase(ABC):
         ''' Renders a collection of annotations on a context.
 
         Args:
-            annotations: An iterable collection of annotation type definied in this module.
+            annotations: An iterable collection of annotation type defined in this module.
             context: The context of the backend. Type is implementation-specific.
 
         Returns:

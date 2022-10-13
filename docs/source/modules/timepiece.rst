@@ -3,14 +3,14 @@
 Timepiece
 ---------
 
-Timepiece component includes classes that allow you to quickly time profile the video processing 
+Timepiece component includes classes that allow you to quickly time profile the video processing
 pipeline. For detailed information, please check the API documentation.
 
 Ticker
 ^^^^^^
 
-:class:`~backpack.timepiece.Ticker` allows you to calculate statistics of the time intervals 
-between recurring events. You can use a ticker, for example, to get statistics about how much time 
+:class:`~backpack.timepiece.Ticker` allows you to calculate statistics of the time intervals
+between recurring events. You can use a ticker, for example, to get statistics about how much time
 the application spends to process frames.
 
 Example usage:
@@ -27,18 +27,18 @@ Example usage:
         time.sleep(random.random() / 10)
     print(ticker)
 
-This code returns the time interval (in seconds) between the last five 
-:meth:`~backpack.timepiece.Ticker.tick()` calls, as well as some basic stastics of them::
+This code returns the time interval (in seconds) between the last five
+:meth:`~backpack.timepiece.Ticker.tick()` calls, as well as some basic statistics of them::
 
     <Ticker intervals=[0.0899, 0.0632, 0.0543, 0.0713, 0.0681] min=0.0543 mean=0.0694 max=0.0899>
 
 StopWatch
 ^^^^^^^^^
 
-With :class:`~backpack.timepiece.StopWatch`, you can measure the execution time of a code block, 
-even repeatedly, and get statistics about the time spent on different invocations. You can use 
-:class:`~backpack.timepiece.StopWatch`, for example, to profile the inference time of your machine 
-learning model or your preprocessing or postprocessing functions. Stopwatches can be organized in 
+With :class:`~backpack.timepiece.StopWatch`, you can measure the execution time of a code block,
+even repeatedly, and get statistics about the time spent on different invocations. You can use
+:class:`~backpack.timepiece.StopWatch`, for example, to profile the inference time of your machine
+learning model or your preprocessing or postprocessing functions. Stopwatches can be organized in
 a hierarchy, where the parent watch measures the summary of the time of child watches.
 
 Example usage:
@@ -68,27 +68,27 @@ Results::
 
     <StopWatch name=root intervals=[0.5416] min=0.5416 mean=0.5416 max=0.5416 children=[
         <StopWatch name=task1 intervals=[0.2505] min=0.2505 mean=0.2505 max=0.2505 children=[
-            <StopWatch name=subtask1_1 intervals=[0.0301, 0.0501] min=0.0301 mean=0.0401 max=0.0501>, 
-            <StopWatch name=subtask1_2 intervals=[0.0701] min=0.0701 mean=0.0701 max=0.0701>, 
+            <StopWatch name=subtask1_1 intervals=[0.0301, 0.0501] min=0.0301 mean=0.0401 max=0.0501>,
+            <StopWatch name=subtask1_2 intervals=[0.0701] min=0.0701 mean=0.0701 max=0.0701>,
             <StopWatch name=subtask1_3 intervals=[0.0901] min=0.0901 mean=0.0901 max=0.0901>
-        ]>, 
+        ]>,
         <StopWatch name=task2 intervals=[0.0275, 0.0825, 0.0334, 0.0843, 0.0633] min=0.0275 mean=0.0582 max=0.0843>
     ]>
 
-You can access all interval data, as well as the statistical values using 
+You can access all interval data, as well as the statistical values using
 :class:`~backpack.timepiece.StopWatch` properties.
 
 Schedules
 ^^^^^^^^^
 
-Schedules allow you to schedule the execution of a function at a later time. 
+Schedules allow you to schedule the execution of a function at a later time.
 
 It is important to note that :class:`~backpack.timepiece.Schedule` instances do not intrinsically
 have an event loop or use kernel-based timing operations. Instead, call regularly the
 :meth:`~backpack.timepiece.Schedule.tick` method of the :class:`~backpack.timepiece.Schedule`, and
 the scheduled function will be executed when the next :meth:`~backpack.timepiece.Schedule.tick` is
 called after the scheduled time. When developing Panorama applications, you typically call the
-:meth:`~backpack.timepiece.Schedule.tick` function in the frame processing loop. 
+:meth:`~backpack.timepiece.Schedule.tick` function in the frame processing loop.
 
 You can also specify a `python executor`_ when creating :class:`~backpack.timepiece.Schedule`
 objects. If an executor is specified, the scheduled function will be called asynchronously using
@@ -129,19 +129,19 @@ Example usage:
 
     at = local_now() + datetime.timedelta(seconds=3)
     atschedule = AtSchedule(
-        at=at, 
+        at=at,
         callback=get_callback('AtSchedule', executor)
     )
 
     iv = datetime.timedelta(seconds=1.35)
     ivschedule = IntervalSchedule(
-        interval=iv, 
+        interval=iv,
         callback=get_callback('IntervalSchedule', executor)
     )
 
     ordinalschedule = OrdinalSchedule(
-        ordinal=17, 
-        callback=get_callback('OrdinalSchedule', executor), 
+        ordinal=17,
+        callback=get_callback('OrdinalSchedule', executor),
     )
 
     alarmclock = AlarmClock([atschedule, ivschedule, ordinalschedule])
@@ -191,7 +191,7 @@ Example usage:
               f'sum: {ticker.sum():.4f}, num: {ticker.len()}')
 
     tach = Tachometer(
-        stats_callback=stats_callback, 
+        stats_callback=stats_callback,
         stats_interval=datetime.timedelta(seconds=2),
         executor=ThreadPoolExecutor()
     )
@@ -270,7 +270,7 @@ service of your AWS account:
             self.tacho.tick()
 
             # this  will block until next frame is available
-            streams = self.inputs.video_in.get() 
+            streams = self.inputs.video_in.get()
 
             for stream in streams:
                 # process stream.image here ...

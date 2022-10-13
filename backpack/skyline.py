@@ -30,14 +30,14 @@ from dotenv import find_dotenv, dotenv_values
 from .timepiece import Ticker
 
 USE_LAST_VALUE = -999
-''' Using this value for dynamic streaming attributes like fps, width and heigth
+''' Using this value for dynamic streaming attributes like fps, width and height
 will cause to use the values from the last streaming session. '''
 
 class SkyLine(ABC):
 
     ''' Abstract base class for sending OpenCV frames to a remote service using GStreamer.
 
-    :class:`SkyLine` can be used to create programatically a video stream and send it to
+    :class:`SkyLine` can be used to create programmatically a video stream and send it to
     an external video ingestion service supported by GStreamer. Once the :class:`SkyLine`
     instances is configured and the streaming pipeline was opened by calling
     :meth:`start_streaming`, successive frames can be passed to the :meth:`put` method of the
@@ -45,10 +45,10 @@ class SkyLine(ABC):
     BGR channel order, :class:`numpy.uint8` type).
 
     The frequency of frames (frames per second) as well as the image
-    dimensions (width, heigth) are static during the streaming. You can either
+    dimensions (width, height) are static during the streaming. You can either
     specify these properties upfront in the constructor, or let SkyLine figure out
     these values. In the later case, up to :attr:`FPS_METER_WARMUP_FRAMES`
-    frames (by default 100) will be discarded at the begining of the streaming
+    frames (by default 100) will be discarded at the beginning of the streaming
     and during this period the value of the stream fps, width and height will
     be determined automatically. In all cases you are expected to call the :meth:`put`
     method with the frequency of the :attr:`video_fps` property, and send images
@@ -84,7 +84,7 @@ class SkyLine(ABC):
     _FRAME_LOG_FREQUENCY = datetime.timedelta(seconds=60)
 
     # Wait for so many put() requests before starting streaming.
-    # During this period the avgerage FPS will be measured and the
+    # During this period the average FPS will be measured and the
     # stream will be initialized with this FPS
     FPS_METER_WARMUP_FRAMES = 100
 
@@ -275,7 +275,7 @@ class SkyLine(ABC):
     ) -> None:
         ''' Start the streaming.
 
-        After calling this method, you are exepcted to call the :meth:`put` method at
+        After calling this method, you are expected to call the :meth:`put` method at
         regular intervals. The streaming can be stopped and restarted arbitrary times on
         the same :class:`SkyLine` instance.
 
@@ -291,7 +291,7 @@ class SkyLine(ABC):
             width: The declared width of the video. Set this to ``None`` to determine
                 this value automatically, or :attr:`USE_LAST_VALUE` to use the value from
                 the last streaming session.
-            height: The declared heigth of the video. Set this to ``None`` to determine
+            height: The declared height of the video. Set this to ``None`` to determine
                 this value automatically, or :attr:`USE_LAST_VALUE` to use the value from
                 the last streaming session.
         '''
