@@ -185,7 +185,7 @@ class ConfigBase:
             if not hasattr(inputs, name):
                 continue
             value = getattr(inputs, name).get()
-            serde = ConfigBase._get_param_serde(fld=fld)
+            serde = ConfigBase._get_param_serde(field=fld)
             if serde is not None:
                 value = serde.deserialize(value, metadata=serde_metadata)
             setattr(obj, key, value)
