@@ -9,6 +9,7 @@ from itertools import islice
 from typing import List, Deque, Optional, Iterator, Dict, Any, Callable, Tuple
 from abc import ABC, abstractmethod
 import concurrent.futures
+import functools
 
 from dateutil.tz import tzlocal
 
@@ -248,6 +249,28 @@ class StopWatch(BaseTimer):
         self.intervals.append(time.perf_counter() - self._start)
         self._start = None
 
+    def measure(self, fun):
+        ''' Use stopwatch as decorator.
+
+        Usage::
+
+            import time
+            from backpack.timepiece import StopWatch
+
+            stopwatch = StopWatch('stopwatch')
+
+            @stopwatch.measure
+            def long_running_func():
+                time.sleep(10)
+
+        '''
+        @functools.wraps(fun)
+        def wrapper(*args, **kwds):
+            self.__enter__()
+            fun(*args, **kwds)
+            self.__exit__()
+        return wrapper
+
     @property
     def level(self) -> int:
         ''' Returns the number of parents. '''
@@ -475,7 +498,7 @@ class AlarmClock:
             self.schedules.remove(schedule)
 
 
-class Tachometer:
+class BaseTachometer:
     ''' A Tachometer can be used to measure the frequency of recurring events,
     and periodically report statistics about it.
 
@@ -500,6 +523,7 @@ class Tachometer:
        - bool: True, if the stats_callback was called
        - the return value of stats_callback if it was called, else None
 
+    :param timer: Instance of the BaseTimer subclass that will be used to report events.
     :param stats_callback: A callable with the above signature that will be called
         when new statistics is available.
     :param stat_interval: The interval of the statistics calculation
@@ -513,6 +537,7 @@ class Tachometer:
 
     def __init__(
         self,
+        timer: BaseTimer,
         stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional[concurrent.futures.Executor] = None
@@ -522,21 +547,62 @@ class Tachometer:
             interval=stats_interval,
             callback=Callback(cb=self._calculate_stats, executor=executor)
         )
+        self.timer = timer
+
+    def _calculate_stats(self):
+        timestamp = local_now()
+        if len(self.timer.intervals) == 0:
+            return (False, None)
+        res = self.stats_callback(timestamp, self.timer)
+        self.timer.intervals.clear()
+        return (True, res)
+
+
+class TickerTachometer(BaseTachometer):
+
+    def __init__(self,
+        stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
+        stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
+        executor: Optional[concurrent.futures.Executor] = None
+    ):
         ticker_intervals = int(self.EXPECTED_MAX_FPS * stats_interval.total_seconds())
         self.ticker = Ticker(max_intervals=ticker_intervals)
+        super().__init__(self.ticker, stats_callback, stats_interval, executor)
 
     def tick(self) -> bool:
         ''' Call this method when a recurring event happens.
 
         :returns: True if the stat_callback was called in this tick.
         '''
-        self.ticker.tick()
+        self.timer.tick()
         return self.schedule.tick()
 
-    def _calculate_stats(self):
-        timestamp = local_now()
-        if len(self.ticker.intervals) == 0:
-            return (False, None)
-        res = self.stats_callback(timestamp, self.ticker)
-        self.ticker.intervals.clear()
-        return (True, res)
+
+class StopWatchTachometer(BaseTachometer):
+
+    def __init__(self,
+        stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
+        stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
+        executor: Optional[concurrent.futures.Executor] = None
+    ):
+        ticker_intervals = int(self.EXPECTED_MAX_FPS * stats_interval.total_seconds())
+        self.stopwatch = StopWatch('tachometer', max_intervals=ticker_intervals)
+        super().__init__(self.stopwatch, stats_callback, stats_interval, executor)
+
+    def __enter__(self) -> 'StopWatchTachometer':
+        ''' Context manager entry point returning self.'''
+        self.timer.__enter__()
+        return self
+
+    def __exit__(self, *_) -> None:
+        ''' Context manager exit. '''
+        self.timer.__exit__()
+        self.schedule.tick()
+
+    def measure(self, fun):
+        @functools.wraps(fun)
+        def wrapper(*args, **kwds):
+            self.__enter__()
+            fun(*args, **kwds)
+            self.__exit__()
+        return wrapper

@@ -6,7 +6,7 @@ from backpack.timepiece import (
     local_now, local_dt, panorama_timestamp_to_datetime,
     Ticker, StopWatch, Callback,
     AtSchedule, IntervalSchedule, OrdinalSchedule, AlarmClock,
-    Tachometer
+    TickerTachometer
 )
 
 # Mock time to control its behavior
@@ -432,12 +432,12 @@ class TestAlarmClock(unittest.TestCase):
 
 @patch('backpack.timepiece.time')
 @patch('backpack.timepiece.local_now')
-class TestTachometer(unittest.TestCase):
+class TestTickerTachometer(unittest.TestCase):
 
     def setUp(self):
         self.stats_callback = Mock(side_effect=self._stats_callback)
         self.stats_interval = datetime.timedelta(seconds=60)
-        self.tachometer = Tachometer(
+        self.tachometer = TickerTachometer(
             stats_callback=self.stats_callback,
             stats_interval=self.stats_interval
         )
@@ -459,7 +459,7 @@ class TestTachometer(unittest.TestCase):
 
     def test_init(self, backpack_mock_local_now, backpack_mock_time):
         self.assertIsInstance(self.tachometer.ticker, Ticker)
-        min_interval_len = Tachometer.EXPECTED_MAX_FPS * self.stats_interval.total_seconds()
+        min_interval_len = TickerTachometer.EXPECTED_MAX_FPS * self.stats_interval.total_seconds()
         self.assertTrue(self.tachometer.ticker.intervals.maxlen >= min_interval_len)
 
     def test_first_tick_no_stats(self, backpack_mock_local_now, backpack_mock_time):
@@ -482,4 +482,4 @@ class TestTachometer(unittest.TestCase):
                          'Stats callback was called with incorrect timestamp')
         self.assertIsInstance(args[1], Ticker, 'Stats callback was not called Ticker instance')
         self.assertEqual(len(self.stats_callback_ticker_intervals), 60,
-                         'Stast callback Ticker has incorrect number of intervals')
+                         'Stats callback Ticker has incorrect number of intervals')

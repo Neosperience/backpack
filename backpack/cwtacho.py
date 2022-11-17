@@ -8,9 +8,9 @@ import concurrent
 import boto3
 import botocore
 
-from .timepiece import Tachometer
+from .timepiece import TickerTachometer
 
-class CWTachometer(Tachometer):
+class CWTachometer(TickerTachometer):
     ''' Reports Tachometer statistics to AWS CloudWatch Metrics.
 
     The IAM policy associated with the Panorama Application Role of this app should grant
