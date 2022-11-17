@@ -6,15 +6,16 @@
 
 > Your hiking equipment for an enjoyable Panorama development experience
 
-You can read also the [structered and extended version of this documentation](https://panorama-backpack.readthedocs.io/).
+You can read also the [structured and extended version of this documentation](https://panorama-backpack.readthedocs.io/).
 
 Backpack is a toolset that makes development for AWS Panorama hopefully more enjoyable. AWS Panorama is a machine learning appliance and software development kit that can be used to develop intelligent video analytics and computer vision applications deployed on an edge device. For more information, refer to the [Panorama page](https://aws.amazon.com/panorama/) on the AWS website.
 
 Backpack provides the following modules:
- - *AutoIdentity* allows your application to learn more about itself and the host device. It gives access to the Panorama device id, application instance id, application name and description, and other similar information.
- - *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
- - *SkyLine* provides a framework to restream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSkyLine* is an implementation of a SkyLine pipeline that lets you send the processed video to AWS Kinesis Video Streams.
- - *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
+
+- *AutoIdentity* allows your application to learn more about itself and the host device. It gives access to the Panorama device id, application instance id, application name and description, and other similar information.
+- *Timepiece* is a collection of timing and profiling classes that allows you to efficiently measure the frame processing time of your app, time profile different stages of frame processing (preprocessing, model invocation, postprocessing), and send a selected subset of these metrics to AWS CloudWatch to monitor your application in real-time, and even create CloudWatch alarms if your app stops processing frames.
+- *SkyLine* provides a framework to re-stream the processed video (annotated by your application) to media endpoints supported by *GStreamer*. *KVSSkyLine* is an implementation of a SkyLine pipeline that lets you send the processed video to AWS Kinesis Video Streams.
+- *Annotation* is a unified API for drawing on different backends like the core `panoramasdk.media` class or OpenCV images.
 
 ## Installation
 
@@ -24,13 +25,13 @@ Backpack consists of several loosely coupled components, each solving a specific
 RUN pip install git+https://github.com/neosperience/backpack.git
 ```
 
-Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSSkyLine` to restream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
+Some components have particular dependencies that can not be installed with the standard pip dependency resolver. For example, if you want to use `KVSSkyLine` to re-stream the output video of your machine learning model to AWS Kinesis Video Streams, you should have several particularly configured libraries in the docker container to make everything work correctly. You will find detailed instructions and `Dockerfile` snippets in the rest of this documentation that will help you put together all dependencies.
 
 ## Permissions
 
 Several components of Backpack call AWS services in the account where your Panorama appliance is provisioned. To use these components, you should grant permissions to the Panorama Application IAM Role to use these services. Please refer to [AWS Panorama documentation](https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html) for more information. For each component, we will list the services required by the component. For example, `AutoIdentity` needs permission to execute the following AWS service operations:
 
- - `panorama:ListApplicationInstances`
+- `panorama:ListApplicationInstances`
 
 To make this component work correctly, you should include the following inline policy in the Panorama Application Role:
 
@@ -53,7 +54,7 @@ When your application's code is running in a Panorama application, there is no o
 
 To successfully use AutoIdentity, you should grant the execution of the following operations to the Panorama Application IAM Role:
 
- - `panorama:ListApplicationInstances`
+- `panorama:ListApplicationInstances`
 
 Example usage:
 
@@ -65,7 +66,8 @@ print(auto_identity)
 ```
 
 The code above prints details of the running application in the CloudWatch log stream of your Panorama app, something similar to:
-```
+
+```text
 <AutoIdentity
     application_created_time="2022-02-17 16:38:05.510000+00:00"
     application_description="Sample application description"
@@ -89,6 +91,7 @@ Timepiece component includes classes that allow you to quickly time profile the 
 `Ticker` allows you to calculate statistics of the time intervals between recurring events. You can use a ticker, for example, to get statistics about how much time the application spends to process frames.
 
 Example usage:
+
 ```python
 import time
 import random
@@ -101,8 +104,9 @@ for i in range(10):
 print(ticker)
 ```
 
-This code returns the time interval (in seconds) between the last five `tick()` calls, as well as some basic stastics of them:
-```
+This code returns the time interval (in seconds) between the last five `tick()` calls, as well as some basic statistics of them:
+
+```text
 <Ticker intervals=[0.0899, 0.0632, 0.0543, 0.0713, 0.0681] min=0.0543 mean=0.0694 max=0.0899>
 ```
 
@@ -134,7 +138,8 @@ print(root)
 ```
 
 Results:
-```
+
+```text
 <StopWatch name=root intervals=[0.5416] min=0.5416 mean=0.5416 max=0.5416 children=[
     <StopWatch name=task1 intervals=[0.2505] min=0.2505 mean=0.2505 max=0.2505 children=[
         <StopWatch name=subtask1_1 intervals=[0.0301, 0.0501] min=0.0301 mean=0.0401 max=0.0501>,
@@ -157,9 +162,9 @@ You can also specify a [python executor](https://docs.python.org/3/library/concu
 
 The following Schedules are available to you:
 
- - `AtSchedule`: executes a function at a given time in the future
- - `IntervalSchedule`: executes a function repeatedly at given intervals
- - `OrdinalSchedule`: executes a function once in each *n* invocation of `tick()`
+- `AtSchedule`: executes a function at a given time in the future
+- `IntervalSchedule`: executes a function repeatedly at given intervals
+- `OrdinalSchedule`: executes a function once in each *n* invocation of `tick()`
 
 Finally, `AlarmClock` allows you to handle a collection of `Schedule` instances with the invocation of a single `tick()` method.
 
@@ -193,7 +198,8 @@ for i in range(25*5):
 ```
 
 Results:
-```
+
+```text
 IntervalSchedule was called at 2022-02-18 13:08:27.025772+00:00
 OrdinalSchedule was called at 2022-02-18 13:08:27.669900+00:00
 OrdinalSchedule was called at 2022-02-18 13:08:28.354350+00:00
@@ -235,7 +241,7 @@ for i in range(200):
 
 Results:
 
-```
+```text
 timestamp: 2022-02-18 13:08:34.074238+00:00
 min: 0.0003, max: 0.0979, sum: 2.0156, num: 36
 timestamp: 2022-02-18 13:08:36.102133+00:00
@@ -252,7 +258,7 @@ min: 0.0028, max: 0.0975, sum: 1.9781, num: 39
 
 To successfully use `CWTachometer`, you should grant the execution of the following operations to the Panorama Application IAM Role:
 
- - `cloudwatch:PutMetricData`
+- `cloudwatch:PutMetricData`
 
 The following example (a snippet from a Panorama Application implementation) shows you how you can combine together `AutoIdentity` and `CWTachometer` to get frame processing time metrics in the CloudWatch service of your AWS account:
 
@@ -330,18 +336,18 @@ Technically speaking, SkyLine instantiates a [GStreamer pipeline](https://gstrea
 
 SkyLine depends on a set of custom compiled external libraries. You should have all these libraries compiled and configured correctly in your application's docker container in order to make `SkyLine` work correctly. These libraries include:
 
- - GStreamer 1.0 installed with standard plugins pack, libav, tools, and development libraries
- - OpenCV 4.2.0, compiled with GStreamer support and Python bindings
- - numpy (it is typically installed by the base docker image of your Panorama application)
+- GStreamer 1.0 installed with standard plugins pack, libav, tools, and development libraries
+- OpenCV 4.2.0, compiled with GStreamer support and Python bindings
+- numpy (it is typically installed by the base docker image of your Panorama application)
 
 Furthermore, if you want to use `KVSSkyLine`, the `SkyLine` implementation that streams the video to Kinesis Video Streams, you will need also the following libraries:
 
- - Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
- - Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
-   binaries of KVS Producer SDK GStreamer plugin is placed
- - Environment variable LD_LIBRARY_PATH including the open-source third-party dependencies
-   compiled by KVS Producer SDK
- - boto3 (it is typically installed by the base docker image of your Panorama application)
+- Amazon Kinesis Video Streams (KVS) Producer SDK compiled with GStreamer plugin support
+- Environment variable GST_PLUGIN_PATH configured to point to the directory where the compiled
+  binaries of KVS Producer SDK GStreamer plugin is placed
+- Environment variable LD_LIBRARY_PATH including the open-source third-party dependencies
+  compiled by KVS Producer SDK
+- boto3 (it is typically installed by the base docker image of your Panorama application)
 
 We provide a sample Dockerfile in the examples folder that shows you how to install correctly these libraries in your Docker container. In most cases, it should be enough to copy the relevant sections from the sample to your application's Dockerfile. The first time you compile the docker container, it might take up to one hour to correctly compile all libraries.
 
@@ -349,9 +355,9 @@ We provide a sample Dockerfile in the examples folder that shows you how to inst
 
 Compared to the `SkyLine` base class, `KVSSkyLine` adds an additional element to the pipeline: the Amazon Kinesis Video Streams (KVS) Producer library, wrapped in a GStreamer sink element. KVS Producer needs AWS credentials to function correctly: it does not use automatically the credentials associated with the Panorama Application Role. You have different options to provide credentials using `KVSCredentialsHandler` subclasses, provided in the `kvs` module. For testing purposes, you can create an IAM user in your AWS account that has the privileges only to the following operations to write media to KVS:
 
- - `kinesisvideo:DescribeStream`
- - `kinesisvideo:GetStreamingEndpoint`
- - `kinesisvideo:PutMedia`
+- `kinesisvideo:DescribeStream`
+- `kinesisvideo:GetStreamingEndpoint`
+- `kinesisvideo:PutMedia`
 
 You should configure this user to have programmatic access to AWS resources, and get the AWS Access Key and Secret Key pair of the user. These are so-called static credentials that do not expire. You can create a `KVSInlineCredentialsHandler` or `KVSEnvironmentCredentialsHandler` instance to pass these credentials to KVS Producer Plugin directly in the GStreamer pipeline definition, or as environment variables. However as these credentials do not expire, it is not recommended to use this setting in a production environment. Even in a development and testing environment, you should take the appropriate security measures to protect these credentials: never hard code them in the source code. Instead, use AWS Secret Manager or a similar service to provision these parameters.
 
@@ -410,8 +416,8 @@ If everything worked well, you can watch the restreamed video in the [Kinesis Vi
 
 *Annotations* and *annotation drivers* provide a unified way to draw annotations on different rendering backends. Currently, two annotation drivers are implemented:
 
- - `PanoramaMediaAnnotationDriver` allows you to draw on `panoramasdk.media` object, and
- - `OpenCVImageAnnotationDriver` allows you to draw on an OpenCV image (numpy array) object.
+- `PanoramaMediaAnnotationDriver` allows you to draw on `panoramasdk.media` object, and
+- `OpenCVImageAnnotationDriver` allows you to draw on an OpenCV image (numpy array) object.
 
 Two types of annotations can be drawn: labels and rectangles. Not all annotation drivers necessarily implement all features specified by annotations, for example, one driver might decide to ignore colors.
 
