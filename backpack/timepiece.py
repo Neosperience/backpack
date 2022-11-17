@@ -429,7 +429,7 @@ class IntervalSchedule(Schedule):
         while self._next_fire <= now:
             self._next_fire += self.interval
 
-    def tick(self) -> bool:
+    def tick(self) -> Tuple[bool, Any]:
         now = local_now()
         if not self._next_fire:
             self._next_fire = now
@@ -498,30 +498,20 @@ class AlarmClock:
             self.schedules.remove(schedule)
 
 
-class BaseTachometer:
-    ''' A Tachometer can be used to measure the frequency of recurring events,
-    and periodically report statistics about it.
+class BaseTachometer(ABC):
+    ''' Abstract base class for tachometers.
 
-    Call the `tick()` method of the tachometer each time an atomic event happens.
-    For example, if you are interested in the spastics of the frame processing
-    time of your application, call `tick` method each time you process a new
-    frame.
+    A Tachometer can be used to measure the frequency of recurring events, and periodically report
+    statistics about it by calling a callback function with the following signature::
 
-    Tachometer will periodically call a callback function with the following
-    signature::
-
-        def stats_callback(timestamp, ticker):
+        def stats_callback(timestamp: datetime.datetime, timer: BaseTimer):
             pass
 
-    passing the timestamp of the last event, as well as the `Ticker` instance that
+    passing the timestamp of the last event, as well as the `BaseTimer` instance that
     collected the events. You can access the `min()`, `max()`, `sum()` (total processing time)
-    and the `len()` (number of measurements) methods of the ticker.
+    and the `len()` (number of measurements) methods of the timer.
 
-    The `tick()` method will return a tuple with these elements:
-     - bool: True, if the internal schedule was fired (you can ignore this value)
-     - a tuple with these elements:
-       - bool: True, if the stats_callback was called
-       - the return value of stats_callback if it was called, else None
+    This class is not intended to be instantiated. Use one of the subclasses instead.
 
     :param timer: Instance of the BaseTimer subclass that will be used to report events.
     :param stats_callback: A callable with the above signature that will be called
@@ -538,7 +528,7 @@ class BaseTachometer:
     def __init__(
         self,
         timer: BaseTimer,
-        stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
+        stats_callback: Callable[[datetime.datetime, BaseTimer], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional[concurrent.futures.Executor] = None
     ):
@@ -559,9 +549,18 @@ class BaseTachometer:
 
 
 class TickerTachometer(BaseTachometer):
+    ''' TickerTachometer is a combination of a Ticker and a Tachometer.
+
+    It reports statistics about the call frequency of the `tick()` method.
+
+    Call the `tick()` method of the tachometer each time an atomic event happens.
+    For example, if you are interested in the spastics of the frame processing
+    time of your application, call `tick` method each time you process a new
+    frame.
+    '''
 
     def __init__(self,
-        stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
+        stats_callback: Callable[[datetime.datetime, BaseTimer], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional[concurrent.futures.Executor] = None
     ):
@@ -569,16 +568,45 @@ class TickerTachometer(BaseTachometer):
         self.ticker = Ticker(max_intervals=ticker_intervals)
         super().__init__(self.ticker, stats_callback, stats_interval, executor)
 
-    def tick(self) -> bool:
+    def tick(self) -> Tuple[bool, Any]:
         ''' Call this method when a recurring event happens.
 
-        :returns: True if the stat_callback was called in this tick.
+        :returns: a tuple with these elements:
+         - bool: True, if the stats_callback was called
+         - the return value of stats_callback if it was called, else None
         '''
-        self.timer.tick()
+        self.ticker.tick()
         return self.schedule.tick()
 
 
 class StopWatchTachometer(BaseTachometer):
+    ''' `StopWatchTachometer` is a combination of a StopWatch and a Tachometer.
+
+    It reports statistics about the elapsed time intervals.
+
+    Much like StopWatch, you can use `StopWatchTachometer` as a context manager or as a function
+    decorator.
+
+    For example::
+
+        swt = StopWatchTachometer(
+            stats_callback=lambda dt, timer: print('Mean interval:', timer.mean()),
+            stats_interval=datetime.timedelta(seconds=10)
+        )
+
+        for i in range(11):
+            with swt:
+                print('tick')
+                time.sleep(2)
+
+        @swt.measure
+        def long_running_func():
+            print('tack')
+            time.sleep(1.5)
+
+        for i in range(15):
+            long_running_func()
+    '''
 
     def __init__(self,
         stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
@@ -591,12 +619,12 @@ class StopWatchTachometer(BaseTachometer):
 
     def __enter__(self) -> 'StopWatchTachometer':
         ''' Context manager entry point returning self.'''
-        self.timer.__enter__()
+        self.stopwatch.__enter__()
         return self
 
     def __exit__(self, *_) -> None:
         ''' Context manager exit. '''
-        self.timer.__exit__()
+        self.stopwatch.__exit__()
         self.schedule.tick()
 
     def measure(self, fun):

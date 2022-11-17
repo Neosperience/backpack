@@ -169,28 +169,34 @@ Results::
 Tachometer
 ^^^^^^^^^^
 
-A :class:`~backpack.timepiece.Tachometer` combines a :class:`~backpack.timepiece.Ticker` and an
-:class:`~backpack.timepiece.IntervalSchedule` to measure the time interval of a recurring event and
-periodically report statistics about it. You can use it, for example, to report the frame processing
-time statistics to an external service. You can specify the reporting interval and a callback
-function that will be called with the timing statistics. You should consider using an *executor*, as
-your reporting callback can take a considerable amount of time to finish, and you might not want to
-hold up the processing loop synchronously meanwhile.
+A :class:`~backpack.timepiece.BaseTachometer` combines an instance of
+:class:`~backpack.timepiece.BaseTimer` subclass and :class:`~backpack.timepiece.IntervalSchedule` to
+measure the time interval of a recurring event and periodically report statistics about it. You can
+use it, for example, to report the frame processing time statistics to an external service. You can
+specify the reporting interval and a callback function that will be called with the timing
+statistics. You should consider using an *executor*, as your reporting callback can take a
+considerable amount of time to finish, and you might not want to hold up the processing loop
+synchronously meanwhile.
 
-Example usage:
+:class:`~backpack.timepiece.BaseTachometer` is not intended to be instantiated directly. Instead,
+you should use one of its subclasses, :class:`~backpack.timepiece.TickerTachometer` or
+:class:`~backpack.timepiece.StopWatchTachometer`. The former wraps the functionality of a Ticker,
+the later a StopWatch.
+
+Example usage of TickerTachometer:
 
 .. code-block:: python
 
     import datetime, time, random
     from concurrent.futures import ThreadPoolExecutor
-    from backpack.timepiece import Tachometer
+    from backpack.timepiece import TickerTachometer
 
     def stats_callback(timestamp, ticker):
         print('timestamp:', timestamp)
         print(f'min: {ticker.min():.4f}, max: {ticker.max():.4f}, '
               f'sum: {ticker.sum():.4f}, num: {ticker.len()}')
 
-    tach = Tachometer(
+    tach = TickerTachometer(
         stats_callback=stats_callback,
         stats_interval=datetime.timedelta(seconds=2),
         executor=ThreadPoolExecutor()
@@ -212,34 +218,65 @@ Results::
     min: 0.0028, max: 0.0975, sum: 1.9781, num: 39
 
 
-CWTachometer
-^^^^^^^^^^^^
+Example usage of StopWatchTachometer:
 
-:class:`~backpack.timepiece.CWTachometer` is a :class:`~backpack.timepiece.Tachometer` subclass that
-reports frame processing time statistics to `AWS CloudWatch Metrics` service. You can use this class
-as a drop-in to your frame processing loop. It will give you detailed statistics about the behavior
-the timing of your application and you can mount `CloudWatch alarms`_ on this metric to receive
-email or SMS notifications when your application stops processing the video for whatever reason.
+.. code-block:: python
+
+    def stats_callback(timestamp, ticker):
+        print('timestamp:', timestamp)
+        print(f'min: {ticker.min():.4f}, max: {ticker.max():.4f}, '
+              f'sum: {ticker.sum():.4f}, num: {ticker.len()}')
+
+    tach = StopWatchTachometer(
+        stats_callback=stats_callback,
+        stats_interval=datetime.timedelta(seconds=2)
+    )
+
+    # as a context manager:
+    for i in range(200):
+        with tach:
+            time.sleep(random.random() / 10)
+
+    # or as a decorator:
+    @tach.measure
+    def long_running_func():
+        time.sleep(random.random() / 10)
+
+    for i in range(200):
+        long_running_func()
+
+
+CloudWatchTimerAdapter
+^^^^^^^^^^^^^^^^^^^^^^
+
+:class:`~backpack.cwadapter.CloudWatchTimerAdapter` provides an easy-to use callback implementation
+that sends frame processing time statistics to `AWS CloudWatch Metrics` service. You can use this
+class as a drop-in to your frame processing loop. It will give you detailed statistics about the
+behavior the timing of your application and you can mount `CloudWatch alarms`_ on this metric to
+receive email or SMS notifications when your application stops processing the video for whatever
+reason.
 
 .. _`AWS CloudWatch Metrics`: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/working_with_metrics.html
 .. _`CloudWatch alarms`: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html
 
-To successfully use :class:`~backpack.timepiece.CWTachometer`, you should grant the execution of the
-following operations to the Panorama Application IAM Role:
+To successfully use :class:`~backpack.cwadapter.CloudWatchTimerAdapter`, you should grant the
+execution of the following operations to the Panorama Application IAM Role:
 
  - ``cloudwatch:PutMetricData``
 
 The following example (a snippet from a Panorama Application implementation) shows you how you can
-combine together :class:`~backpack.autoidentity.AutoIdentity` and
-:class:`~backpack.timepiece.CWTachometer` to get frame processing time metrics in the CloudWatch
-service of your AWS account:
+combine together :class:`~backpack.autoidentity.AutoIdentity`,
+:class:`~backpack.timepiece.TickerTachometer`, and
+:class:`~backpack.cwadapter.CloudWatchTimerAdapter` to get frame processing time metrics in the
+CloudWatch service of your AWS account:
 
 .. code-block:: python
 
     from concurrent.futures import ThreadPoolExecutor
     import boto3
     from backpack.autoidentity import AutoIdentity
-    from backpack.cwtacho import CWTachometer
+    from backpack.cwadapter import CloudWatchTimerAdapter
+    from backpack.timepiece import TickerTachometer
 
     # You might want to read these values from Panorama application parameters
     service_region = 'us-east-1'
@@ -252,7 +289,7 @@ service of your AWS account:
             self.session = boto3.Session(region_name=service_region)
             self.executor = ThreadPoolExecutor()
             self.auto_identity = AutoIdentity(device_region=device_region)
-            self.tacho = CWTachometer(
+            self.cw_adapter = CloudWatchTimerAdapter(
                 namespace='MyPanoramaMetrics',
                 metric_name='frame_processing_time',
                 dimensions={
@@ -262,6 +299,9 @@ service of your AWS account:
                 },
                 executor=self.executor,
                 boto3_session=self.session
+            )
+            self.tacho = TickerTachometer(
+                stats_callback=self.cw_adapter.send_metrics
             )
 
         def process_streams(self):
@@ -288,4 +328,5 @@ service of your AWS account:
 
     main()
 
-For more information, refer to the :ref:`timepiece API documentation <timepiece-api>`.
+For more information, refer to the :ref:`timepiece <timepiece-api>` and :ref:`cwadapter
+<cwadapter-api>` API documentation.

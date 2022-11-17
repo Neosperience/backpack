@@ -35,4 +35,4 @@ profiling your Panorama application, and remote view the output of your model.
     annotation
     geometry
     config
-
+    cwadapter
