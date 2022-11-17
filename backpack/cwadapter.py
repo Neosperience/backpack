@@ -1,17 +1,16 @@
-''' Reports Tachometer statistics to AWS CloudWatch Metrics. '''
+''' Reports timer statistics to AWS CloudWatch Metrics. '''
 
 import datetime
 import logging
 from typing import Optional, Dict
-import concurrent
 
 import boto3
 import botocore
 
-from .timepiece import TickerTachometer
+from .timepiece import BaseTimer
 
-class CWTachometer(TickerTachometer):
-    ''' Reports Tachometer statistics to AWS CloudWatch Metrics.
+class CloudWatchTimerAdapter:
+    ''' Reports timer statistics to AWS CloudWatch Metrics.
 
     The IAM policy associated with the Panorama Application Role of this app should grant
     the execution of `cloudwatch:PutMetricData` operation.
@@ -23,10 +22,6 @@ class CWTachometer(TickerTachometer):
         time statistics.
     :param dimensions: Additional CloudWatch metrics dimensions of this metric. This
         can be for example the device and application identifier.
-    :param stats_interval: Report statistics to CloudWatch with this interval. If using
-        standard resolution metrics, this should not be less than 1 minute.
-    :param executor: If specified, the metrics will be reported asynchronously, using
-        this executor.
     :param region: The AWS region of the CloudWatch metrics.
     :param boto3_session: The boto3 session to be used for sending the CloudWatch metrics.
         If left to None, CWTachometer will use the default session. If the default session
@@ -35,49 +30,57 @@ class CWTachometer(TickerTachometer):
         specify it here.
     '''
 
-    # pylint: disable=too-many-arguments,too-few-public-methods
-    # We could group the CloudWatch related parameters into a group, but why?
-    # Also, public methods are inherited from base class
-
-    def __init__(
-        self,
+    def __init__(self,
         namespace: str,
         metric_name: str,
         dimensions: Optional[Dict[str, str]] = None,
-        stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
-        executor: Optional[concurrent.futures.Executor]=None,
         region: Optional[str] = None,
         boto3_session: Optional[boto3.Session] = None,
         parent_logger: Optional[logging.Logger] = None
     ):
-        super().__init__(
-            stats_callback=self._stats_callback,
-            stats_interval=stats_interval,
-            executor=executor
-        )
         self.logger = (
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)
         )
-        self.dimensions = dimensions or {}
+        self.dimensions = CloudWatchTimerAdapter._cw_dimensions(dimensions or {})
         self.namespace = namespace
         self.metric_name = metric_name
         boto3_session = boto3_session or boto3.Session(region_name=region)
         self.cloudwatch = boto3_session.client('cloudwatch')
 
-    def _cw_dimensions(self):
-        return [{ 'Name': name, 'Value': value } for name, value in self.dimensions.items()]
+    @staticmethod
+    def _cw_dimensions(dimensions):
+        return [{ 'Name': name, 'Value': value } for name, value in dimensions.items()]
 
-    def _stats_callback(self, timestamp, ticker):
+    def send_metrics(self, timestamp: datetime.datetime, timer: BaseTimer):
+        ''' Sends timer statistics to CloudWatch.
+
+        This method can be used as a callback in Tachometer instances.
+
+        For example::
+
+            cw_adapter = CloudWatchTimerAdapter(
+                namespace='my_namespace',
+                metric_name='my_metric',
+                dimensions={'foo': 'bar'}
+            )
+            tacho = TickerTachometer(
+                stats_callback=cw_adapter.send_metrics
+            )
+            tacho.tick()
+
+        :param timestamp: The timestamp the statistics refers to.
+        :param timer: The timer that collected the statistics.
+        '''
         metric_data = {
             'MetricName': self.metric_name,
-            'Dimensions': self._cw_dimensions(),
+            'Dimensions': self.dimensions,
             'Timestamp': timestamp.astimezone(datetime.timezone.utc),
             'StatisticValues': {
-                'SampleCount': ticker.len(),
-                'Sum': ticker.sum(),
-                'Minimum': ticker.min(),
-                'Maximum': ticker.max()
+                'SampleCount': timer.len(),
+                'Sum': timer.sum(),
+                'Minimum': timer.min(),
+                'Maximum': timer.max()
             },
             'Unit': 'Seconds'
         }

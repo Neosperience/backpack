@@ -4,13 +4,14 @@ from unittest.mock import patch, Mock
 import datetime
 
 import botocore
-from backpack.cwtacho import CWTachometer
+from backpack.cwadapter import CloudWatchTimerAdapter
+from backpack.timepiece import TickerTachometer
 
 time = Mock()
 
 @patch('backpack.timepiece.time')
 @patch('backpack.timepiece.local_now')
-class TestCWTacho(unittest.TestCase):
+class TestCWAdapter(unittest.TestCase):
 
     def setUp(self):
         self.namespace = 'unit_test'
@@ -19,16 +20,23 @@ class TestCWTacho(unittest.TestCase):
             'dim1': 'val1',
             'dim2': 'val2'
         }
+        self.cw_dimensions = [
+            {'Name': 'dim1', 'Value': 'val1'},
+            {'Name': 'dim2', 'Value': 'val2'}
+        ]
         self.boto3_session = Mock()
         self.cloudwatch = self.boto3_session.client('cloudwatch')
         parent_logger = logging.getLogger()
         self.logger = parent_logger.getChild('test_logger')
-        self.cw_tacho = CWTachometer(
+        self.cw_adapter = CloudWatchTimerAdapter(
             namespace=self.namespace,
             metric_name=self.metric_name,
             dimensions=self.dimensions,
             boto3_session=self.boto3_session,
             parent_logger=parent_logger
+        )
+        self.tacho = TickerTachometer(
+            stats_callback=self.cw_adapter.send_metrics
         )
         self.start = datetime.datetime(2022, 2, 22, 22, 22, 0)
         self.current_perf_time = 0
@@ -42,15 +50,15 @@ class TestCWTacho(unittest.TestCase):
         time.sleep.side_effect = _mock_time_sleep
 
     def test_init(self, backpack_mock_local_now, backpack_mock_time):
-        self.assertEqual(self.cw_tacho.namespace, self.namespace, 'namespace is correct')
-        self.assertEqual(self.cw_tacho.metric_name, self.metric_name, 'metric_name is correct')
-        self.assertEqual(self.cw_tacho.dimensions, self.dimensions, 'dimensions are correct')
-        self.assertIs(self.cw_tacho.cloudwatch, self.cloudwatch, 'cloudwatch client is correct')
+        self.assertEqual(self.cw_adapter.namespace, self.namespace, 'namespace is correct')
+        self.assertEqual(self.cw_adapter.metric_name, self.metric_name, 'metric_name is correct')
+        self.assertEqual(self.cw_adapter.dimensions, self.cw_dimensions, 'dimensions are correct')
+        self.assertIs(self.cw_adapter.cloudwatch, self.cloudwatch, 'cloudwatch client is correct')
 
     def _do_test_callback(self, backpack_mock_local_now):
         for i in range(60 + 1):
             backpack_mock_local_now.return_value = self.start + datetime.timedelta(seconds=i)
-            fired, res = self.cw_tacho.tick()
+            fired, res = self.tacho.tick()
             time.sleep(1)
         return res
 
@@ -79,14 +87,14 @@ class TestCWTacho(unittest.TestCase):
         error_payload = {'Error': {'Code': 'TestException', 'Message': 'test error message'}}
         self.cloudwatch.put_metric_data.side_effect = \
             botocore.exceptions.ClientError(error_payload, 'test_operation')
-        with self.assertLogs(self.cw_tacho.logger, 'WARNING') as logs:
+        with self.assertLogs(self.cw_adapter.logger, 'WARNING') as logs:
             self._do_test_callback(backpack_mock_local_now)
             self.assertTrue(any('TestException' in o for o in logs.output))
 
     def test_attributeerror_handling(self, backpack_mock_local_now, backpack_mock_time):
         self._setup_mocks(backpack_mock_time)
         self.cloudwatch.put_metric_data.side_effect = AttributeError
-        with self.assertLogs(self.cw_tacho.logger, 'WARNING') as logs:
+        with self.assertLogs(self.cw_adapter.logger, 'WARNING') as logs:
             self._do_test_callback(backpack_mock_local_now)
 
     def test_otherexception_raise(self, backpack_mock_local_now, backpack_mock_time):
