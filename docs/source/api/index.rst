@@ -23,6 +23,8 @@ profiling your Panorama application, and remote view the output of your model.
    algorithms
  - :ref:`config-api` provides a way to standardize the configuration of Panorama applications via
    deploy-time parameters
+ - :ref:`cwadapter-api` makes it easy to send performance metrics of your Panorama application to
+   AWS CloudWatch service.
 
 .. toctree::
     :hidden:
