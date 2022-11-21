@@ -88,12 +88,15 @@ class BaseTimer(ABC):
         ''' Resets the timer. '''
         self.intervals.clear()
 
+    def _repr_intervals(self, intervals):
+        iv_list = [f'{iv:.4f}' for iv in islice(intervals, self.MAX_REPR_INTERVALS)]
+        if len(intervals) > self.MAX_REPR_INTERVALS:
+            iv_list.append('...')
+        return f'[{", ".join(iv_list)}]'
+
     def _repr_props(self) -> Iterator[str]:
         if self.intervals:
-            iv_list = [f'{iv:.4f}' for iv in islice(self.intervals, self.MAX_REPR_INTERVALS)]
-            if len(self.intervals) > self.MAX_REPR_INTERVALS:
-                iv_list.append('...')
-            yield f'intervals=[{", ".join(iv_list)}]'
+            yield f'intervals={self._repr_intervals(self.intervals)}'
             yield f'min={self.min():.4f}'
             yield f'mean={self.mean():.4f}'
             yield f'max={self.max():.4f}'
@@ -218,7 +221,7 @@ class StopWatch(BaseTimer):
             return self.children[name]
         if max_intervals is None:
             max_intervals = self.intervals.maxlen
-        child = StopWatch(name, max_intervals=max_intervals)
+        child = self.__class__(name, max_intervals=max_intervals)
         child.parent = self
         self.children[name] = child
         return child
@@ -278,8 +281,7 @@ class StopWatch(BaseTimer):
 
     def _repr_props(self) -> Iterator[str]:
         yield f'name={self.name}'
-        for prop in super()._repr_props():
-            yield prop
+        yield from super()._repr_props()
 
     def __repr__(self) -> str:
         ''' Indented string representation of this StopWatch.'''
