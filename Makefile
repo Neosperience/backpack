@@ -1,6 +1,8 @@
 .PHONY: test docs build test-release release
 .DEFAULT_GOAL := build
 
+all: build
+
 test:
 	tox -e py39
 
