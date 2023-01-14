@@ -11,6 +11,7 @@ You should subclass :class:`ConfigSerDeBase` and override the following static f
 
 from typing import Any, List, Sequence, Mapping
 from abc import ABC, abstractmethod
+import json
 
 class ConfigSerDeBase(ABC):
     ''' Defines a serializer / deserializer interface. '''
@@ -84,3 +85,37 @@ class IntegerListSerDe(ConfigSerDeBase):
         '''
         sep = metadata.get('separator', ',')
         return [int(e) for e in value.split(sep)]
+
+
+class JsonSerde(ConfigSerDeBase):
+    ''' De/serializes a string containing a JSON-encoded object.'''
+
+    description : str = 'JSON-encoded object'
+    example: str = '{"foo": "bar", "list": [0, 1, 2]}'
+
+    @staticmethod
+    def serialize(value: Any, metadata: Mapping[str, Any]={}) -> str:
+        ''' Serializes a JSON object into a string.
+
+        Args:
+            value (Any): A JSON-serializable object.
+
+        Returns:
+            The JSON object serialized into a string.
+        '''
+        return json.dumps(value)
+
+    @staticmethod
+    def deserialize(value: str, metadata: Mapping[str, Any]={}) -> Any:
+        ''' Deserializes JSON object from a string.
+
+        Args:
+            value (str): A string containing a serialized JSON object.
+
+        Returns:
+            The JSON object restored from the string.
+
+        Raises:
+            Exception: exceptions related to invalid string format.
+        '''
+        return json.loads(value)
