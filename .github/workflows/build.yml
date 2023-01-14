@@ -70,10 +70,11 @@ jobs:
         python-version: "3.7"
     - name: Install dependencies
       run: |
-        sudo apt-get update -y && \
-        sudo apt-get install -y libgirepository1.0-dev libgstreamer1.0-dev libgstrtspserver-1.0-dev
+        sudo apt-get update -y
+        sudo apt install -y libunwind-dev
+        sudo apt-get install -y  --no-install-recommends libgirepository1.0-dev libgstreamer1.0-dev libgstrtspserver-1.0-dev
         python -m pip install --upgrade pip
-        python -m pip install opencv-python boto3 PyGObject python-dotenv 
+        python -m pip install opencv-python boto3 PyGObject python-dotenv
         python -m pip install sphinx sphinx-rtd-theme m2r2
     - name: Generate documentation with Sphinx
       working-directory: ./docs
