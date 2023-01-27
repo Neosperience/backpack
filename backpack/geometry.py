@@ -170,20 +170,29 @@ class Line:
         if not isinstance(self.pt1, Point) or not isinstance(self.pt2, Point):
             raise ValueError('Line arguments "pt1" and "pt2" must be Point objects.')
 
-    def intersects(self, other: 'Line') -> bool:
+    def intersects(self, other: 'Line') -> int:
         ''' Determines if this line segment intersects an other one.
+
+        The direction of intersection is interpreted as follows. Place an observer to the first
+        point of this line, looking to the second point of this line. If the second point of the
+        other line is on the left side, the directions of the intersection is "left", otherwise
+        it is "right".
 
         Args:
             other: The other line segment
 
         Returns:
-            `True` if the two segments intersect each other.
+            - 0, if the two segments do not intersect each other,
+            - 1, if they intersect in left direction,
+            - -1, if the intersect in right direction.
         '''
-        return (
-            Point.ccw(self.pt1, other.pt1, other.pt2) != Point.ccw(self.pt2, other.pt1, other.pt2)
-            and
-            Point.ccw(self.pt1, self.pt2, other.pt1) != Point.ccw(self.pt1, self.pt2, other.pt2)
-        )
+        if (
+            Point.ccw(self.pt1, other.pt1, other.pt2) == Point.ccw(self.pt2, other.pt1, other.pt2) or
+            Point.ccw(self.pt1, self.pt2, other.pt1) == Point.ccw(self.pt1, self.pt2, other.pt2)
+        ):
+            return 0
+        else:
+            return 1 if Point.ccw(self.pt1, self.pt2, other.pt1) else -1
 
     @classmethod
     def from_value(cls, value):
