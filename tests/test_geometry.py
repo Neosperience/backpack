@@ -77,9 +77,13 @@ class TestLine(unittest.TestCase):
         l1 = Line(Point(-1, 0), Point(1, 0))
         l2 = Line(Point(0, -1), Point(0, 1))
         self.assertTrue(l1.intersects(l2))
+        self.assertEqual(l1.intersects(l2), Line.Intersection.RIGHT)
+        self.assertEqual(l2.intersects(l1), Line.Intersection.LEFT)
         l3 = Line(Point(-1, 2), Point(1, 2))
         self.assertFalse(l3.intersects(l1))
+        self.assertEqual(l3.intersects(l1), Line.Intersection.NONE)
         self.assertFalse(l3.intersects(l2))
+        self.assertEqual(l3.intersects(l2), Line.Intersection.NONE)
 
     def test_from_value(self):
         line = Line(Point(1, 2), Point(3, 4))

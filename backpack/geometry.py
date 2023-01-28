@@ -160,6 +160,22 @@ class Line:
         pt1 (float): The first point of the line segment
         pt2 (float): The second point of the line segment
     '''
+
+    class Intersection(enum.Enum):
+        ''' The intersection type of two line segments. '''
+
+        LEFT = -1
+        ''' The second segment intersects the first one in left direction. '''
+
+        NONE = 0
+        ''' The two segments do not intersect. '''
+
+        RIGHT = 1
+        ''' The second segment intersects the first one in right direction. '''
+
+        def __bool__(self) -> bool:
+            return bool(self.value)
+
     pt1: Point
     ''' The first point of the line segment '''
 
@@ -170,29 +186,32 @@ class Line:
         if not isinstance(self.pt1, Point) or not isinstance(self.pt2, Point):
             raise ValueError('Line arguments "pt1" and "pt2" must be Point objects.')
 
-    def intersects(self, other: 'Line') -> int:
+    def intersects(self, other: 'Line') -> Intersection:
         ''' Determines if this line segment intersects an other one.
 
         The direction of intersection is interpreted as follows. Place an observer to the first
         point of this line, looking to the second point of this line. If the second point of the
         other line is on the left side, the directions of the intersection is "left", otherwise
-        it is "right".
+        it is "right". Attention: when considering the line intersection direction, keep in mind
+        that the geometry module uses the screen coordinate system orientation, i.e. the origin
+        can be found in the upper left corner of the screen.
 
         Args:
-            other: The other line segment
+            other (Line): The other line segment
 
         Returns:
-            - 0, if the two segments do not intersect each other,
-            - 1, if they intersect in left direction,
-            - -1, if the intersect in right direction.
+            The line intersection type.
         '''
         if (
             Point.ccw(self.pt1, other.pt1, other.pt2) == Point.ccw(self.pt2, other.pt1, other.pt2) or
             Point.ccw(self.pt1, self.pt2, other.pt1) == Point.ccw(self.pt1, self.pt2, other.pt2)
         ):
-            return 0
+            return Line.Intersection.NONE
         else:
-            return 1 if Point.ccw(self.pt1, self.pt2, other.pt1) else -1
+            return (
+                Line.Intersection.LEFT if Point.ccw(self.pt1, self.pt2, other.pt1)
+                else Line.Intersection.RIGHT
+            )
 
     @classmethod
     def from_value(cls, value):
