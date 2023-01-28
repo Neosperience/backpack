@@ -36,7 +36,7 @@ from typing import List, Dict, Any
 from abc import ABC, abstractmethod
 
 import boto3
-from botocore.credentials import RefreshableCredentials
+from botocore.credentials import Credentials, RefreshableCredentials
 
 from .skyline import SkyLine
 from .timepiece import AtSchedule, Callback, local_now
@@ -240,15 +240,16 @@ class KVSCredentialsHandler(ABC):
     @abstractmethod
     def _save_credentials(
         self,
-        credentials: 'botocore.credentials.Credentials',
+        credentials: Credentials,
         next_update: datetime.datetime
     ) -> None:
         ''' Saves the credentials for Kinesis Video Stream Producer component.
 
         This method should be implemented in subclasses.
 
-        :param credentials: The credentials to be saved.
-        :param next_update: When the next credentials update is expected.
+        Args:
+            credentials (Credentials): The credentials to be saved.
+            next_update (datetime.datetime): When the next credentials update is expected.
         '''
 
     def plugin_config(self) -> str: # pylint: disable=no-self-use

@@ -136,7 +136,8 @@ class Point(metaclass=PointMeta):
 
         Return: The new Point instance
 
-        Raises: ValueError if the conversion was not successful.
+        Raises:
+            ValueError: If the conversion was not successful.
         '''
         if isinstance(value, Point):
             return value
@@ -227,9 +228,11 @@ class Line:
         Args:
             value: the value to be converted
 
-        Returns: the Line instance
+        Returns:
+            The Line instance
 
-        Raises: ValueError if the value could not be converted to a Line.
+        Raises:
+            ValueError: If the value could not be converted to a Line.
         '''
         if isinstance(value, Line):
             return value
@@ -374,9 +377,11 @@ class Rectangle:
         Args:
             value: the tuple
 
-        Returns: the Rectangle instance
+        Returns:
+            The Rectangle instance
 
-        Raises: ValueError if the tuple could not be converted to a Rectangle.
+        Raises:
+            ValueError: If the tuple could not be converted to a Rectangle.
         '''
         if isinstance(value, Rectangle):
             return value
@@ -395,9 +400,11 @@ class Rectangle:
         Args:
             tlbr: A top-left-bottom-right sequence of floats.
 
-        Returns: the Rectangle instance
+        Returns:
+            The Rectangle instance
 
-        Raises: ValueError if the sequence could not be converted to a Rectangle.
+        Raises:
+            ValueError: If the sequence could not be converted to a Rectangle.
         '''
         if _issequence_or_numpy(tlbr) and len(tlbr) == 4:
             return cls(pt1=Point(x=tlbr[1], y=tlbr[0]), pt2=Point(x=tlbr[3], y=tlbr[2]))
@@ -411,9 +418,11 @@ class Rectangle:
         Args:
             tlbr: A top-left-width-height sequence of floats.
 
-        Returns: the Rectangle instance
+        Returns:
+            The Rectangle instance
 
-        Raises: ValueError if the sequence could not be converted to a Rectangle.
+        Raises:
+            ValueError: If the sequence could not be converted to a Rectangle.
         '''
         if _issequence_or_numpy(tlhw) and len(tlhw) == 4:
             return cls(
@@ -545,9 +554,11 @@ class PolyLine:
             value: the tuple
             closed: flags if the newly created PolyLine should be closed or not.
 
-        Returns: the PolyLine instance
+        Returns:
+            The PolyLine instance
 
-        Raises: ValueError if the tuple could not be converted to a PolyLine.
+        Raises:
+            ValueError: If the tuple could not be converted to a PolyLine.
         '''
         if isinstance(value, PolyLine):
             return value

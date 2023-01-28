@@ -137,8 +137,11 @@ class SkyLine(ABC):
     def _check_gst_plugin(self, plugin_name: str) -> bool:
         ''' Checks if a given GStreamer plugin can be correctly loaded.
 
-        :param plugin_name: The name of the GStreamer plugin
-        :return: True if the plugin can be loaded by the GStreamer system.
+        Args:
+            plugin_name (str): The name of the GStreamer plugin
+
+        Returns:
+            True if the plugin can be loaded by the GStreamer system.
         '''
         try:
             cmd = f'gst-inspect-1.0 {plugin_name} --plugin'

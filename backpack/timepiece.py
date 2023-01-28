@@ -300,11 +300,12 @@ class Callback:
 
     The callback can be optionally called asynchronously.
 
-    :param cb: The callback function to be called
-    :param cbargs: Positional arguments of the callback
-    :param cbkwargs: Keyword arguments of the callback
-    :param executor: If specified, the callback function will be called asynchronously, using
-        this executor.
+    Args:
+        cb (Callable): The callback function to be called
+        cbargs (Optional[List[Any]]): The callback function to be called
+        cbkwargs (Optional[Dict[str, Any]]): Keyword arguments of the callback
+        executor (Optional[concurrent.futures.Executor]): If specified, the callback function will
+            be called asynchronously using this executor.
     '''
 
     # pylint: disable=invalid-name,too-few-public-methods
@@ -336,8 +337,9 @@ class Schedule(ABC):
     The external scheduler is expected to call the `tick()` method periodically,
     most likely from an event-loop.
 
-    :param repeating: If this schedule fires repeatedly
-    :param callback: The callback to be called when the scheduler fires
+    Args:
+        repeating (bool): If this schedule fires repeatedly
+        callback (Callback): The callback to be called when the scheduler fires
     '''
 
     def __init__(
@@ -351,18 +353,21 @@ class Schedule(ABC):
     def fire(self) -> None:
         ''' Fires the schedule calling the callback.
 
-        :returns: If not using an executor (the callback is called synchronously), `fire()`
+        Returns:
+            If not using an executor (the callback is called synchronously), `fire()`
             returns the return value of the callback. Otherwise it returns None.
         '''
         return self.callback()
 
     @abstractmethod
-    def tick(self) -> bool: # pylint: disable=no-self-use
+    def tick(self) -> Tuple[bool, Any]: # pylint: disable=no-self-use
         ''' The heartbeat of the schedule to be called periodically.
 
-        :returns: A tuple of (True, callback_return_value) if the schedule was fired,
+        Returns:
+            A tuple of (True, callback_return_value) if the schedule was fired,
             otherwise (False, None)
         '''
+        return (False, None)
 
 
 class AtSchedule(Schedule):
@@ -370,16 +375,16 @@ class AtSchedule(Schedule):
 
     The task will be executed at the next tick after the specified datetime.
 
-    :param at: When to execute the task
-    :param args: Positional arguments to be passed to superclass initializer
-    :param kwargs: Keyword arguments to be passed to superclass initializer
+    Args:
+        at (datetime.datetime): When to execute the task
+        callback (Callback): The callback to be called when the scheduler fires
     '''
 
     # pylint: disable=invalid-name
     # Disabled for the `at` parameter
 
-    def __init__(self, at: datetime.datetime, *args: Any, **kwargs: Any):
-        super().__init__(False, *args, **kwargs)
+    def __init__(self, at: datetime.datetime, callback: Callback):
+        super().__init__(repeating=False, callback=callback)
         self.at_lock = threading.Lock()
         self.fire_lock = threading.Lock()
         self.at = at
@@ -404,7 +409,7 @@ class AtSchedule(Schedule):
             return (True, res)
         return (False, None)
 
-    def tick(self) -> bool:
+    def tick(self) -> Tuple[bool, Any]:
         if self.callback.executor:
             with self.fire_lock:
                 return self._do_tick()
@@ -417,13 +422,13 @@ class IntervalSchedule(Schedule):
     The task will be executed at the first tick and at each tick after
     the specified time interval has passed.
 
-    :param interval: The time interval of the executions
-    :param args: Positional arguments to be passed to superclass initializer
-    :param kwargs: Keyword arguments to be passed to superclass initializer
+    Args:
+        interval (datetime.timedelta): The time interval of the executions
+        callback (Callback): The callback to be called when the scheduler fires
     '''
 
-    def __init__(self, interval: datetime.timedelta, *args: Any, **kwargs: Any):
-        super().__init__(True, *args, **kwargs)
+    def __init__(self, interval: datetime.timedelta, callback: Callback):
+        super().__init__(repeating=True, callback=callback)
         self.interval = interval
         self._next_fire = None
 
@@ -448,20 +453,20 @@ class OrdinalSchedule(Schedule):
 
     At the first tick the task will not be executed.
 
-    :param ordinal: Execute the task once in every ordinal number of ticks. An OrdinalSchedule
-        with zero ordinal will never fire.
-    :param args: Positional arguments to be passed to superclass initializer
-    :param kwargs: Keyword arguments to be passed to superclass initializer
+    Args:
+        ordinal (int): Execute the task once in every ordinal number of ticks. An OrdinalSchedule
+            with zero ordinal will never fire.
+        callback (Callback): The callback to be called when the scheduler fires
     '''
 
-    def __init__(self, ordinal: int, *args: Any, **kwargs: Any):
-        super().__init__(True, *args, **kwargs)
+    def __init__(self, ordinal: int, callback: Callback):
+        super().__init__(repeating=True, callback=callback)
         if ordinal < 0:
             raise ValueError('ordinal must be greater or equal than zero')
         self.ordinal = ordinal
         self._counter = 0
 
-    def tick(self):
+    def tick(self) -> Tuple[bool, Any]:
         if self.ordinal == 0:
             return (False, None)
         self._counter += 1
@@ -476,7 +481,8 @@ class AlarmClock:
     ''' An alarm clock can be used to bundle different schedules and send them
     the tick event at once.
 
-    :param schedules: The list of the schedules.
+    Args:
+        schedules (List[Schedule]): The list of the schedules.
     '''
 
     # pylint: disable=too-few-public-methods
@@ -515,11 +521,14 @@ class BaseTachometer(ABC):
 
     This class is not intended to be instantiated. Use one of the subclasses instead.
 
-    :param timer: Instance of the BaseTimer subclass that will be used to report events.
-    :param stats_callback: A callable with the above signature that will be called
-        when new statistics is available.
-    :param stat_interval: The interval of the statistics calculation
-    :param executor: If specified, callback will be called asynchronously using this executor
+    Args:
+        timer (BaseTimer): Instance of the BaseTimer subclass that will be used to report events.
+        stats_callback (Callable[[datetime.datetime, BaseTimer]):  A callable with the above
+            signature that will be called when new statistics is available.
+        stats_interval (datetime.timedelta): The interval of the statistics calculation. Defaults
+            to one minute.
+        executor (Optional[concurrent.futures.Executor]): If specified, callback will be called
+            asynchronously using this executor
     '''
 
     # pylint: disable=too-few-public-methods
@@ -559,10 +568,18 @@ class TickerTachometer(BaseTachometer):
     For example, if you are interested in the spastics of the frame processing
     time of your application, call `tick` method each time you process a new
     frame.
+
+    Args:
+        stats_callback (Callable[[datetime.datetime, Ticker]):  A callable that will be called
+            when new statistics is available.
+        stats_interval (datetime.timedelta): The interval of the statistics calculation. Defaults
+            to one minute.
+        executor (Optional[concurrent.futures.Executor]): If specified, callback will be called
+            asynchronously using this executor
     '''
 
     def __init__(self,
-        stats_callback: Callable[[datetime.datetime, BaseTimer], None],
+        stats_callback: Callable[[datetime.datetime, Ticker], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional[concurrent.futures.Executor] = None
     ):
@@ -573,9 +590,11 @@ class TickerTachometer(BaseTachometer):
     def tick(self) -> Tuple[bool, Any]:
         ''' Call this method when a recurring event happens.
 
-        :returns: a tuple with these elements:
-         - bool: True, if the stats_callback was called
-         - the return value of stats_callback if it was called, else None
+        Returns:
+            Tuple[bool, Any]: A tuple with these elements:
+
+                - bool: True, if stats_callback was called
+                - the return value of stats_callback if it was called, else None
         '''
         self.ticker.tick()
         return self.schedule.tick()
@@ -608,10 +627,18 @@ class StopWatchTachometer(BaseTachometer):
 
         for i in range(15):
             long_running_func()
+
+    Args:
+        stats_callback (Callable[[datetime.datetime, Ticker]):  A callable that will be called
+            when new statistics is available.
+        stats_interval (datetime.timedelta): The interval of the statistics calculation. Defaults
+            to one minute.
+        executor (Optional[concurrent.futures.Executor]): If specified, callback will be called
+            asynchronously using this executor
     '''
 
     def __init__(self,
-        stats_callback: Callable[[datetime.datetime, 'Ticker'], None],
+        stats_callback: Callable[[datetime.datetime, Ticker], None],
         stats_interval: datetime.timedelta = datetime.timedelta(seconds=60),
         executor: Optional[concurrent.futures.Executor] = None
     ):

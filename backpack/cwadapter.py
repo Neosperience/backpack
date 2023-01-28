@@ -15,19 +15,20 @@ class CloudWatchTimerAdapter:
     The IAM policy associated with the Panorama Application Role of this app should grant
     the execution of `cloudwatch:PutMetricData` operation.
 
-    :param namespace: The name of the CloudWatch namespace of this custom metrics.
-        It can be for example the name of your project.
-    :param metric_name: The name of the CloudWatch metrics. This can be for example
-        `frame_processing_time`, if you use CWTachometer to measure frame processing
-        time statistics.
-    :param dimensions: Additional CloudWatch metrics dimensions of this metric. This
-        can be for example the device and application identifier.
-    :param region: The AWS region of the CloudWatch metrics.
-    :param boto3_session: The boto3 session to be used for sending the CloudWatch metrics.
-        If left to None, CWTachometer will use the default session. If the default session
-        does not have a default region configured, you might get errors.
-    :param parent_logger: If you want to connect the logger of this class to a parent,
-        specify it here.
+    Args:
+        namespace (str): The name of the CloudWatch namespace of this custom metrics.
+            It can be for example the name of your project.
+        metric_name (str): The name of the CloudWatch metrics. This can be for example
+            `frame_processing_time`, if you use CWTachometer to measure frame processing
+            time statistics.
+        dimensions (Optional[Dict[str, str]]): Additional CloudWatch metrics dimensions of this
+            metric. This can be for example the device and application identifier.
+        region (Optional[str]): The AWS region of the CloudWatch metrics.
+        boto3_session (Optional[boto3.Session]): The boto3 session to be used for sending the
+            CloudWatch metrics. If left to None, CWTachometer will use the default session. If the
+            default session does not have a default region configured, you might get errors.
+        parent_logger (Optional[logging.Logger]): If you want to connect the logger of this class
+            to a parent, specify it here.
     '''
 
     def __init__(self,
@@ -52,7 +53,7 @@ class CloudWatchTimerAdapter:
     def _cw_dimensions(dimensions):
         return [{ 'Name': name, 'Value': value } for name, value in dimensions.items()]
 
-    def send_metrics(self, timestamp: datetime.datetime, timer: BaseTimer):
+    def send_metrics(self, timestamp: datetime.datetime, timer: BaseTimer) -> None:
         ''' Sends timer statistics to CloudWatch.
 
         This method can be used as a callback in Tachometer instances.
@@ -69,8 +70,9 @@ class CloudWatchTimerAdapter:
             )
             tacho.tick()
 
-        :param timestamp: The timestamp the statistics refers to.
-        :param timer: The timer that collected the statistics.
+        Args:
+            timestamp (datetime.datetime): The timestamp the statistics refers to.
+            timer (BaseTimer): The timer that collected the statistics.
         '''
         metric_data = {
             'MetricName': self.metric_name,

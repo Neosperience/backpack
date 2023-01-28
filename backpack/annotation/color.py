@@ -62,7 +62,7 @@ class Color:
             The new Color object.
 
         Raises:
-            ValueError if the conversion was not successful.
+            ValueError: If the conversion was not successful.
         '''
         if isinstance(value, Color):
             return value

@@ -88,7 +88,8 @@ class RTSPServer:
     def remove_stream(self, mount_point: str) -> None:
         ''' It removes a registered stream from the server.
 
-        :param mount_point: The registered path of the stream.
+        Args:
+            mount_point (str): The registered path of the stream.
         '''
         mounts = self.gst_server.get_mount_points()
         mounts.remove_factory(mount_point)
