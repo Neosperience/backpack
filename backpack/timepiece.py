@@ -367,7 +367,6 @@ class Schedule(ABC):
             A tuple of (True, callback_return_value) if the schedule was fired,
             otherwise (False, None)
         '''
-        return (False, None)
 
 
 class AtSchedule(Schedule):
