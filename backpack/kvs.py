@@ -31,7 +31,7 @@ import re
 import os
 import datetime
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from typing import List, Dict, Any
 from abc import ABC, abstractmethod
 
@@ -155,7 +155,7 @@ class KVSCredentialsHandler(ABC):
         self,
         aws_access_key_id: str=None,
         aws_secret_access_key: str=None,
-        executor: 'concurrent.futures.Executor'=ThreadPoolExecutor(max_workers=1),
+        executor: Executor=ThreadPoolExecutor(max_workers=1),
         parent_logger: logging.Logger=None
     ):
         self.logger = (
@@ -322,7 +322,7 @@ class KVSEnvironmentCredentialsHandler(KVSCredentialsHandler):
 
     def _save_credentials(
         self,
-        credentials: 'botocore.credentials.Credentials',
+        credentials: Credentials,
         _: datetime.datetime
     ):
         if _is_refreshable(credentials):
