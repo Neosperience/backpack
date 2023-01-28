@@ -1,6 +1,7 @@
 ''' 2D geometry primitives and implementation of some geometric algorithms. '''
 
 from typing import List, Sequence, Tuple
+import enum
 import collections.abc
 from dataclasses import dataclass
 import math
