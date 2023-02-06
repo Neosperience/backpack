@@ -4,7 +4,7 @@ application execution environment. '''
 import os
 import logging
 import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 import boto3
 
@@ -46,6 +46,8 @@ class AutoIdentity:
         self,
         device_region: str,
         application_instance_id: str = None,
+        test_utility: bool = False,
+        test_utility_app_instance_id: Optional[str] = None,
         parent_logger: logging.Logger = None
     ):
         self._logger = (
@@ -53,7 +55,8 @@ class AutoIdentity:
             parent_logger.getChild(self.__class__.__name__)
         )
         self.application_instance_id: str = (
-            application_instance_id or os.environ.get('AppGraph_Uid')
+            application_instance_id or os.environ.get('AppGraph_Uid') if not test_utility
+            else test_utility_app_instance_id + '_test_app'
         )
         self.application_name: str = None
         self.device_id: str = None
@@ -63,22 +66,38 @@ class AutoIdentity:
         self.application_tags: Dict[str, str]  = None
         self.application_description: str = None
         if not self.application_instance_id:
-            self._logger.warning('Could not find application instance id '
-                                 'in environment variable "AppGraph_Uid"')
+            self._logger.warning(
+                'Could not find application instance id in environment variable "AppGraph_Uid"'
+            )
             return
-        self._session = boto3.Session(region_name=device_region)
-        self._panorama = self._session.client('panorama')
-        app_instance_data = self._app_instance_data(self.application_instance_id)
-        if not app_instance_data:
-            self._logger.warning('Could not find application instance in service response. '
-                                f'Check if application_instance_id={self.application_instance_id} '
-                                f'and device_region={device_region} parameters are correct.')
-            return
-        self._config_from_instance_data(app_instance_data)
+
+        if not test_utility:
+            self._session = boto3.Session(region_name=device_region)
+            self._panorama = self._session.client('panorama')
+            app_instance_data = self._app_instance_data(self.application_instance_id)
+            if not app_instance_data:
+                self._logger.warning(
+                    'Could not find application instance in service response. '
+                    f'Check if application_instance_id={self.application_instance_id} '
+                    f'and device_region={device_region} parameters are correct.'
+                )
+            else:
+                self._config_from_instance_data(app_instance_data)
+        else:
+            self._config_for_test_utility()
 
     def __repr__(self):
         elements = [f'{a}={getattr(self, a)}' for a in dir(self) if not a.startswith('_')]
         return '<AutoIdentity ' + ' '.join(elements) + '>'
+
+    def _config_for_test_utility(self):
+        self.application_name = self.application_instance_id
+        self.device_id = 'emulator'
+        self.device_name = 'test_utility_emulator'
+        self.application_created_time = datetime.datetime.now()
+        self.application_status = 'TEST_UTILITY'
+        self.application_tags = {}
+        self.application_description = self.application_name
 
     def _config_from_instance_data(self, instance_data):
         self.application_name = instance_data.get('Name')
