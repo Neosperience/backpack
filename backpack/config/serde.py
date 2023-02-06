@@ -12,6 +12,7 @@ You should subclass :class:`ConfigSerDeBase` and override the following static f
 from typing import Any, List, Sequence, Mapping
 from abc import ABC, abstractmethod
 import json
+import datetime
 
 class ConfigSerDeBase(ABC):
     ''' Defines a serializer / deserializer interface. '''
@@ -87,7 +88,43 @@ class IntegerListSerDe(ConfigSerDeBase):
         return [int(e) for e in value.split(sep)]
 
 
-class JsonSerde(ConfigSerDeBase):
+class StringListSerDe(ConfigSerDeBase):
+    ''' De/serializes a string containing a comma-separated list of strings.'''
+
+    description : str = 'Comma-separated list of strings'
+    example: str = 'apple, pear, banana'
+
+    @staticmethod
+    def serialize(value: Sequence[str], metadata: Mapping[str, Any]={}) -> str:
+        ''' Serializes a list of strings into a string.
+
+        Args:
+            value (Sequence[str]): The list of strings.
+
+        Returns:
+            The list of strings serialized into a string.
+        '''
+        sep = metadata.get('separator', ', ')
+        return sep.join(str(e) for e in value)
+
+    @staticmethod
+    def deserialize(value: str, metadata: Mapping[str, Any]={}) -> List[str]:
+        '''Restores a list of strings from a string.
+
+        Args:
+            value (str): A string containing a serialized list of strings.
+
+        Returns:
+            The list of strings restored from the string.
+
+        Raises:
+            Exception: exceptions related to invalid string format.
+        '''
+        sep = metadata.get('separator', ',')
+        return [str(e) for e in value.split(sep)]
+
+
+class JsonSerDe(ConfigSerDeBase):
     ''' De/serializes a string containing a JSON-encoded object.'''
 
     description : str = 'JSON-encoded object'
@@ -119,3 +156,28 @@ class JsonSerde(ConfigSerDeBase):
             Exception: exceptions related to invalid string format.
         '''
         return json.loads(value)
+
+
+class TimeDeltaSecondsSerDe(ConfigSerDeBase):
+    ''' De/serializes a timedelta instance into a float number.
+
+    The time interval is expressed in seconds.
+    '''
+
+    name : str = 'float32 value interpreted as seconds'
+
+    @staticmethod
+    def serialize(value: datetime.timedelta, _: Mapping[str, Any]={}) -> float:
+        ''' Serializes a timedelta instance as a float number.
+
+        The time interval is expressed in seconds. '''
+        return value.total_seconds()
+
+
+    @staticmethod
+    def deserialize(value: float, _: Mapping[str, Any]={}) -> datetime.timedelta:
+        ''' Deserializes a float value into a time interval.
+
+        The value is interpreted in seconds.
+        '''
+        return datetime.timedelta(seconds=value)
