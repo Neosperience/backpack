@@ -19,6 +19,11 @@ class AutoIdentity:
         device_region: The AWS region where this Panorama appliance is registered.
         application_instance_id: The application instance id. If left to `None`,
             :class:`AutoIdentity` will try to find the instance id in the environment variable.
+        test_utility: Set this to `True` when using AutoIdentity from Test Utility Environment.
+            :class:`AutoIdentity` will provide you with dummy attribute values.
+        test_utility_app_instance_id: Set this to your application identifier when using
+            :class:`AutoIdentity` from Test Utility Environment. :class:`AutoIdentity` will create
+            dummy attributes based on this value.
         parent_logger: If you want to connect the logger to a parent, specify it here.
 
     Upon successfully initialization, :class:`AutoIdentity` will fill out the following properties:
