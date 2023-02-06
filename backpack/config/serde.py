@@ -167,7 +167,7 @@ class TimeDeltaSecondsSerDe(ConfigSerDeBase):
     name : str = 'float32 value interpreted as seconds'
 
     @staticmethod
-    def serialize(value: datetime.timedelta, _: Mapping[str, Any]={}) -> float:
+    def serialize(value: datetime.timedelta, metadata: Mapping[str, Any]={}) -> float:
         ''' Serializes a timedelta instance as a float number.
 
         The time interval is expressed in seconds. '''
@@ -175,7 +175,7 @@ class TimeDeltaSecondsSerDe(ConfigSerDeBase):
 
 
     @staticmethod
-    def deserialize(value: float, _: Mapping[str, Any]={}) -> datetime.timedelta:
+    def deserialize(value: float, metadata: Mapping[str, Any]={}) -> datetime.timedelta:
         ''' Deserializes a float value into a time interval.
 
         The value is interpreted in seconds.
