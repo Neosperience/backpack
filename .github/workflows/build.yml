@@ -70,6 +70,7 @@ jobs:
         python-version: "3.7"
     - name: Install dependencies
       run: |
+        sudo sed -i 's/azure\.//' /etc/apt/sources.list
         sudo apt-get update -y
         sudo apt install -y libunwind-dev
         sudo apt-get install -y  --no-install-recommends libgirepository1.0-dev libgstreamer1.0-dev libgstrtspserver-1.0-dev
