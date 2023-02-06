@@ -8,6 +8,7 @@ configurations. The class offers two basic functionalities:
 
 import dataclasses
 from typing import Sequence, List, Any, Type, TypeVar, Mapping, Tuple, Optional
+import textwrap
 
 from .serde import ConfigSerDeBase
 
@@ -65,7 +66,11 @@ class ConfigBase:
 
     @staticmethod
     def _get_param_doc(field: dataclasses.field) -> Optional[str]:
-        return field.metadata.get('__doc__', field.metadata.get('doc'))
+        doc = field.metadata.get('__doc__', field.metadata.get('doc'))
+        doc = textwrap.dedent(doc)
+        doc = doc.replace('\n', ' ')
+        doc = doc.replace('  ', ' ')
+        return doc
 
     def _param_walker(self, _current_path: Sequence[str]=[]) -> Tuple[str, dataclasses.field]:
         ''' Recursively walks all parameters in the config structure.
