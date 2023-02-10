@@ -33,11 +33,13 @@ def cli(name: str, config: ConfigBase) -> None:
         are supported:
 
          - nodes: generates a json snippet to be pasted in the nodeGraph.nodes field of graph.json
-         - edges: generates a json snippet to be pasted in the nodeGraph.edges field of graph.json
+         - edges: generates a json snippet to be pasted in the nodeGraph.edges field of graph.json.
+            Specify the code node name.
          - interface: generates json a snippet to be pasted in nodePackage.interfaces field of the
              package.json of the application code package
          - markdown: generates a markdown snippet that you can paste to the README of your project,
              or other parts of the documentation.
+         - render: renders a Jinja2 template. Specify the template filename and the code node name.
          '''),
          formatter_class=argparse.RawDescriptionHelpFormatter
     )
