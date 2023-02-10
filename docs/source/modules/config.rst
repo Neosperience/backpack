@@ -95,10 +95,10 @@ where the file can be found::
 
 The CLI help should guide you through the usage of the tool:
 
-.. code-block:: none
+.. code-block:: text
 
-    usage: my_object_detector_config.py [-h] [--code-node CODE_NODE]
-                                    {nodes,edges,interface,markdown}
+    usage: config.py [-h] [--code-node CODE_NODE] [--template TEMPLATE]
+                 {nodes,edges,interface,markdown,render}
 
     Configuration snippet generator for my_object_detector application.
 
@@ -108,21 +108,25 @@ The CLI help should guide you through the usage of the tool:
     are supported:
 
     - nodes: generates a json snippet to be pasted in the nodeGraph.nodes field of graph.json
-    - edges: generates a json snippet to be pasted in the nodeGraph.edges field of graph.json
+    - edges: generates a json snippet to be pasted in the nodeGraph.edges field of graph.json.
+        Specify the code node name.
     - interface: generates json a snippet to be pasted in nodePackage.interfaces field of the
         package.json of the application code package
     - markdown: generates a markdown snippet that you can paste to the README of your project,
         or other parts of the documentation.
+    - render: renders a Jinja2 template. Specify the template filename and the code node name.
 
     positional arguments:
-    {nodes,edges,interface,markdown}
+    {nodes,edges,interface,markdown,render}
                             Prints configuration snippets for graph.json nodes, edges,
                             application interface in package.json, or in markdown format.
 
     optional arguments:
     -h, --help            show this help message and exit
-    --code-node CODE_NODE
+    --code-node CODE_NODE, -c CODE_NODE
                             Code node name (used in edges snippet)
+    --template TEMPLATE, -t TEMPLATE
+                            Template file (used in render command)
 
 For example, the following call::
 
@@ -194,3 +198,144 @@ will generate the following json snippet, ready to be pasted into ``graph.json``
             }
         }
     ]
+
+You can also write your ``graph.json``, application ``package.json`` and markdown documentation
+as `Jinja2`_ templates. In this case you can automatize the update of these artifacts after
+modifying your :class:`~backpack.config.ConfigBase` subclass. The config tool CLI offers the
+following template variables:
+
+- ``nodes``: list of dictionaries containing the nodes to be placed in ``graph.json``
+- ``edges``: list of dictionaries containing the edges to be placed in ``graph.json``
+- ``interface``: list of dictionaries containing the interface to be placed in application's
+    ``package.json``
+- ``markdown``: Markdown documentation as string.
+
+.. _`Jinja2`: https://jinja.palletsprojects.com/
+
+For example, you could use the following template ``graph.json.jinja`` for your manifest:
+
+.. code-block:: jinja
+
+    {
+        "nodeGraph": {
+            "envelopeVersion": "2021-01-01",
+            "packages": [
+                {
+                    "name": "panorama::abstract_rtsp_media_source",
+                    "version": "1.0"
+                },
+                {
+                    "name": "panorama::hdmi_data_sink",
+                    "version": "1.0"
+                },
+                {
+                    "name": "123456789012::my_app_logic",
+                    "version": "1.0"
+                },
+                {
+                    "name": "123456789012::my_model",
+                    "version": "1.0"
+                }
+            ],
+            "nodes": [
+                {
+                    "name": "camera_input",
+                    "interface": "panorama::abstract_rtsp_media_source.rtsp_v1_interface",
+                    "overridable": true,
+                    "launch": "onAppStart",
+                    "decorator": {
+                        "title": "Camera camera_input",
+                        "description": "Abstract camera input of the application."
+                    }
+                },
+                {
+                    "name": "display_output",
+                    "interface": "panorama::hdmi_data_sink.hdmi0",
+                    "overridable": false,
+                    "launch": "onAppStart"
+                },
+                {
+                    "name": "my_model_node",
+                    "interface": "123456789012::my_model.interface",
+                    "overridable": false,
+                    "launch": "onAppStart"
+                },
+                {
+                    "name": "my_app_logic_node",
+                    "interface": "123456789012::my_app_logic.interface",
+                    "overridable": false,
+                    "launch": "onAppStart"
+                }{{ "," if nodes|length > 0 else "" }}
+    {% for node in nodes %}
+                {{ node|to_pretty_json|indent(width=12) }}{{ "," if not loop.last else "" }}
+    {% endfor %}
+            ],
+            "edges": [
+                {
+                    "producer": "camera_input.video_out",
+                    "consumer": "my_app_logic_node.video_in"
+                },
+                {
+                    "producer": "my_app_logic_node.video_out",
+                    "consumer": "display_output.video_in"
+                }{{ "," if nodes|length > 0 else "" }}
+    {% for edge in edges %}
+                {{ edge|to_pretty_json|indent(width=12) }}{{ "," if not loop.last else "" }}
+    {% endfor %}
+            ]
+        }
+    }
+
+Using this template, you can generate your ``graph.json`` with::
+
+    $ python -m my_object_detector_config render \
+        --code-node my_object_detector_business_logic \
+        --template path_to/graph.json.jinja \
+        > path_to/graph.json
+
+An example ``package.json.jinja`` template:
+
+.. code-block:: jinja
+
+    {
+        "nodePackage": {
+            "envelopeVersion": "2021-01-01",
+            "name": "my_app_logic",
+            "version": "1.0",
+            "description": "Default description for package my_app_logic",
+            "assets": [
+                {
+                    "name": "my_app_logic_logic_asset",
+                    "implementations": [
+                        {
+                            "type": "container",
+                            "assetUri": "deadbeaf.tar.gz",
+                            "descriptorUri": "deadbeaf.json"
+                        }
+                    ]
+                }
+            ],
+            "interfaces": [
+                {
+                    "name": "interface",
+                    "category": "business_logic",
+                    "asset": "my_app_logic_logic_asset",
+                    "inputs": [
+                        {
+                            "name": "video_in",
+                            "type": "media"
+                        }{{ "," if interface|length > 0 else "" }}
+    {% for item in interface %}
+                        {{ item|to_pretty_json|indent(width=20) }}{{ "," if not loop.last else "" }}
+    {% endfor %}
+                    ],
+                    "outputs": [
+                        {
+                            "name": "video_out",
+                            "type": "media"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
