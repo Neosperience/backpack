@@ -66,10 +66,11 @@ class ConfigBase:
 
     @staticmethod
     def _get_param_doc(field: dataclasses.field) -> Optional[str]:
-        doc = field.metadata.get('__doc__', field.metadata.get('doc'))
+        doc: str = field.metadata.get('__doc__', field.metadata.get('doc'))
         doc = textwrap.dedent(doc)
         doc = doc.replace('\n', ' ')
         doc = doc.replace('  ', ' ')
+        doc = doc.strip()
         return doc
 
     def _param_walker(self, _current_path: Sequence[str]=[]) -> Tuple[str, dataclasses.field]:
@@ -165,7 +166,7 @@ class ConfigBase:
 
     @classmethod
     def from_panorama_params(cls: Type[T],
-        inputs: 'panoramasdk.port',
+        inputs: 'panoramasdk.port', # type: ignore
         serde_metadata: Mapping[str, Any]={}
     ) -> T:
         ''' Parses the config values form AWS Panorama input parameters.
