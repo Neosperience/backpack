@@ -20,6 +20,7 @@ def cli(name: str, config: ConfigBase) -> None:
         except ImportError:
             sys.exit('To use the render command you must install jinja2 with "pip install Jinja2"')
         env = Environment(loader=FileSystemLoader('/'), trim_blocks=True)
+        env.filters['to_pretty_json'] = lambda value: json.dumps(value, indent=4)
         template = env.get_template(template_path)
         return template.render(variables)
 
