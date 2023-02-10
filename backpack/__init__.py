@@ -1,6 +1,6 @@
 ''' Utilities for AWS Panorama application development. '''
 
-__version__ = '0.2.6'
+__version__ = '0.2.7'
 __author__ = 'Janos Tolgyesi'
 
 import functools

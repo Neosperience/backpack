@@ -121,7 +121,7 @@ class StringListSerDe(ConfigSerDeBase):
             Exception: exceptions related to invalid string format.
         '''
         sep = metadata.get('separator', ',')
-        return [str(e) for e in value.split(sep)]
+        return [str(e).strip() for e in value.split(sep)]
 
 
 class JsonSerDe(ConfigSerDeBase):

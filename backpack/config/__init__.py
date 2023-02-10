@@ -5,4 +5,6 @@ configuration snippets for the metadata and descriptor json files of your Panora
 
 from .tool import cli
 from .config import ConfigBase
-from .serde import ConfigSerDeBase, IntegerListSerDe
+from .serde import (
+    ConfigSerDeBase, IntegerListSerDe, StringListSerDe, JsonSerDe, TimeDeltaSecondsSerDe
+)
