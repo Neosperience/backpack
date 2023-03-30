@@ -2,7 +2,7 @@ import logging
 import unittest
 from unittest.mock import patch, Mock
 
-from backpack.autoidentity import AutoIdentity
+from backpack.autoidentity import AutoIdentityFetcher
 
 import datetime
 
@@ -33,6 +33,17 @@ class TestAutoIdentity(unittest.TestCase):
         'Description': APPLICATION_DESCRIPTION,
     }
 
+    OTHER_APPLICATION_INSTANCE = {
+        'ApplicationInstanceId': 'foobar',
+        'Name': APPLICATION_NAME,
+        'DefaultRuntimeContextDevice': DEVICE_ID,
+        'DefaultRuntimeContextDeviceName': DEVICE_NAME,
+        'CreatedTime': APPLICATION_CREATED_TIME,
+        'HealthStatus': APPLICATION_STATUS,
+        'Tags': APPLICATION_TAGS,
+        'Description': APPLICATION_DESCRIPTION,
+    }
+
     def setUp(self):
         self.device_region = 'dummy-region'
         self.parent_logger = logging.getLogger()
@@ -47,10 +58,11 @@ class TestAutoIdentity(unittest.TestCase):
         panorama.list_application_instances.side_effect = [
             { 'ApplicationInstances': [TestAutoIdentity.APPLICATION_INSTANCE] }
         ]
-        ai = AutoIdentity(
+        ai_fetcher = AutoIdentityFetcher(
             device_region=self.device_region,
             parent_logger=self.parent_logger
         )
+        ai = ai_fetcher.get_data()
         panorama.list_application_instances.assert_called()
         self.assertEqual(ai.application_name, TestAutoIdentity.APPLICATION_NAME)
         self.assertEqual(ai.application_created_time, TestAutoIdentity.APPLICATION_CREATED_TIME)
@@ -65,28 +77,29 @@ class TestAutoIdentity(unittest.TestCase):
         lai = panorama.list_application_instances
         lai.side_effect = [
             {
-                'ApplicationInstances': [TestAutoIdentity.APPLICATION_INSTANCE],
+                'ApplicationInstances': [TestAutoIdentity.OTHER_APPLICATION_INSTANCE],
                 'NextToken': TestAutoIdentity.NEXT_TOKEN
             },
             {
                 'ApplicationInstances': [TestAutoIdentity.APPLICATION_INSTANCE]
             }
         ]
-        ai = AutoIdentity(
+        ai_fetcher = AutoIdentityFetcher(
             device_region=self.device_region,
             parent_logger=self.parent_logger
         )
+        ai_fetcher.get_data()
         self.assertEqual(lai.call_count, 2, 'Service called twice')
         lai.assert_called_with(NextToken=TestAutoIdentity.NEXT_TOKEN, StatusFilter=unittest.mock.ANY)
 
     def test_no_app_instance_id(self, backpack_mock_os, backpack_mock_boto3):
         backpack_mock_os.environ.get.return_value = None
-        with self.assertLogs(self.logger, 'WARNING') as logs:
-            ai = AutoIdentity(
+        with self.assertRaises(RuntimeError):
+            ai_fetcher = AutoIdentityFetcher(
                 device_region=self.device_region,
                 parent_logger=self.parent_logger
             )
-        self.assertEqual(ai.application_instance_id, None)
+            ai = ai_fetcher.get_data()
 
     def test_no_app_instance_data(self, backpack_mock_os, backpack_mock_boto3):
         panorama = self._setup_mocks(backpack_mock_os, backpack_mock_boto3)
@@ -98,30 +111,34 @@ class TestAutoIdentity(unittest.TestCase):
                 'ApplicationInstances': [wrong_instance]
             }
         ]
-        with self.assertLogs(self.logger, 'WARNING') as logs:
-            ai = AutoIdentity(
+        with self.assertRaises(RuntimeError):
+            ai_fetcher = AutoIdentityFetcher(
                 device_region=self.device_region,
                 parent_logger=self.parent_logger
             )
-        self.assertEqual(ai.application_name, None)
+            ai = ai_fetcher.get_data()
 
     def test_repr(self, backpack_mock_os, backpack_mock_boto3):
         panorama = self._setup_mocks(backpack_mock_os, backpack_mock_boto3)
         panorama.list_application_instances.side_effect = [
             { 'ApplicationInstances': [TestAutoIdentity.APPLICATION_INSTANCE] }
         ]
-        ai = AutoIdentity(
+        ai_fetcher = AutoIdentityFetcher(
             device_region=self.device_region,
             parent_logger=self.parent_logger
         )
+        ai = ai_fetcher.get_data()
+        self.maxDiff = None
         expected_repr = (
-            "<AutoIdentity application_created_time=2022-02-22 22:22:22 "
-            "application_description=Test Application Description "
-            "application_instance_id=dummy_app_id "
-            "application_name=test_application_name "
-            "application_status=TEST "
-            "application_tags={'test_tag': 'test_value'} "
-            "device_id=test_device_id "
-            "device_name=test_device_name>"
+            "AutoIdentityData("
+                "application_instance_id='dummy_app_id', "
+                "application_name='test_application_name', "
+                "application_tags={'test_tag': 'test_value'}, "
+                "device_id='test_device_id', "
+                "device_name='test_device_name', "
+                "application_created_time=datetime.datetime(2022, 2, 22, 22, 22, 22), "
+                "application_status='TEST', "
+                "application_description='Test Application Description'"
+            ")"
         )
         self.assertEqual(repr(ai), expected_repr)

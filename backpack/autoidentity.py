@@ -4,11 +4,55 @@ application execution environment. '''
 import os
 import logging
 import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Iterator, Any
+import time
 
 import boto3
+from pydantic import BaseModel, Field
 
-class AutoIdentity:
+class AutoIdentityData(BaseModel):
+    ''' Data class to store auto identity information. '''
+
+    application_instance_id: str = Field(alias='ApplicationInstanceId')
+    ''' Application instance id. '''
+
+    application_name: str = Field(alias='Name')
+    ''' Name of this application. '''
+
+    application_tags: Dict[str, str] = Field(alias='Tags')
+    ''' Tags associated with this application. '''
+
+    device_id: str = Field(alias='DefaultRuntimeContextDevice')
+    ''' Device id of the appliance running this application. '''
+
+    device_name: str = Field(alias='DefaultRuntimeContextDeviceName')
+    '''  Name of this application. '''
+
+    application_created_time: datetime.datetime = Field(alias='CreatedTime')
+    ''' Application deployment time. '''
+
+    application_status: str = Field(alias='HealthStatus')
+    ''' Health status of this application. '''
+
+    application_description: str = Field(alias='Description')
+    ''' The description of this application. '''
+
+    @classmethod
+    def for_test_environment(cls, application_instance_id: str, application_name: str):
+        ''' Initializes a dummy AutoIdentityData to be used in test environment. '''
+        return cls(
+            ApplicationInstanceId=application_instance_id,
+            Name=application_name,
+            Tags={},
+            DefaultRuntimeContextDevice='emulator',
+            DefaultRuntimeContextDeviceName='test_utility_emulator',
+            CreatedTime=datetime.datetime.now(),
+            HealthStatus='TEST_UTILITY',
+            Description=application_name,
+        )
+
+
+class AutoIdentityFetcher:
     ''' AutoIdentity instance queries metadata of the current application instance.
 
     The IAM policy associated with the `Panorama Application Role`_
@@ -19,24 +63,7 @@ class AutoIdentity:
         device_region: The AWS region where this Panorama appliance is registered.
         application_instance_id: The application instance id. If left to `None`,
             :class:`AutoIdentity` will try to find the instance id in the environment variable.
-        test_utility: Set this to `True` when using AutoIdentity from Test Utility Environment.
-            :class:`AutoIdentity` will provide you with dummy attribute values.
-        test_utility_app_instance_id: Set this to your application identifier when using
-            :class:`AutoIdentity` from Test Utility Environment. :class:`AutoIdentity` will create
-            dummy attributes based on this value.
         parent_logger: If you want to connect the logger to a parent, specify it here.
-
-    Upon successfully initialization, :class:`AutoIdentity` will fill out the following properties:
-
-    Attributes:
-        application_created_time (datetime.datetime): Application deployment time.
-        application_instance_id (str): Application instance id.
-        application_name (str): Name of this application.
-        application_status (str): Health status of this application.
-        application_tags (Dict[str, str]): Tags associated with this application.
-        application_description (str): The description of this application.
-        device_id (str): Device id of the appliance running this application.
-        device_name (str): Name of the appliance running this application.
 
     .. _`Panorama Application Role`:
         https://docs.aws.amazon.com/panorama/latest/dev/permissions-application.html
@@ -47,79 +74,75 @@ class AutoIdentity:
     # pylint: disable=too-many-instance-attributes,too-few-public-methods
     # This class functions as a data class that reads its values from the environment
 
-    def __init__(
-        self,
+    def __init__(self,
         device_region: str,
-        application_instance_id: str = None,
-        test_utility: bool = False,
-        test_utility_app_instance_id: Optional[str] = None,
-        parent_logger: logging.Logger = None
+        application_instance_id: Optional[str] = None,
+        parent_logger: Optional[logging.Logger] = None
     ):
         self._logger = (
             logging.getLogger(self.__class__.__name__) if parent_logger is None else
             parent_logger.getChild(self.__class__.__name__)
         )
-        self.application_instance_id: str = (
-            application_instance_id or os.environ.get('AppGraph_Uid') if not test_utility
-            else test_utility_app_instance_id + '_test_app'
+        self.application_instance_id = (
+            application_instance_id or os.environ.get('AppGraph_Uid')
         )
-        self.application_name: str = None
-        self.device_id: str = None
-        self.device_name: str = None
-        self.application_created_time: datetime.datetime = None
-        self.application_status: str = None
-        self.application_tags: Dict[str, str]  = None
-        self.application_description: str = None
         if not self.application_instance_id:
-            self._logger.warning(
+            raise RuntimeError(
                 'Could not find application instance id in environment variable "AppGraph_Uid"'
             )
-            return
+        self.device_region = device_region
 
-        if not test_utility:
-            self._session = boto3.Session(region_name=device_region)
-            self._panorama = self._session.client('panorama')
+    def get_data(self, retry_freq: Optional[float] = None) -> AutoIdentityData:
+        ''' Fetches the auto identity data.
+
+        Args:
+            retry_freq (Optional[float]): If set to a float number, AutoIdentity will keep retrying
+                fetching the auto identity data from remote services if the status of the app was
+                "NOT_AVAILABLE". If set to None, will not retry.
+
+        Raises:
+            RuntimeError: if could not fetch the auto identity information, and retry_freq is set
+                to None.
+        '''
+
+        def fetch() -> Dict[str, Any]:
             app_instance_data = self._app_instance_data(self.application_instance_id)
             if not app_instance_data:
-                self._logger.warning(
+                raise RuntimeError(
                     'Could not find application instance in service response. '
-                    f'Check if application_instance_id={self.application_instance_id} '
-                    f'and device_region={device_region} parameters are correct.'
+                    'Check if application_instance_id=%s '
+                    'and device_region=%s parameters are correct.'
+                    .format(self.application_instance_id, self.device_region)
                 )
             else:
-                self._config_from_instance_data(app_instance_data)
-        else:
-            self._config_for_test_utility()
+                return app_instance_data
 
-    def __repr__(self):
-        elements = [f'{a}={getattr(self, a)}' for a in dir(self) if not a.startswith('_')]
-        return '<AutoIdentity ' + ' '.join(elements) + '>'
+        while True:
+            app_instance_data = fetch()
+            status = app_instance_data.get('HealthStatus', 'NOT_AVAILABLE')
+            if status == 'NOT_AVAILABLE':
+                if retry_freq is None:
+                    raise RuntimeError(
+                        'Application HealthStatus is "NOT_AVAILABLE" and retry is disabled.'
+                    )
+                else:
+                    time.sleep(retry_freq)
+                    continue
+            elif status == 'ERROR':
+                raise RuntimeError('Application HealthStatus is "ERROR"')
+            else:
+                return AutoIdentityData(**app_instance_data)
 
-    def _config_for_test_utility(self):
-        self.application_name = self.application_instance_id
-        self.device_id = 'emulator'
-        self.device_name = 'test_utility_emulator'
-        self.application_created_time = datetime.datetime.now()
-        self.application_status = 'TEST_UTILITY'
-        self.application_tags = {}
-        self.application_description = self.application_name
-
-    def _config_from_instance_data(self, instance_data):
-        self.application_name = instance_data.get('Name')
-        self.device_id = instance_data.get('DefaultRuntimeContextDevice')
-        self.device_name = instance_data.get('DefaultRuntimeContextDeviceName')
-        self.application_created_time = instance_data.get('CreatedTime')
-        self.application_status = instance_data.get('HealthStatus')
-        self.application_tags = instance_data.get('Tags')
-        self.application_description = instance_data.get('Description')
-
-    def _list_app_instances(self, deployed_only=True):
+    def _list_app_instances(self, deployed_only=True) -> Iterator[Dict[str, Any]]:
+        session = boto3.Session(region_name=self.device_region)
+        panorama = session.client('panorama')
         next_token = None
         while True:
             kwargs = {'StatusFilter': 'DEPLOYMENT_SUCCEEDED'} if deployed_only else {}
             if next_token:
                 kwargs['NextToken'] = next_token
-            response = self._panorama.list_application_instances(**kwargs)
+            response = panorama.list_application_instances(**kwargs)
+            inst: Dict[str, Any]
             for inst in response['ApplicationInstances']:
                 yield inst
             if 'NextToken' in response:
@@ -127,7 +150,9 @@ class AutoIdentity:
             else:
                 break
 
-    def _app_instance_data(self, application_instance_id):
-        matches = [inst for inst in self._list_app_instances()
-                   if inst.get('ApplicationInstanceId') == application_instance_id]
-        return matches[0] if matches else None
+    def _app_instance_data(self, application_instance_id) -> Optional[Dict[str, Any]]:
+        matches = (inst
+            for inst in self._list_app_instances()
+            if inst.get('ApplicationInstanceId') == application_instance_id
+        )
+        return next(matches, None)
