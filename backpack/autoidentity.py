@@ -34,7 +34,7 @@ class AutoIdentityData(BaseModel):
     application_status: str = Field(alias='HealthStatus')
     ''' Health status of this application. '''
 
-    application_description: str = Field(alias='Description')
+    application_description: Optional[str] = Field(alias='Description')
     ''' The description of this application. '''
 
     @classmethod
@@ -50,6 +50,10 @@ class AutoIdentityData(BaseModel):
             HealthStatus='TEST_UTILITY',
             Description=application_name,
         )
+
+
+class AutoIdentityError(RuntimeError):
+    ''' AutoIdentity specific error. '''
 
 
 class AutoIdentityFetcher:
@@ -87,7 +91,7 @@ class AutoIdentityFetcher:
             application_instance_id or os.environ.get('AppGraph_Uid')
         )
         if not self.application_instance_id:
-            raise RuntimeError(
+            raise AutoIdentityError(
                 'Could not find application instance id in environment variable "AppGraph_Uid"'
             )
         self.device_region = device_region
@@ -104,17 +108,18 @@ class AutoIdentityFetcher:
                 "NOT_AVAILABLE". If set to None, will not retry.
 
         Raises:
-            RuntimeError: if could not fetch the auto identity information, and retry_freq is set
+            AutoIdentityError: if could not fetch the auto identity information, and retry_freq is set
                 to None.
         '''
 
         def fetch() -> Dict[str, Any]:
             app_instance_data = self._app_instance_data(self.application_instance_id)
+            self._logger.info('Fetched data: %s', app_instance_data)
             if not app_instance_data:
-                raise RuntimeError(
+                raise AutoIdentityError(
                     'Could not find application instance in service response. '
-                    'Check if application_instance_id=%s '
-                    'and device_region=%s parameters are correct.'
+                    'Check if application_instance_id={} '
+                    'and device_region={} parameters are correct.'
                     .format(self.application_instance_id, self.device_region)
                 )
             else:
@@ -127,7 +132,7 @@ class AutoIdentityFetcher:
             self._logger.info('Application HealthStatus=%s', status)
             if status in ('NOT_AVAILABLE'):
                 if retry_freq is None:
-                    raise RuntimeError(
+                    raise AutoIdentityError(
                         f'Application HealthStatus is "{status}" and retry is disabled.'
                     )
                 else:
@@ -138,9 +143,7 @@ class AutoIdentityFetcher:
                         retry_freq = min(retry_freq, max_retry_freq)
                     retries += 1
                     if max_retry_num is not None and retries > max_retry_num:
-                         raise RuntimeError(
-                            'Maximum number of retries reached.'
-                        )
+                        raise AutoIdentityError('Maximum number of retries reached.')
                     else:
                         continue
             else:
