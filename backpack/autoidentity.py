@@ -92,7 +92,10 @@ class AutoIdentityFetcher:
             )
         self.device_region = device_region
 
-    def get_data(self, retry_freq: Optional[float] = None) -> AutoIdentityData:
+    def get_data(self,
+        retry_freq: Optional[float] = 5,
+        max_retry_freq: Optional[float] = 300,
+        max_retry_num: Optional[int] = 50) -> AutoIdentityData:
         ''' Fetches the auto identity data.
 
         Args:
@@ -117,19 +120,29 @@ class AutoIdentityFetcher:
             else:
                 return app_instance_data
 
+        retries = 0
         while True:
             app_instance_data = fetch()
             status = app_instance_data.get('HealthStatus', 'NOT_AVAILABLE')
-            if status == 'NOT_AVAILABLE':
+            self._logger.info('Application HealthStatus=%s', status)
+            if status in ('NOT_AVAILABLE'):
                 if retry_freq is None:
                     raise RuntimeError(
-                        'Application HealthStatus is "NOT_AVAILABLE" and retry is disabled.'
+                        f'Application HealthStatus is "{status}" and retry is disabled.'
                     )
                 else:
+                    self._logger.info('Will retry fetching auto identity data in %s seconds.', retry_freq)
                     time.sleep(retry_freq)
-                    continue
-            elif status == 'ERROR':
-                raise RuntimeError('Application HealthStatus is "ERROR"')
+                    retry_freq = retry_freq * 2
+                    if max_retry_freq is not None:
+                        retry_freq = min(retry_freq, max_retry_freq)
+                    retries += 1
+                    if max_retry_num is not None and retries > max_retry_num:
+                         raise RuntimeError(
+                            'Maximum number of retries reached.'
+                        )
+                    else:
+                        continue
             else:
                 return AutoIdentityData(**app_instance_data)
 
